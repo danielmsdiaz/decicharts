@@ -681,3 +681,31 @@ Esta revisão substitui a apresentação inicial dos campos e os rótulos do flu
 - [x] Validar os 7 cenários Chrome e manter os 39 testes unitários aprovados.
 
 A detecção automática gera a prévia; a confirmação do usuário continua necessária para utilizar ou substituir a série. Nenhuma configuração Firebase foi alterada por esta revisão.
+
+## 19. Persistência no Neon e perfil — 2026-11-23
+
+Ampliação autorizada na conversa: usuário escolheu Neon, configurou DATABASE_URL e confirmou prontidão para a integração. Esta seção substitui as restrições iniciais de ausência de banco/backend exclusivamente para as funcionalidades abaixo. Firebase continua responsável pelo login Google. Sem deploy automático.
+
+- [x] API Node serverless na Vercel e no desenvolvimento Vite; conexão PostgreSQL somente no servidor.
+- [x] Validar tokens Firebase assinados, expirados, audiência e emissor; identidade nunca aceita do corpo enviado pelo navegador.
+- [x] Tabelas próprias em schema decicharts, migração idempotente e isolamento de todas as consultas pelo UID.
+- [x] Perfil com dados Google e preferências de fuso/unidade para novas importações.
+- [x] Salvar análise somente por ação explícita: metadados, medições normalizadas, título e intervalo. Não armazenar o arquivo original nem células originais dos diagnósticos.
+- [x] Dividir até 250 mil pontos em blocos de até 5 mil pontos; requisições pequenas, retomada idempotente e publicação da análise apenas após conferir todos os blocos.
+- [x] Histórico paginado, reabertura e exclusão das próprias análises.
+- [x] Preservar o trabalho na memória ao navegar entre análise, histórico e perfil; limpar no logout.
+- [x] Gráfico, filtros e exportação continuam no navegador; importação local funciona sem salvar.
+- [x] Testes de autenticação/API, isolamento, validação, blocos, integração Neon e interfaces.
+- [x] Atualizar README, .env.example e progresso com configuração e resultados reais.
+
+Critérios de aceite: salvar/reabrir preserva todos os pontos e duplicados, título e intervalo; usuário não acessa registros de outro; falhas não publicam séries incompletas; excluir remove metadados e blocos; credenciais ausentes do build frontend.
+
+### Validações da fase 6
+
+- Migração real aplicada e reexecutada com sucesso; tabelas confirmadas no Neon.
+- 56 testes unitários aprovados, mais um teste de integração real executado separadamente.
+- Integração real com dois usuários e 5.001 pontos: contagens, duplicados entre blocos, repetição idempotente, blocos incompletos/fora de ordem, isolamento, atualização e exclusão em cascata. Registros sintéticos removidos.
+- 10 cenários Chrome aprovados, com confirmação final dos fluxos de gráfico e atualização/reabertura de análise.
+- Build/tipagem/lint aprovados. Conexão Neon, driver de banco e fixtures ausentes do bundle frontend. Auditoria final sem vulnerabilidades.
+- [ ] Aceite manual de login Google real → API → salvar/reabrir com a conta do usuário. Não foi obtido nem utilizado um token real da conta durante os testes automatizados.
+- [ ] Deploy na Vercel, somente após autorização explícita.
