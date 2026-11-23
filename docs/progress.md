@@ -2,10 +2,10 @@
 
 ## Estado atual
 
-- Fase atual: 7 — Adoção do Prisma
-- Status: Concluído
+- Fase atual: 8 — Estabilidade e próximos incrementos
+- Status: Pendente
 - Última atualização: 2026-11-23
-- Implementação e validações locais/Neon concluídas. Aceite manual com Google real e eventual deploy permanecem pendentes.
+- Fases de implementação anteriores concluídas nas validações locais/Neon. Backlog de estabilidade registrado; oscilação visual relatada ao reiniciar o servidor dev ainda não reproduzida. Aceite manual com Google real e eventual deploy permanecem pendentes.
 
 ## Resumo das fases
 
@@ -18,6 +18,7 @@
 | 5. Finalização | Concluído |
 | 6. Perfil e Neon | Concluído |
 | 7. Adoção do Prisma | Concluído |
+| 8. Estabilidade e próximos incrementos | Pendente |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -35,15 +36,16 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 ## Trabalho em andamento
 
-Nenhuma implementação local pendente. Aceite manual Google real → API → Neon aguardando uso da conta real.
+Triagem inicial concluída e backlog registrado na seção 21 do plano. Nenhuma correção de sessão implementada nesta etapa; a causa do relato ainda precisa ser reproduzida.
 
 ## Próximas tarefas
 
-1. Reiniciar npm run dev para carregar API/configuração atualizada.
-2. Entrar com Google real, importar o exemplo, salvar, recarregar, abrir pelo histórico e conferir preferências.
-3. Registrar o aceite manual, incluindo sessão persistente e logout.
-4. Conferir planilhas reais dos equipamentos.
-5. Publicar na Vercel somente após autorização; configurar as variáveis de servidor no ambiente escolhido.
+1. Reproduzir o cenário relatado: login com servidor dev parado e reconexão após reiniciar; distinguir recarga visual de logout real.
+2. Implementar proteção para trabalho não salvo e separar banco de desenvolvimento/produção.
+3. Diferenciar carregamento de página, recuperação de sessão e falha temporária de conexão; permitir nova tentativa do perfil.
+4. Adicionar busca e filtros paginados ao histórico, preservando isolamento por UID.
+5. Validar Google real → importar → salvar → recarregar → reabrir, persistência da sessão e logout; conferir arquivos reais dos equipamentos.
+6. Publicar na Vercel somente após autorização; configurar as variáveis de servidor no ambiente escolhido.
 
 ## Decisões técnicas
 
@@ -65,7 +67,8 @@ Nenhuma implementação local pendente. Aceite manual Google real → API → Ne
 - Aceite manual completo com conta Google real ainda não registrado. Testes criptográficos e de interface não o substituem.
 - Sem arquivos reais de equipamentos; fixtures são sintéticas.
 - Roteamento Vercel preparado e API local testada; publicação real ainda não executada.
-- Sem erros conhecidos nos fluxos automatizados e na integração real Neon.
+- Relato de oscilação visual ao recuperar a conta depois de reiniciar o Vite durante login. Logout real não confirmado; cenário ainda não reproduzido e não coberto pelos testes atuais de navegador com sessão sintética.
+- Ausência de aviso ao recarregar/fechar com trabalho não salvo e reutilização de “Recuperando sua sessão…” no carregamento de rotas registradas no backlog.
 
 ## Validações
 
@@ -284,3 +287,12 @@ Próxima ação:
 - README documenta banco novo, baseline da versão anterior, comandos oficiais Prisma e criação de migrações em banco de desenvolvimento.
 - Implementação registrada no commit 4eb1644; documentação consolidada em commit separado.
 - Aceite Google real continua manual. Nenhum deploy ou push realizado.
+
+### 2026-11-23 — Backlog de estabilidade registrado
+
+- Usuário solicitou registrar pendências e relatou oscilação da conta na interface. Esclareceu que fazia login com servidor dev parado e que o comportamento surgiu após reiniciá-lo.
+- Hipótese a verificar: reconexão/recarga do Vite seguida de restauração da sessão Firebase. Não há evidência suficiente para afirmar logout real ou falha em produção.
+- Revisão estática encontrou a mesma mensagem de recuperação de sessão no fallback das páginas; confirmou que trabalho não salvo fica apenas em memória e não há proteção antes de recarregar/fechar a aba.
+- Seção 21 do plano adicionada com prioridades, tarefas e critérios de aceite para sessão, proteção do trabalho, separação de ambientes, carregamento/rede e busca no histórico.
+- Mudança somente documental. Não foram executados novos testes nem alterados autenticação, banco ou variáveis de ambiente; resultados anteriores permanecem como histórico, sem validar o relato novo.
+- Próxima ação: reproduzir o reinício do servidor dev durante login e identificar a causa antes de corrigir.

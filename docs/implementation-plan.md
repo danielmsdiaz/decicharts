@@ -726,3 +726,54 @@ Solicitada pelo usuário: substituir SQL direto como camada principal por Prisma
 SQL parametrizado pontual é permitido para travas de linha, que o Prisma não oferece na API tipada; consultas e validações de domínio devem usar os modelos do Prisma.
 
 Validações: baseline registrada sem alterar fingerprints dos dados existentes; migrate deploy/status sem pendências e migrate diff sem diferenças; 56 testes unitários, integração Prisma no Neon com concorrência e 5.001 pontos e 10 cenários Chrome aprovados. Tipagem/build e lint aprovados; auditoria com zero vulnerabilidades. Bundle frontend sem Client, adaptador, conexão Neon ou fixtures. Dados originais novamente conferidos após a integração.
+
+## 21. Pendências de estabilidade e próximos incrementos — 2026-11-23
+
+Solicitação do usuário: registrar o que ainda falta desenvolver. Os itens abaixo são backlog; não representam funcionalidades implementadas ou correções já verificadas.
+
+### Prioridade 1 — Sessão após reinício do servidor de desenvolvimento
+
+Relato: o usuário estava fazendo login com o servidor de desenvolvimento parado; após reiniciá-lo, a interface oscilou como se saísse e entrasse na conta. O próprio usuário suspeita de efeito apenas visual. Esse relato não confirma logout real nem problema em produção.
+
+- [ ] Reproduzir login com servidor indisponível e reinício do Vite; observar reconexão, recarga completa, restauração da sessão Firebase e redirecionamentos.
+- [ ] Distinguir recarga da página, carregamento de rota e mudança efetiva da sessão; investigar também retomada da aba e rede lenta. Coletar somente eventos técnicos necessários, sem tokens, credenciais ou dados pessoais.
+- [ ] Corrigir os problemas que forem reproduzidos e adicionar testes de regressão para a causa identificada.
+- [ ] Validar com Google real a persistência da conta após reinício/recarga e comparar com execução fora do servidor de desenvolvimento.
+
+Evidência da revisão: `AuthProvider` aguarda o observador Firebase para restaurar a sessão; `signOut` é chamado na ação de logout. Não foi reproduzida uma desconexão automática. Os testes de navegador existentes usam uma sessão sintética e não validam reconexão do Vite com login Google real.
+
+Aceite: em uma sessão ainda válida, a interface aguarda a restauração sem exibir login prematuramente; uma recarga não exige novo popup Google; logout explícito continua funcionando. Não se deve manter acesso autenticado quando o Firebase confirmar o encerramento da sessão. Recarga completa ainda descarta trabalho não salvo conforme a arquitetura atual.
+
+### Prioridade 1 — Proteção do trabalho não salvo
+
+- [ ] Avisar antes de recarregar/fechar a aba quando houver análise ou alterações ainda não salvas, usando os mecanismos permitidos pelo navegador.
+- [ ] Confirmar saída voluntária da conta quando houver trabalho não salvo e permitir cancelar.
+- [ ] Cobrir arquivo recém-importado, alteração de título/período, análise já salva e salvamento em andamento.
+
+Aceite: oferecer proteção nas ações suportadas pelo navegador sem impedir saída após salvar; cancelamento conserva o gráfico. Não prometer proteção contra queda do processo ou recarga forçada pelo servidor. Persistência local automática fica para decisão futura; não enviar dados ao Neon sem ação de salvar.
+
+### Prioridade 1 — Separar desenvolvimento e produção
+
+- [ ] Configurar um branch/banco Neon de desenvolvimento e documentar qual conexão pertence a cada ambiente.
+- [ ] Usar o ambiente de desenvolvimento para `db:migrate:dev`, testes e dados sintéticos; reservar `db:migrate` para aplicar migrações revisadas em produção.
+- [ ] Conferir que conexão da aplicação e conexão direta das migrações apontam para o mesmo branch em cada ambiente.
+
+Aceite: mudanças e testes locais não alteram os dados de produção; configuração documentada sem expor URLs ou senhas. Nenhum branch ou recurso de nuvem foi criado nesta etapa.
+
+### Prioridade 2 — Mensagens de carregamento e falhas de conexão
+
+- [ ] Separar a mensagem de recuperação da sessão da mensagem de carregamento das páginas. Hoje os fallbacks de `Suspense` das rotas reutilizam `SessionLoading`.
+- [ ] Diferenciar falha de rede/API de sessão efetivamente inválida, incluindo falha de rede ao obter um token, sem induzir novo login desnecessário.
+- [ ] Oferecer nova tentativa de carregar o perfil após uma falha temporária, preservando a análise aberta e a conta autenticada enquanto forem válidas.
+
+Aceite: abrir Perfil/Minhas análises não informa que o usuário está entrando novamente; falhas temporárias apresentam recuperação clara e não apagam o trabalho em memória. Expiração/revogação real continua sendo tratada como autenticação necessária.
+
+### Prioridade 2 — Encontrar análises no histórico
+
+- [ ] Adicionar busca por nome da análise/arquivo e filtro por período das medições, com consultas paginadas na API.
+- [ ] Manter filtros ao carregar mais resultados, com ordenação estável, estado vazio e opção de limpar a busca.
+- [ ] Verificar isolamento por UID também nas consultas filtradas e nos totais.
+
+Aceite: localizar análises além da primeira página sem carregar todos os pontos; nenhum resultado de outra conta é exibido.
+
+Continuam pendentes os aceites anteriores: fluxo completo Google real → API → Neon e compatibilidade com arquivos reais dos equipamentos. Publicação permanece dependente de autorização explícita.
