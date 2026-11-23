@@ -71,6 +71,12 @@ export function FileImport({ onImport, hasDataset }: { onImport: (dataset: Measu
   const headers = sheet?.rows[mapping?.headerRow ?? 0] ?? []
   const columnOptions = headers.map((header, index) => <option key={index} value={index}>{index + 1}. {String(header ?? '').trim().slice(0, 80) || 'Sem título'}</option>)
 
+  if (hasDataset && !source && !busy) return <section className={`panel p-5 ${dragging ? 'border-primary bg-accent' : ''}`} aria-labelledby="import-title" onDragOver={event => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={drop}>
+    <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 id="import-title" className="font-semibold">Importar outra medição</h2><p className="mt-1 text-sm text-muted-foreground">Arraste outro Excel ou CSV aqui · Até 20 MiB e 250 mil registros</p></div><Button variant="outline" onClick={() => input.current?.click()}><FileSpreadsheet />Selecionar arquivo</Button></div>
+    <input ref={input} type="file" accept=".csv,.xlsx,.xls" aria-label="Arquivo de medições" className="sr-only" onChange={event => { const file = event.target.files?.[0]; if (file) void read(file); event.target.value = '' }} />
+    {status && <p className="sr-only" role="status">{status}</p>}{error && <p className="notice error mt-4" role="alert">{error}</p>}
+  </section>
+
   return <section className="panel p-5 sm:p-7" aria-labelledby="import-title" aria-busy={busy}>
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h2 id="import-title" className="text-lg font-semibold">{hasDataset ? 'Importar outra medição' : 'Comece pelo seu arquivo'}</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Excel ou CSV, até 20 MiB e 250 mil registros. O arquivo permanece neste navegador.</p></div>{(source || busy) && <Button variant="ghost" size="sm" onClick={cancel}><X />Cancelar importação</Button>}</div>
     <div className={`rounded-lg border border-dashed px-5 py-7 text-center transition-colors ${dragging ? 'border-primary bg-accent' : 'border-input'}`} onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={drop}>

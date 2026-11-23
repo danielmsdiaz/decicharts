@@ -303,14 +303,14 @@ project/
 
 ### Fase 4 — Gráficos
 
-- [ ] Integrar Apache ECharts.
-- [ ] Criar gráfico temporal.
-- [ ] Implementar tooltip.
-- [ ] Implementar zoom.
-- [ ] Adicionar filtros temporais.
-- [ ] Exibir indicadores.
-- [ ] Implementar exportação PNG/SVG.
-- [ ] Testar fluxo completo de importação e visualização.
+- [x] Integrar Apache ECharts.
+- [x] Criar gráfico temporal.
+- [x] Implementar tooltip.
+- [x] Implementar zoom.
+- [x] Adicionar filtros temporais.
+- [x] Exibir indicadores.
+- [x] Implementar exportação PNG/SVG.
+- [x] Testar fluxo completo de importação e visualização.
 
 **Critério de conclusão:** importar dados, visualizá-los e exportar corretamente o gráfico.
 
@@ -644,3 +644,7 @@ Em 2026-11-23, o usuário autorizou commits por parte implementada. Deploy conti
 ### Validação da autenticação
 
 Código e testes locais implementados. Login, persistência e logout com Google real continuam bloqueados por configuração externa. Checklists de implementação não representam validação externa concluída.
+
+### Exportação de intervalo com um único instante
+
+Quando início e fim são iguais, o eixo exportado usa apenas uma margem gráfica de ±1 ms e identifica somente o instante real. Essa margem impede a expansão automática do ECharts para vários dias; não cria, altera ou agrega medições.

@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-- Fase atual: 4 — Gráficos
+- Fase atual: 5 — Testes e finalização
 - Status: Em andamento
 - Última atualização: 2026-11-23
 
@@ -13,8 +13,8 @@
 | 1. Setup | Concluído |
 | 2. Autenticação | Bloqueado |
 | 3. Importação | Concluído |
-| 4. Gráficos | Em andamento |
-| 5. Finalização | Pendente |
+| 4. Gráficos | Concluído |
+| 5. Finalização | Em andamento |
 
 ## Trabalho concluído
 
@@ -97,3 +97,25 @@ Próxima ação:
 - Limite adicional de 250.100 linhas físicas por aba Excel documentado; leituras truncadas são rejeitadas.
 - Commit de setup e autenticação: 06c0999.
 - Próxima ação: concluir o commit de importação e integrar o workspace de gráficos.
+
+### 2026-11-23 — Validação integrada e revisão visual
+
+- 37 testes unitários e 4 cenários Chrome aprovados; lint e build aprovados.
+- PNG real validado em 3200×1800 e SVG validado com título, unidade e intervalo.
+- Capacidade: 250 mil registros em aproximadamente 5,1 segundos nesta execução, incluindo interações de teste.
+- Detector visual: nenhum achado. Capturas desktop, mobile, escuro e login inspecionadas.
+- Revisão encontrou expansão inadequada do eixo na exportação de um único instante; corrigida com margem de layout de 1 ms, sem inserir dados, e teste de regressão acrescentado.
+- Área de upload fica compacta após importar, para dar prioridade ao gráfico.
+- Nova validação dessas duas correções em andamento.
+- Sem alterações de layout adicionais previstas.
+
+### 2026-11-23 — Gráficos e exportação concluídos
+
+- 38 testes unitários aprovados, incluindo regressão do intervalo com instante único.
+- 4 testes Chrome aprovados após as correções: acesso real protegido, fluxo completo, mobile e capacidade.
+- PNG 3200×1800 e SVG conferidos; zoom e filtros preservam duplicados e limites inclusivos.
+- Build e lint aprovados; divisão de bundles removeu os avisos de tamanho.
+- 250 mil registros processados e exibidos em aproximadamente 5,4 segundos na última execução.
+- Capturas finais confirmadas sem nova rodada de mudanças visuais.
+- Commit de importação: 3c5b72f.
+- Próxima ação: consolidar testes de navegador e documentação final.
