@@ -1,0 +1,57 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color-scheme: light;
+  --background: #f7f8fa;
+  --foreground: #172b36;
+  --card: #ffffff;
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --muted-foreground: #556571;
+  --accent: #e9eff1;
+  --input: #c9d2d9;
+  --border: #dde3e7;
+  --ring: #0f766e;
+}
+.dark {
+  color-scheme: dark;
+  --background: #10191f;
+  --foreground: #edf2f5;
+  --card: #17232b;
+  --primary: #5ee0cc;
+  --primary-foreground: #102922;
+  --muted-foreground: #afbdc6;
+  --accent: #263740;
+  --input: #4c606b;
+  --border: #30424d;
+  --ring: #5ee0cc;
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+}
+* { box-sizing: border-box; border-color: var(--border); }
+body { margin: 0; min-width: 320px; background: var(--background); color: var(--foreground); font-size: 1rem; }
+button, select, summary { cursor: pointer; }
+button:disabled, select:disabled { cursor: not-allowed; }
+::selection { background: #b5e9de; color: #102922; }
+input { caret-color: var(--primary); }
+a { text-underline-offset: 4px; }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+.field { display: grid; gap: .5rem; font-size: .875rem; font-weight: 500; }
+.panel { border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.notice { border: 1px solid var(--border); border-radius: 8px; padding: .85rem 1rem; font-size: .875rem; line-height: 1.6; }
+.error { color: #a32424; background: #fff0ef; border-color: #f3b4b0; }
+.dark .error { color: #ffb9b3; background: #3b2427; border-color: #7d4043; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation: none !important; } }

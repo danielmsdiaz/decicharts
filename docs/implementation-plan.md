@@ -263,27 +263,27 @@ project/
 
 ### Fase 1 — Setup e estrutura
 
-- [ ] Inicializar React + Vite + TypeScript.
-- [ ] Configurar Tailwind CSS.
-- [ ] Configurar shadcn/ui.
-- [ ] Configurar ESLint e TypeScript strict.
-- [ ] Criar estrutura de diretórios.
-- [ ] Configurar React Router.
-- [ ] Implementar layout inicial.
-- [ ] Configurar light/dark mode.
+- [x] Inicializar React + Vite + TypeScript.
+- [x] Configurar Tailwind CSS.
+- [x] Configurar shadcn/ui.
+- [x] Configurar ESLint e TypeScript strict.
+- [x] Criar estrutura de diretórios.
+- [x] Configurar React Router.
+- [x] Implementar layout inicial.
+- [x] Configurar light/dark mode.
 
 **Critério de conclusão:** aplicação inicial executando e build sem erros.
 
 ### Fase 2 — Autenticação
 
-- [ ] Configurar Firebase Authentication.
-- [ ] Criar página de login.
-- [ ] Implementar login Google.
-- [ ] Implementar persistência de sessão.
-- [ ] Criar `ProtectedRoute`.
-- [ ] Implementar logout.
-- [ ] Tratar erros de autenticação.
-- [ ] Documentar configuração do Firebase.
+- [x] Configurar Firebase Authentication.
+- [x] Criar página de login.
+- [x] Implementar login Google.
+- [x] Implementar persistência de sessão.
+- [x] Criar `ProtectedRoute`.
+- [x] Implementar logout.
+- [x] Tratar erros de autenticação.
+- [x] Documentar configuração do Firebase.
 
 **Critério de conclusão:** fluxo de autenticação implementado e validado quando houver configuração real disponível.
 
@@ -640,3 +640,7 @@ Priorize uma aplicação simples, moderna, confiável e bem estruturada.
 ### Autorização posterior
 
 Em 2026-11-23, o usuário autorizou commits por parte implementada. Deploy continua sem autorização.
+
+### Validação da autenticação
+
+Código e testes locais implementados. Login, persistência e logout com Google real continuam bloqueados por configuração externa. Checklists de implementação não representam validação externa concluída.

@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-- Fase atual: 3 — Importação
+- Fase atual: 4 — Gráficos
 - Status: Em andamento
 - Última atualização: 2026-11-23
 
@@ -10,10 +10,10 @@
 
 | Fase | Status |
 |------|--------|
-| 1. Setup | Em andamento |
-| 2. Autenticação | Em andamento |
+| 1. Setup | Concluído |
+| 2. Autenticação | Bloqueado |
 | 3. Importação | Em andamento |
-| 4. Gráficos | Pendente |
+| 4. Gráficos | Em andamento |
 | 5. Finalização | Pendente |
 
 ## Trabalho concluído
@@ -70,3 +70,22 @@ Próxima ação:
 
 - Usuário autorizou commits incrementais por parte.
 - Atualização de Vitest e override compatível de gRPC em andamento para resolver a auditoria inicial.
+
+### 2026-11-23 — Fase 4 e primeiras validações
+
+- Interface completa de importação, prévia, diagnóstico e substituição implementada.
+- Gráfico ECharts, intervalo compartilhado, indicadores, PNG e SVG implementados.
+- Primeiro build de produção aprovado.
+- Primeiro lint identificou conflito entre ECharts.use e a regra de hooks; corrigido com alias explícito.
+- Auditoria após atualização de Vitest e gRPC: zero vulnerabilidades reportadas.
+- Testes unitários e validação no navegador em andamento.
+- Commit inicial da documentação: a8e2730.
+
+### 2026-11-23 — Estrutura e autenticação
+
+- Setup validado: build e lint aprovados.
+- Testes de acesso e provedor Firebase executados; resultados registrados após execução.
+- Código de autenticação implementado; validação Google real bloqueada sem configuração.
+- Checklists distinguem implementação de validação externa.
+- Primeira execução no Chrome: rota real protegida, mobile e 250 mil registros aprovados; fluxo completo interrompido na leitura e sob investigação.
+- Capacidade: 250 mil registros carregados e renderizados em aproximadamente 6 segundos nesta máquina, incluindo interações do teste.
