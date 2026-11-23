@@ -1,6 +1,6 @@
 # Decicharts
 
-Importe medições acústicas, confira os dados e exporte gráficos para relatórios ambientais. CSV e Excel são processados localmente em Web Worker; medições não são enviadas ao Firebase ou a outro servidor.
+Importe medições acústicas, confira os dados e exporte gráficos para relatórios ambientais. CSV e Excel são lidos localmente em Web Worker. O salvamento opcional guarda as medições normalizadas no PostgreSQL Neon, vinculadas à sua conta Google.
 
 ## Executar
 
@@ -9,7 +9,8 @@ Requisitos: Node.js **22.12+** e npm.
 ```bash
 npm ci
 cp .env.example .env.local
-# Preencha .env.local com a configuração Firebase do seu projeto.
+# Preencha Firebase e DATABASE_URL do Neon. Preserve .env.local se já existir.
+npm run db:migrate
 npm run dev
 ```
 
@@ -46,6 +47,29 @@ A escolha de aba só aparece para planilhas com várias abas. Quando uma coluna 
 
 No gráfico, o período e o título podem ser alterados em **Ajustar período e título**. PNG e SVG permanecem disponíveis na barra do gráfico. A consulta detalhada preserva primeira/última medição, tabela e diagnósticos.
 
+## Perfil e análises salvas
+
+- **Meu perfil:** nome/foto/e-mail do Google e preferências de fuso/unidade para novas importações. Alterar preferências não reinterpreta medições já abertas ou salvas.
+- **Salvar análise:** salva os pontos normalizados, metadados de importação, título e intervalo aplicado. **Salvar alterações** atualiza o título/período de uma análise existente.
+- **Minhas análises:** histórico paginado de sua conta, com Abrir e Excluir. Excluir remove os metadados e blocos de medições por cascata no banco.
+- **Fechar análise:** remove apenas a cópia do workspace; a versão salva continua no histórico.
+- O arquivo original Excel/CSV e as células originais dos diagnósticos não são enviados ao Neon. Guardamos somente os dados necessários para reabrir a análise, incluindo razões e números de linhas inválidas.
+
+## Neon e criação das tabelas
+
+1. Crie o projeto no Neon. Ele normalmente já contém um banco padrão; use a conexão mostrada em **Connect**.
+2. Preencha `DATABASE_URL` em `.env.local`. A variável é exclusiva do servidor: **não use prefixo VITE_** e não versione seu valor.
+3. Execute `npm run db:migrate`. Este é o gatilho explícito da criação das tabelas. Login, importação e build não executam migrações.
+4. Reinicie `npm run dev` depois de alterar variáveis.
+
+O comando aplica `db/migrations/*.sql` em transação e cria somente o schema **decicharts**, com `profiles`, `analyses`, `analysis_chunks` e `schema_migrations`. A versão inicial é idempotente: pode ser executada novamente sem apagar registros existentes. Tabelas fora desse schema não são alteradas.
+
+A API valida a assinatura RS256, emissor, audiência, expiração e provedor Google dos tokens Firebase usando as chaves públicas do Google. `FIREBASE_PROJECT_ID` é opcional; quando vazio, o servidor usa `VITE_FIREBASE_PROJECT_ID`. Não é necessário baixar uma chave privada de service account. O UID é extraído do token verificado e filtra todas as consultas.
+
+Séries são transferidas em blocos de até 5.000 pontos, com até três requisições simultâneas, evitando ultrapassar o limite de corpo das funções da Vercel. A API aceita até 512 KiB por requisição. Uma análise só aparece no histórico depois de conferir todos os blocos, sua ordem, duplicados e contagens. Repetir o salvamento após falha na mesma sessão usa o mesmo ID; não cria outra análise. Rascunhos incompletos com mais de 24 horas são removidos na próxima tentativa de salvar do mesmo usuário.
+
+Rotas da API: `GET/PUT /api/profile`, `GET/POST /api/analyses`, `GET/PATCH/DELETE /api/analyses/:id`, `GET/PUT /api/analyses/:id/chunks/:index`, `POST /api/analyses/:id/complete`. Campos de identidade enviados pelo cliente não determinam propriedade.
+
 ## Importação e precisão
 
 - Uma série, um arquivo, uma aba e uma coluna sonora por vez. A próxima importação só substitui a atual após confirmação.
@@ -55,14 +79,14 @@ No gráfico, o período e o título podem ser alterados em **Ajustar período e 
 - Confira aba, cabeçalho, colunas, formato de data, decimal, unidade e fuso antes de confirmar. Colunas ambíguas permanecem sem seleção automática.
 - Datas brasileiras, ISO, segundos/milissegundos e datas seriais Excel 1900/1904. Horários separados aceitam `HH:mm[:ss[.SSS]]` ou fração numérica Excel.
 - Para arquivos só com horários, informe uma data de referência. Todas as linhas usam essa data; não se deduz mudança de dia. Para vários dias, forneça datas nas linhas.
-- Fuso IANA selecionável, inicialmente `America/Recife`. Offsets ISO explícitos preservam o instante; os demais horários usam o fuso escolhido. Mudanças históricas são respeitadas. Horários ambíguos/inexistentes exigem correção ou offset explícito.
+- Fuso IANA selecionável, inicialmente `America/Recife` ou a preferência salva no perfil. Offsets ISO explícitos preservam o instante; os demais horários usam o fuso escolhido. Mudanças históricas são respeitadas. Horários ambíguos/inexistentes exigem correção ou offset explícito.
 - Valores usam o separador decimal escolhido, sem separador de milhar. Zero e negativos não são descartados automaticamente. Células numéricas Excel preservam seu valor.
-- Unidade inicial `dB`; informe outra identificação somente se corresponder ao arquivo. Não se infere ponderação acústica.
-- Linhas vazias são ignoradas; inválidas são contadas e diagnosticadas com a linha original, até 100 exemplos. A prévia mostra até 10 registros.
+- Unidade inicial `dB` ou a preferência salva no perfil; informe outra identificação somente se corresponder ao arquivo. Não se infere ponderação acústica.
+- Linhas vazias são ignoradas; inválidas são contadas e diagnosticadas com a linha original, até 100 exemplos. A prévia visível mostra até 5 registros.
 - Duplicados permanecem em ordem original no mesmo instante. A contagem informa ocorrências adicionais, não grupos.
 - Não há médias, cálculos normativos, interpolação, preenchimento de lacunas ou suavização. Segmentos retos unem os pontos existentes, sem criar medições.
 
-Medições ficam apenas na memória. Recarregar, sair ou fechar a aba remove o conjunto. Somente sessão Firebase e preferência de tema persistem no navegador.
+Medições não salvas ficam apenas na memória. Navegar entre Análise, Minhas análises e Meu perfil preserva o trabalho na sessão; recarregar ou sair limpa essa cópia local. As análises salvas podem ser reabertas pela sua conta. A preferência de tema permanece local; fuso/unidade preferidos ficam no Neon.
 
 ## Gráfico e exportação
 
@@ -79,21 +103,33 @@ npm run lint
 npm run build
 npm run preview
 npm run test:e2e
+npm run test:neon  # Integração opcional contra DATABASE_URL real
 ```
+
+`npm run dev` serve frontend e API local. `npm run preview` serve apenas o frontend estático e não substitui o servidor da API.
+
+O teste Neon é separado dos testes comuns: cria dois usuários sintéticos e 5.001 pontos, testa persistência/isolamento/exclusão e remove seus registros ao final. Requer migração aplicada e conexão de rede.
 
 Os testes Playwright usam Chrome em `/usr/bin/google-chrome`. Em outro ambiente, defina `CHROME_PATH` com o executável instalado. O runner inicia Vite em `127.0.0.1:4173` e encerra o servidor ao terminar. Resultados e screenshots ficam em `/tmp/decicharts-*`.
 
-A entrada autenticada `tests/browser/fixture.html` é exclusiva dos testes e não integra `dist`. A aplicação de produção continua exigindo Firebase. Os testes do provedor usam mocks apenas nos testes.
+A entrada autenticada `tests/browser/fixture.html` é exclusiva dos testes e não integra `dist`. A aplicação de produção continua exigindo Firebase. Os testes do provedor usam mocks apenas nos testes. Os fluxos de conta no navegador usam uma API simulada restrita ao token sintético da fixture; o teste Neon separado verifica o banco real. O login Google real até a API deve ser validado manualmente com uma conta real.
 
 As fixtures são sintéticas: compatibilidade com exportações específicas de equipamentos depende de arquivos reais. O teste de capacidade cobre 250 mil registros no navegador desktop; tempos dependem da máquina e não garantem desempenho equivalente em celulares.
 
 ## Estrutura
 
 ```text
+api/                         entrada serverless Vercel
+server/                      autenticação, validação e SQL
+shared/                      contratos entre frontend e API
+db/migrations/               migrações SQL versionadas
+scripts/                     aplicação explícita das migrações
 docs/                        escopo, checklists e progresso
 src/app/                     aplicação e rotas
 src/components/              layout e componentes shadcn/ui
 src/features/auth/           Google e proteção de rotas
+src/features/account/        perfil e preferências
+src/features/analyses/       workspace e histórico salvo
 src/features/file-import/    parsing, worker e prévia
 src/features/measurements/   modelos, intervalos e dashboard
 src/features/charts/         ECharts e exportação
@@ -106,8 +142,8 @@ Leia `docs/implementation-plan.md` e `docs/progress.md` antes de continuar o des
 
 ## Vercel e dependências
 
-Build estático: `npm run build`, saída `dist`, fallback SPA em `vercel.json`. Configure as mesmas variáveis no ambiente de build da Vercel e autorize o domínio no Firebase. Variáveis Vite são incorporadas no build; alterações exigem novo build. **Nenhum deploy foi realizado.** Publicação depende de autorização explícita.
+Frontend: `npm run build`, saída `dist`. A Vercel também executa a função Node em `api/[...path].ts`; o roteamento preserva arquivos/API antes do fallback SPA. Configure as variáveis Firebase e `DATABASE_URL` nos ambientes correspondentes da Vercel, aplique a migração ao banco escolhido e autorize o domínio no Firebase. Variáveis Vite são incorporadas no build; alterações exigem novo build. **Nenhum deploy foi realizado.** Publicação depende de autorização explícita.
 
 SheetJS usa a distribuição oficial mantida `xlsx@0.20.3` em `cdn.sheetjs.com`. O lockfile registra versões instaladas. Um override compatível de `@grpc/grpc-js` corrige advisories na árvore transitiva Firebase; Firestore não é importado pelo aplicativo.
 
-Não há backend, banco de dados, armazenamento de arquivos, geração de laudos ou cálculos normativos.
+A API é serverless; o banco é PostgreSQL Neon. Não há armazenamento dos arquivos originais, geração de laudos ou cálculos normativos. Custos e retenção de backups dependem do plano Neon contratado.

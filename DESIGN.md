@@ -38,3 +38,12 @@ Ferramenta de trabalho calma, legível e direta. Um arquivo visível, uma ação
 - Inspeção conjunta em desktop 1440px, mobile 390px e tema escuro; confirmação final sem nova rodada de mudanças visuais.
 - Capturas com transições desabilitadas para evitar estados intermediários de troca de tema.
 - Detector mecânico sem achados. Testes cobrem leitura automática, campos condicionais, abas, cancelamento, troca, remoção e exportação.
+
+## Conta e histórico — 2026-11-23
+
+- Navegação autenticada por Análise, Minhas análises e Meu perfil, mantendo o tema do layout.
+- Workspace preservado ao navegar entre essas rotas; perfil exibe dados Google e dois campos de preferências.
+- Salvar análise é ação primária no gráfico; estado salvo/alterações pendentes explícito.
+- Histórico paginado com Abrir e Excluir; excluir requer confirmação e não se confunde com Fechar análise do workspace.
+- Leituras, erros, repetição após falha e progresso de envio recebem feedback em português.
+- Inspeção desktop/mobile das telas de conta e histórico concluída; sistema visual existente preservado.

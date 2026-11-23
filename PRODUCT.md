@@ -6,7 +6,7 @@
 web
 
 ## Stack
-React + Vite + TypeScript, Tailwind, shadcn/ui, ECharts, Firebase Auth. Hospedagem prevista: Vercel.
+React + Vite + TypeScript, Tailwind, shadcn/ui, ECharts, Firebase Auth. API Node serverless e PostgreSQL Neon. Hospedagem prevista: Vercel.
 
 ## Users
 Engenheiro que prepara relatórios ambientais a partir de medições de decibelímetros.
@@ -18,13 +18,13 @@ Importar, conferir, visualizar e exportar medições acústicas sem enviar arqui
 Uso desktop, uma série por vez, até 20 MiB e 250 mil registros. Horários e valores precisam ser verificáveis.
 
 ## Capabilities and Constraints
-Google exclusivamente; CSV/XLS/XLSX; fuso selecionável; preservar duplicados; PNG/SVG. Sem backend, banco ou cálculos normativos. Escopo completo em docs/implementation-plan.md.
+Google exclusivamente; CSV/XLS/XLSX; fuso selecionável; preservar duplicados; PNG/SVG. Perfil e preferências no Neon; salvar/reabrir/excluir análises normalizadas por ação explícita. Sem armazenamento de planilhas originais ou cálculos normativos. Escopo completo em docs/implementation-plan.md.
 
 ## Brand Commitments
 Decicharts. Interface profissional e minimalista em português; temas claro/escuro. Construção diretamente em código aprovada.
 
 ## Evidence on Hand
-Sem planilhas reais ou configuração Firebase fornecidas. Não fabricar validações.
+Sem planilhas reais de equipamentos. Usuário configurou Firebase e Neon; migração e integração real do banco verificadas. Testes de navegador usam identidade sintética; aceite com Google real permanece manual.
 
 ## Product Principles
 Precisão antes de conveniência. Processamento local. Diagnósticos explícitos. Gráfico como foco do trabalho.
@@ -32,3 +32,7 @@ Precisão antes de conveniência. Processamento local. Diagnósticos explícitos
 ## Preferências de usabilidade confirmadas — 2026-11-23
 
 O usuário pediu menos campos e linguagem simples. A importação deve reconhecer o arquivo, mostrar seu estado, gerar prévia automaticamente e oferecer uma ação clara para gerar o gráfico. Campos técnicos ficam sob demanda; cancelamento tem destaque. Não exibir “Seu próximo gráfico começa aqui”.
+
+## Persistência aprovada — 2026-11-23
+
+Neon escolhido pelo usuário. API verifica tokens Firebase, isola os dados por UID e salva medições em blocos de até 5 mil pontos. A conta oferece perfil, preferências e histórico. O usuário confirma salvar e excluir; leitura e gráficos continuam no navegador. Migração explícita com npm run db:migrate.
