@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-- Fase atual: 6 — Perfil e persistência Neon
+- Fase atual: 7 — Adoção do Prisma
 - Status: Concluído
 - Última atualização: 2026-11-23
 - Implementação e validações locais/Neon concluídas. Aceite manual com Google real e eventual deploy permanecem pendentes.
@@ -17,6 +17,7 @@
 | 4. Gráficos | Concluído |
 | 5. Finalização | Concluído |
 | 6. Perfil e Neon | Concluído |
+| 7. Adoção do Prisma | Concluído |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -25,7 +26,7 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 - MVP React/Vite/TypeScript, autenticação Google, importação CSV/Excel em worker, gráfico, filtros e PNG/SVG.
 - Interface simplificada: prévia automática, campos condicionais, arquivo ativo visível e cancelamento destacado.
 - API Node autenticada e PostgreSQL Neon, mantendo segredos somente no servidor.
-- Migração explícita e idempotente: schema decicharts com profiles, analyses, analysis_chunks e schema_migrations. Aplicada e reexecutada no Neon real.
+- Prisma ORM 7 com adaptador Neon, modelos tipados e Prisma Migrate; baseline do schema decicharts registrada sem alterar dados existentes. Histórico legado preservado.
 - Perfil Google e preferências persistentes de fuso/unidade para novas importações.
 - Salvar/reabrir/atualizar/excluir análises, com título, intervalo e todos os pontos preservados.
 - Blocos de 5 mil pontos, publicação após validação completa, tentativas idempotentes na sessão e isolamento por UID.
@@ -54,6 +55,8 @@ Nenhuma implementação local pendente. Aceite manual Google real → API → Ne
 - Análises incompletas permanecem ocultas; rascunhos antigos são limpos na próxima tentativa de salvar do mesmo usuário.
 - Exclusão usa cascata no PostgreSQL. Fechar análise limpa somente a sessão.
 - Migração executada manualmente com npm run db:migrate; login e build não criam tabelas.
+- Prisma Client gerado na instalação/build, exclusivamente no servidor; Prisma Migrate substitui o executor SQL manual. CLI usa conexão direta e a aplicação usa DATABASE_URL.
+- Modelos mapeiam tabelas existentes. Trava de linha parametrizada protege transações concorrentes de gravação/publicação; demais consultas da aplicação usam modelos Prisma.
 - Sem novos cálculos normativos, interpolação, sampling ou suavização.
 - Nenhum deploy ou push realizado nesta etapa.
 
@@ -69,14 +72,14 @@ Nenhuma implementação local pendente. Aceite manual Google real → API → Ne
 | Verificação | Resultado |
 |-------------|-----------|
 | Vitest padrão | 56 aprovados; integração real separada fica ignorada por padrão |
-| Neon real | 1 teste aprovado, 5.001 pontos e dois usuários sintéticos; cleanup concluído |
+| Neon real com Prisma | 1 teste aprovado, 5.001 pontos e dois usuários sintéticos; concorrência e cleanup verificados |
 | Chrome/Playwright | 10 cenários aprovados |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
-| Migração | Aplicada e reexecutada; quatro tabelas confirmadas no schema decicharts |
+| Migração Prisma | Baseline aplicada; deploy/status sem pendências; diff sem diferenças; fingerprints dos dados preservados |
 | Isolamento/exclusão | Outro UID não lê/altera/exclui dados; cascata verificada |
-| Bundle frontend | Conexão Neon, driver e fixtures ausentes |
+| Bundle frontend | Conexão Neon, Prisma Client, adaptador/driver e fixtures ausentes |
 | Inspeção visual | Desktop/mobile do perfil e histórico aprovados; detector sem achados |
 | Google real até API | Aceite manual pendente |
 
@@ -252,3 +255,32 @@ Próxima ação:
 - Endpoint público de chaves RS256 do Google conferido; testes de assinatura usam chaves locais de teste, sem token real do usuário.
 - Cálculos puros separados da formatação temporal para manter bibliotecas de datas fora do carregamento inicial.
 - Próxima ação: reiniciar aplicação e validar o fluxo real com a conta Google do usuário.
+
+### 2026-11-23 — Início da adoção do Prisma
+
+- Pedido explícito para usar Prisma ORM.
+- Estado inicial limpo; banco Neon já possui tabelas e pode conter dados reais.
+- Transição será por baseline e verificação de compatibilidade, preservando registros.
+- Prisma 7 estável escolhido para evitar a versão 8 ainda em release candidate na documentação consultada.
+- Em andamento: schema, Client, adaptador e migrações.
+
+### 2026-11-23 — Baseline Prisma registrada
+
+- Prisma Client/CLI/adaptador Neon 7.10.1 instalados; Effect transitivo corrigido com override compatível 3.22.5.
+- Modelos Prisma mapeiam tabelas/colunas e relações existentes no schema decicharts.
+- Baseline 0001_initial comparada ao banco e marcada como aplicada, sem executar DDL sobre tabelas existentes.
+- Contagens e fingerprints antes/depois iguais: uma análise, um bloco, um perfil e um registro do histórico legado preservados.
+- Primeira integração Prisma real aprovada com 5.001 pontos; 56 testes unitários aprovados.
+- Executor SQL antigo removido; comandos de migração agora chamam Prisma Migrate.
+- Em andamento: confirmação de concorrência, migrações pendentes, build e regressão no navegador.
+
+### 2026-11-23 — Adoção do Prisma concluída
+
+- Repositório migrado para Prisma, com transações e trava parametrizada para proteger início, blocos e publicação concorrentes. API e contratos frontend mantidos.
+- Baseline preservou um perfil, uma análise, um bloco e o registro legado; fingerprints novamente conferidos após os testes, sem alteração dos dados originais ou resíduos sintéticos.
+- Prisma Migrate confirmou histórico atualizado, nenhuma migração pendente e nenhuma diferença entre banco e modelos.
+- 56 testes unitários, integração real com concorrência e 5.001 pontos e 10 cenários Chrome aprovados. TypeScript/build e ESLint aprovados; npm audit sem vulnerabilidades.
+- Bundle frontend inspecionado: sem conexão Neon, Prisma Client, adaptador ou fixtures. Client gerado na instalação/build e ignorado pelo Git.
+- README documenta banco novo, baseline da versão anterior, comandos oficiais Prisma e criação de migrações em banco de desenvolvimento.
+- Implementação registrada no commit 4eb1644; documentação consolidada em commit separado.
+- Aceite Google real continua manual. Nenhum deploy ou push realizado.

@@ -55,14 +55,32 @@ No gráfico, o período e o título podem ser alterados em **Ajustar período e 
 - **Fechar análise:** remove apenas a cópia do workspace; a versão salva continua no histórico.
 - O arquivo original Excel/CSV e as células originais dos diagnósticos não são enviados ao Neon. Guardamos somente os dados necessários para reabrir a análise, incluindo razões e números de linhas inválidas.
 
-## Neon e criação das tabelas
+## Neon, Prisma e criação das tabelas
 
 1. Crie o projeto no Neon. Ele normalmente já contém um banco padrão; use a conexão mostrada em **Connect**.
 2. Preencha `DATABASE_URL` em `.env.local`. A variável é exclusiva do servidor: **não use prefixo VITE_** e não versione seu valor.
-3. Execute `npm run db:migrate`. Este é o gatilho explícito da criação das tabelas. Login, importação e build não executam migrações.
+3. Em um **banco novo**, execute `npm run db:migrate`. Este é o gatilho explícito da criação das tabelas. Login, importação e build não executam migrações.
 4. Reinicie `npm run dev` depois de alterar variáveis.
 
-O comando aplica `db/migrations/*.sql` em transação e cria somente o schema **decicharts**, com `profiles`, `analyses`, `analysis_chunks` e `schema_migrations`. A versão inicial é idempotente: pode ser executada novamente sem apagar registros existentes. Tabelas fora desse schema não são alteradas.
+O projeto usa **Prisma ORM 7** com adaptador Neon. Os modelos estão em `prisma/schema.prisma`, as migrações SQL versionadas em `prisma/migrations/` e a configuração da CLI em `prisma.config.ts`. O comando `db:migrate` chama `prisma migrate deploy`: aplica somente migrações pendentes e pode ser repetido. A migração inicial cria o schema **decicharts**, com `profiles`, `analyses`, `analysis_chunks` e o histórico legado `schema_migrations`. O histórico atual é controlado por `_prisma_migrations` no mesmo schema.
+
+**Banco da versão anterior, com tabelas/dados existentes:** execute `npm run db:baseline` uma vez, antes de `db:migrate`. Esse comando compara os modelos ao banco, registra a migração inicial como já aplicada e confere contagens e fingerprints antes/depois, sem recriar tabelas. Isso **já foi realizado no Neon configurado durante esta implementação**; os dados existentes foram preservados. A baseline exige um banco compatível e não serve para inicializar um banco vazio.
+
+Comandos disponíveis:
+
+| Comando | Finalidade |
+|---------|------------|
+| `npm run db:generate` | Gerar o Prisma Client tipado a partir dos modelos |
+| `npm run db:migrate` | Aplicar migrações pendentes no banco configurado |
+| `npm run db:status` | Conferir o histórico de migrações |
+| `npm run db:check` | Comparar estrutura do banco e modelos, sem alterar dados |
+| `npm run db:studio` | Abrir o Prisma Studio para consultar e editar dados |
+
+O Client é gerado automaticamente na instalação e no build, em `server/generated/prisma/`, que não é versionado. **Gerar o Client não cria tabelas.** A aplicação usa `DATABASE_URL`; a CLI usa `DATABASE_URL_UNPOOLED` quando informada. Em Neon, quando a conexão direta não é informada, a CLI deriva o host direto removendo `-pooler` do host da conexão. As duas URLs devem apontar para o mesmo banco/branch.
+
+Para futuras alterações de estrutura, use um **banco ou branch Neon de desenvolvimento**: altere `prisma/schema.prisma`, execute `npm run db:migrate:dev -- --name nome_da_alteracao`, revise e versione o SQL gerado. O comando de desenvolvimento pode pedir reset ao detectar divergências; não o execute no banco que contém os dados do usuário. Em produção, aplique o SQL revisado com `npm run db:migrate`. Restrições PostgreSQL `CHECK` são mantidas no SQL das migrações, pois não são representadas pelos modelos Prisma.
+
+O repositório usa consultas tipadas do Prisma e transações para salvar/publicar blocos. A única consulta SQL da aplicação é uma trava de linha parametrizada (`SELECT ... FOR UPDATE`) para proteger gravações simultâneas. As verificações administrativas da baseline também usam SQL parametrizado.
 
 A API valida a assinatura RS256, emissor, audiência, expiração e provedor Google dos tokens Firebase usando as chaves públicas do Google. `FIREBASE_PROJECT_ID` é opcional; quando vazio, o servidor usa `VITE_FIREBASE_PROJECT_ID`. Não é necessário baixar uma chave privada de service account. O UID é extraído do token verificado e filtra todas as consultas.
 
@@ -120,10 +138,12 @@ As fixtures são sintéticas: compatibilidade com exportações específicas de 
 
 ```text
 api/                         entrada serverless Vercel
-server/                      autenticação, validação e SQL
+server/                      autenticação, validação e repositório Prisma
 shared/                      contratos entre frontend e API
-db/migrations/               migrações SQL versionadas
-scripts/                     aplicação explícita das migrações
+prisma/schema.prisma         modelos mapeados às tabelas do Neon
+prisma/migrations/           migrações SQL controladas pelo Prisma Migrate
+prisma.config.ts             configuração de migrações e conexão direta
+scripts/                     CLI Prisma e baseline do banco existente
 docs/                        escopo, checklists e progresso
 src/app/                     aplicação e rotas
 src/components/              layout e componentes shadcn/ui
@@ -144,6 +164,6 @@ Leia `docs/implementation-plan.md` e `docs/progress.md` antes de continuar o des
 
 Frontend: `npm run build`, saída `dist`. A Vercel também executa a função Node em `api/[...path].ts`; o roteamento preserva arquivos/API antes do fallback SPA. Configure as variáveis Firebase e `DATABASE_URL` nos ambientes correspondentes da Vercel, aplique a migração ao banco escolhido e autorize o domínio no Firebase. Variáveis Vite são incorporadas no build; alterações exigem novo build. **Nenhum deploy foi realizado.** Publicação depende de autorização explícita.
 
-SheetJS usa a distribuição oficial mantida `xlsx@0.20.3` em `cdn.sheetjs.com`. O lockfile registra versões instaladas. Um override compatível de `@grpc/grpc-js` corrige advisories na árvore transitiva Firebase; Firestore não é importado pelo aplicativo.
+SheetJS usa a distribuição oficial mantida `xlsx@0.20.3` em `cdn.sheetjs.com`. O lockfile registra versões instaladas. Overrides compatíveis de `@grpc/grpc-js` e `effect` corrigem advisories nas árvores transitivas Firebase e Prisma, respectivamente; Firestore não é importado pelo aplicativo.
 
 A API é serverless; o banco é PostgreSQL Neon. Não há armazenamento dos arquivos originais, geração de laudos ou cálculos normativos. Custos e retenção de backups dependem do plano Neon contratado.

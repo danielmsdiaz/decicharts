@@ -6,7 +6,7 @@
 web
 
 ## Stack
-React + Vite + TypeScript, Tailwind, shadcn/ui, ECharts, Firebase Auth. API Node serverless e PostgreSQL Neon. Hospedagem prevista: Vercel.
+React + Vite + TypeScript, Tailwind, shadcn/ui, ECharts, Firebase Auth. API Node serverless, Prisma ORM/Migrate e PostgreSQL Neon. Hospedagem prevista: Vercel.
 
 ## Users
 Engenheiro que prepara relatórios ambientais a partir de medições de decibelímetros.

@@ -709,3 +709,20 @@ Critérios de aceite: salvar/reabrir preserva todos os pontos e duplicados, tít
 - Build/tipagem/lint aprovados. Conexão Neon, driver de banco e fixtures ausentes do bundle frontend. Auditoria final sem vulnerabilidades.
 - [ ] Aceite manual de login Google real → API → salvar/reabrir com a conta do usuário. Não foi obtido nem utilizado um token real da conta durante os testes automatizados.
 - [ ] Deploy na Vercel, somente após autorização explícita.
+
+## 20. Adoção do Prisma — 2026-11-23
+
+Solicitada pelo usuário: substituir SQL direto como camada principal por Prisma ORM e Prisma Migrate. Preservar dados e tabelas existentes, UID, API e contratos frontend.
+
+- [x] Modelar as tabelas existentes com nomes/campos mapeados ao schema decicharts.
+- [x] Configurar Prisma Client e adaptador Neon, exclusivamente no servidor.
+- [x] Registrar uma baseline compatível com o banco existente, sem reset, drop ou recriação de dados.
+- [x] Prisma Migrate passa a controlar migrações pendentes; desativar o executor SQL manual.
+- [x] Migrar o repositório para consultas tipadas, mantendo publicação atômica e proteção contra concorrência nos blocos.
+- [x] Gerar Client na instalação/build; oferecer comandos de geração, migração e inspeção.
+- [x] Validar dados antes/depois, migrações sem mudanças pendentes, isolamento, reabertura, exclusão e testes existentes.
+- [x] Atualizar documentação e registrar commits por etapa.
+
+SQL parametrizado pontual é permitido para travas de linha, que o Prisma não oferece na API tipada; consultas e validações de domínio devem usar os modelos do Prisma.
+
+Validações: baseline registrada sem alterar fingerprints dos dados existentes; migrate deploy/status sem pendências e migrate diff sem diferenças; 56 testes unitários, integração Prisma no Neon com concorrência e 5.001 pontos e 10 cenários Chrome aprovados. Tipagem/build e lint aprovados; auditoria com zero vulnerabilidades. Bundle frontend sem Client, adaptador, conexão Neon ou fixtures. Dados originais novamente conferidos após a integração.
