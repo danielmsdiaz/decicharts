@@ -7,21 +7,23 @@ import type { MeasurementDataset, TimeRange } from '@/features/measurements/type
 import { formatTime, fullRange, parseFilter, selectMeasurements, summarize } from '@/features/measurements/range'
 import { TimeSeriesChart } from './TimeSeriesChart'
 import { exportChart } from './export'
+import { useWorkspace } from '@/features/analyses/workspace-context'
+import { Save, Check } from 'lucide-react'
 
 const number = (value: number) => value.toLocaleString('pt-BR', { maximumFractionDigits: 6 })
 export default function ChartWorkspace({ dataset, dark }: { dataset: MeasurementDataset; dark: boolean }) {
   const available = fullRange(dataset.measurements)!
-  const [range, setRange] = useState<TimeRange>(available)
-  const [title, setTitle] = useState('Série temporal de nível sonoro')
+  const workspace = useWorkspace()
+  const { range, title } = workspace.view!
   const localInput = (timestamp: number) => DateTime.fromMillis(timestamp, { zone: dataset.timezone }).toFormat("yyyy-MM-dd'T'HH:mm:ss.SSS")
-  const [startInput, setStartInput] = useState(() => localInput(available.start))
-  const [endInput, setEndInput] = useState(() => localInput(available.end))
+  const [startInput, setStartInput] = useState(() => localInput(range.start))
+  const [endInput, setEndInput] = useState(() => localInput(range.end))
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
   const [exporting, setExporting] = useState(false)
   const visible = useMemo(() => selectMeasurements(dataset.measurements, range), [dataset, range])
   const stats = useMemo(() => summarize(visible), [visible])
-  function updateRange(next: TimeRange) { setRange(next); setStartInput(localInput(next.start)); setEndInput(localInput(next.end)); setError(''); setFeedback('') }
+  function updateRange(next: TimeRange) { workspace.setView({ title, range: next }); setStartInput(localInput(next.start)); setEndInput(localInput(next.end)); setError(''); setFeedback('') }
   function apply() {
     try {
       const start = parseFilter(startInput, dataset.timezone), end = parseFilter(endInput, dataset.timezone)
@@ -45,7 +47,8 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
             {formatTime(range.start, dataset.timezone, 'dd/MM/yyyy HH:mm:ss')} — {formatTime(range.end, dataset.timezone, 'dd/MM/yyyy HH:mm:ss')}
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={workspace.saving || !workspace.dirty} onClick={() => void workspace.save()}>{workspace.saved && !workspace.dirty ? <Check /> : <Save />}{workspace.saving ? 'Salvando…' : workspace.saved && !workspace.dirty ? 'Análise salva' : workspace.saved ? 'Salvar alterações' : 'Salvar análise'}</Button>
           <Button variant="outline" disabled={!stats || exporting} onClick={() => void download('png')}><Download />PNG</Button>
           <Button variant="outline" disabled={!stats || exporting} onClick={() => void download('svg')}><Download />SVG</Button>
         </div>
@@ -55,7 +58,7 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
         <details className="disclosure chart-settings">
           <summary><SlidersHorizontal className="size-4" aria-hidden="true" />Ajustar período e título</summary>
           <div className="mt-5">
-            <label className="field max-w-xl">Título do gráfico<Input value={title} maxLength={100} onChange={event => setTitle(event.target.value)} /></label>
+            <label className="field max-w-xl">Título do gráfico<Input value={title} maxLength={100} onChange={event => workspace.setView({ range, title: event.target.value })} /></label>
             <form onSubmit={event => { event.preventDefault(); apply() }} className="mt-5 flex flex-wrap items-end gap-3">
               <label className="field min-w-0 flex-[1_1_240px]">Início<Input type="datetime-local" step="0.001" value={startInput} onChange={event => setStartInput(event.target.value)} /></label>
               <label className="field min-w-0 flex-[1_1_240px]">Fim<Input type="datetime-local" step="0.001" value={endInput} onChange={event => setEndInput(event.target.value)} /></label>
@@ -66,6 +69,9 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
           </div>
         </details>
         {error && <p role="alert" className="notice error mt-4">{error}</p>}
+        {workspace.saveError && <p role="alert" className="notice error mt-4">{workspace.saveError}</p>}
+        {workspace.saving && <p role="status" className="mt-4 text-sm text-muted-foreground">Salvando na sua conta: {workspace.progress.toLocaleString('pt-BR')} de {dataset.validRecords.toLocaleString('pt-BR')} medições…</p>}
+        {workspace.saved && !workspace.saving && <p role="status" className="mt-4 text-sm text-primary">{workspace.dirty ? 'Há alterações no título ou período ainda não salvas.' : 'Análise salva na sua conta. Você pode reabri-la em Minhas análises.'}</p>}
         {(feedback || exporting) && <p role="status" className="mt-4 text-sm text-muted-foreground">{exporting ? 'Preparando gráfico em alta resolução…' : feedback}</p>}
         <dl className="chart-stats">
           {[

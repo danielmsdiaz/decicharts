@@ -1,6 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import * as XLSX from 'xlsx'
+import { mockAccountApi } from './mock-api'
+
+test.beforeEach(async ({ page }) => { await mockAccountApi(page) })
 
 const csv = 'Data;Nível\n23/11/2026 12:00:00;50,5\n23/11/2026 12:00:01;65,4\n23/11/2026 12:00:01;70\n23/11/2026 12:00:09;55\ninválida;20\n'
 async function importCsv(page: Page, contents = csv) {
@@ -23,6 +26,7 @@ test('importação, duplicados, filtros, zoom, PNG/SVG, tema e logout', async ({
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/tests/browser/fixture.html')
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
   await importCsv(page)
   await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-redesign-chart-default.png', fullPage: true })
   const stats = page.locator('dl')
@@ -91,6 +95,7 @@ test('importação, duplicados, filtros, zoom, PNG/SVG, tema e logout', async ({
 test('layout mobile e erros de importação', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/tests/browser/fixture.html')
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
   await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'arquivo.txt', mimeType: 'text/plain', buffer: Buffer.from('teste') })
   await expect(page.getByRole('alert')).toContainText('Formato não suportado')
   await importCsv(page)
@@ -106,6 +111,7 @@ test('processa e representa 250 mil registros no navegador', async ({ page }) =>
   const start = Date.UTC(2026, 10, 23, 15)
   const rows = Array.from({ length: 250_000 }, (_, index) => `${new Date(start + index * 1000).toISOString()};${50 + index % 40}`)
   await page.goto('/tests/browser/fixture.html')
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
   const before = Date.now()
   await page.getByLabel('Arquivo de medições').setInputFiles({ name: '250mil.csv', mimeType: 'text/csv', buffer: Buffer.from('Timestamp;Nível\n' + rows.join('\n')) })
   // The main thread remains interactive while normalization runs in the worker.
@@ -126,6 +132,7 @@ test('processa e representa 250 mil registros no navegador', async ({ page }) =>
 
 test('arquivo carregado, leitura automática, cancelamento, troca e remoção', async ({ page }) => {
   await page.goto('/tests/browser/fixture.html')
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
   await expect(page.getByText('Seu próximo gráfico começa aqui')).toHaveCount(0)
   await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-redesign-empty.png', fullPage: true })
   await page.getByLabel('Arquivo de medições').setInputFiles('samples/medicao-ruido-sintetica.csv')
@@ -173,6 +180,7 @@ test('arquivo carregado, leitura automática, cancelamento, troca e remoção', 
 
 test('pede apenas o mapeamento necessário quando as colunas são ambíguas', async ({ page }) => {
   await page.goto('/tests/browser/fixture.html')
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
   await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'colunas.csv', mimeType: 'text/csv', buffer: Buffer.from('Data;Nível A;Nível B\n23/11/2026 12:00:00;50;80\n23/11/2026 12:00:01;55;81') })
   await expect(page.getByRole('combobox', { name: 'Coluna de nível sonoro', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeDisabled()
@@ -196,6 +204,7 @@ test('mostra a escolha de aba somente em uma planilha com várias abas', async (
     ]), name)
   }
   await page.goto('/tests/browser/fixture.html')
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
   await page.getByLabel('Arquivo de medições').setInputFiles({
     name: 'duas-abas.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: Buffer.from(XLSX.write(book, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer),
@@ -207,4 +216,79 @@ test('mostra a escolha de aba somente em uma planilha com várias abas', async (
   await expect(page.locator('dl')).toContainText('95 dB')
   await expect(page.locator('dl')).toContainText('97 dB')
   await expect(page.getByRole('region', { name: 'Arquivo em análise' })).toContainText('Tarde')
+})
+
+
+test('API local rejeita requisição sem sessão antes de acessar dados', async ({ request }) => {
+  const response = await request.get('/api/profile')
+  expect(response.status()).toBe(401)
+  expect(response.headers()['content-type']).toContain('application/json')
+})
+
+test('salva e reabre análise e preferências após recarregar; exclui da conta', async ({ page }) => {
+  await page.goto('/tests/browser/fixture.html')
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
+  await importCsv(page)
+  await page.getByText('Ajustar período e título', { exact: true }).click()
+  await page.getByLabel('Título do gráfico').fill('Ponto ambiental salvo')
+  await page.getByLabel('Início', { exact: true }).fill('2026-11-23T12:00:01.000')
+  await page.getByLabel('Fim', { exact: true }).fill('2026-11-23T12:00:01.000')
+  await page.getByRole('button', { name: 'Aplicar intervalo' }).click()
+  await page.getByRole('button', { name: 'Salvar análise', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+  await page.getByRole('link', { name: 'Meu perfil', exact: true }).click()
+  await page.getByLabel('Fuso horário padrão').fill('UTC')
+  await page.getByLabel('Unidade padrão').fill('dB(A)')
+  await page.getByRole('button', { name: 'Salvar preferências', exact: true }).click()
+  await expect(page.getByText('Preferências salvas na sua conta.')).toBeVisible()
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-profile.png', fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-profile-mobile.png', fullPage: true })
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.getByRole('link', { name: 'Análise', exact: true }).click()
+  await expect(page.locator('dl').locator('dd').first()).toHaveText('2')
+  await expect(page.locator('dl')).toContainText('65,4 dB')
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Ponto ambiental salvo', exact: true })).toBeVisible()
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-analyses.png', fullPage: true })
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await page.getByRole('button', { name: 'Abrir', exact: true }).click()
+  await expect(page.locator('dl').locator('dd').first()).toHaveText('2')
+  await expect(page.locator('dl')).toContainText('65,4 dB')
+  await page.getByText('Ajustar período e título', { exact: true }).click()
+  await expect(page.getByLabel('Título do gráfico')).toHaveValue('Ponto ambiental salvo')
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+  await page.getByLabel('Título do gráfico').fill('Ponto ambiental atualizado')
+  await page.getByRole('button', { name: 'Salvar alterações', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Ponto ambiental atualizado', exact: true })).toBeVisible()
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: 'Excluir análise Ponto ambiental atualizado' }).click()
+  await expect(page.getByRole('heading', { name: 'Nenhuma análise salva' })).toBeVisible()
+  await page.getByRole('link', { name: 'Análise', exact: true }).click()
+  await page.getByRole('button', { name: 'Remover arquivo', exact: true }).click()
+  await importCsv(page)
+  await expect(page.locator('dl')).toContainText('50,5 dB(A)')
+})
+
+test('falha de salvamento mantém o gráfico e permite repetir sem duplicar análise', async ({ page }) => {
+  await page.goto('/tests/browser/fixture.html')
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
+  await importCsv(page)
+  let fail = true
+  await page.route('**/api/analyses/*/chunks/*', async route => {
+    if (fail && route.request().method() === 'PUT') { fail = false; return route.abort() }
+    return route.fallback()
+  })
+  await page.getByRole('button', { name: 'Salvar análise', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('conectar ao servidor')
+  await expect(page.locator('dl').locator('dd').first()).toHaveText('4')
+  await page.getByRole('button', { name: 'Salvar análise', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Abrir', exact: true })).toHaveCount(1)
 })

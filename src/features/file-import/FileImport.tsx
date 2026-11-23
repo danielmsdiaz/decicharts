@@ -6,18 +6,22 @@ import { Select } from '@/components/ui/select'
 import type { ColumnMapping, MeasurementDataset } from '@/features/measurements/types'
 import { formatTime } from '@/features/measurements/range'
 import { useFileImport } from './use-file-import'
+import { useAccount } from '@/features/account/account-context'
+import { DEFAULT_PREFERENCES } from '../../../shared/persistence'
 
 const timezoneOptions = ['America/Recife', 'America/Sao_Paulo', 'America/Manaus', 'America/Belem', 'America/Cuiaba', 'America/Rio_Branco', 'UTC', 'Europe/Lisbon', 'America/New_York']
 const count = (value: number) => value.toLocaleString('pt-BR')
 
 interface FileImportProps {
   dataset: MeasurementDataset | null
+  saved?: boolean
   onImport: (dataset: MeasurementDataset) => boolean
   onRemove: () => void
 }
 
-export function FileImport({ dataset, onImport, onRemove }: FileImportProps) {
-  const form = useFileImport()
+export function FileImport({ dataset, saved = false, onImport, onRemove }: FileImportProps) {
+  const { profile, loading: profileLoading, error: profileError } = useAccount()
+  const form = useFileImport(profile?.preferences ?? DEFAULT_PREFERENCES)
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const { file, source, mapping, candidate, busy, settingsOpen } = form
@@ -30,14 +34,14 @@ export function FileImport({ dataset, onImport, onRemove }: FileImportProps) {
   function drop(event: DragEvent) {
     event.preventDefault()
     setDragging(false)
-    if (busy) return
+    if (busy || profileLoading) return
     if (event.dataTransfer.files.length !== 1) { form.setError('Escolha um arquivo por vez.'); return }
     void form.read(event.dataTransfer.files[0])
   }
 
   const fileInput = <input
     ref={input} type="file" accept=".csv,.xlsx,.xls" aria-label="Arquivo de medições"
-    className="sr-only" tabIndex={-1} disabled={busy}
+    className="sr-only" tabIndex={-1} disabled={busy || profileLoading}
     onChange={event => {
       const nextFile = event.target.files?.[0]
       if (nextFile) void form.read(nextFile)
@@ -54,11 +58,11 @@ export function FileImport({ dataset, onImport, onRemove }: FileImportProps) {
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2 text-sm text-primary"><CheckCheck className="size-4" aria-hidden="true" />Arquivo em análise</div>
             <p className="truncate font-semibold" title={dataset.fileName}>{dataset.fileName}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{count(dataset.validRecords)} medições · {dataset.sheetName}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{count(dataset.validRecords)} medições · {dataset.sheetName}{saved ? ' · Salva na sua conta' : ' · Ainda não salva'}</p>
           </div>
           <div className="file-actions">
-            <Button variant="outline" onClick={() => input.current?.click()}><FolderOpen />Trocar arquivo</Button>
-            <Button variant="destructive" onClick={() => { onRemove(); form.removed() }}><X />Remover arquivo</Button>
+            <Button variant="outline" disabled={profileLoading} onClick={() => input.current?.click()}><FolderOpen />Trocar arquivo</Button>
+            <Button variant="destructive" onClick={() => { onRemove(); form.removed() }}><X />{saved ? 'Fechar análise' : 'Remover arquivo'}</Button>
           </div>
         </div>
       ) : (
@@ -66,11 +70,12 @@ export function FileImport({ dataset, onImport, onRemove }: FileImportProps) {
           <span className="upload-symbol"><Upload aria-hidden="true" /></span>
           <h2 className="mt-5 text-xl font-semibold tracking-tight">Arraste seu arquivo para cá</h2>
           <p className="mt-2 text-sm text-muted-foreground">Excel ou CSV com os horários e níveis sonoros.</p>
-          <Button className="mt-6" onClick={() => input.current?.click()}><FolderOpen />Selecionar arquivo</Button>
+          <Button className="mt-6" disabled={profileLoading} onClick={() => input.current?.click()}><FolderOpen />{profileLoading ? 'Carregando preferências…' : 'Selecionar arquivo'}</Button>
           <p className="mt-5 text-sm text-muted-foreground">CSV, XLS ou XLSX · Até 20 MiB · 250 mil registros</p>
         </div>
       )}
       {form.error && <p className="notice error mt-4" role="alert">{form.error}</p>}
+      {profileError && <p className="notice warning mt-4">Preferências da conta indisponíveis. Confira o fuso e a unidade em Ajustar leitura ao importar.</p>}
       {form.status && <p className={dataset ? 'sr-only' : 'mt-4 text-sm text-muted-foreground'} role="status">{form.status}</p>}
       {!dataset && <p className="mt-5 flex items-center justify-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="size-4 shrink-0" aria-hidden="true" />Seu arquivo é processado apenas neste navegador.</p>}
     </section>

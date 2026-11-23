@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ColumnMapping, ImportSource, MeasurementDataset } from '@/features/measurements/types'
 import { suggestMapping } from './normalize'
 import { validateFile } from './validation'
+import { DEFAULT_PREFERENCES, type Preferences } from '../../../shared/persistence'
 
 interface WorkerResponse {
   id: number
@@ -11,7 +12,7 @@ interface WorkerResponse {
   error?: string
 }
 
-export function useFileImport() {
+export function useFileImport(defaults: Preferences = DEFAULT_PREFERENCES) {
   const [file, setFile] = useState<{ name: string; size: number } | null>(null)
   const [source, setSource] = useState<ImportSource | null>(null)
   const [sheetIndex, setSheetIndex] = useState(0)
@@ -82,6 +83,8 @@ export function useFileImport() {
         if (event.data.source) {
           const nextSource = event.data.source
           const nextMapping = suggestMapping(nextSource.sheets[0])
+          nextMapping.timezone = defaults.timezone
+          nextMapping.unit = defaults.unit
           setSource(nextSource)
           setMapping(nextMapping)
           if (nextMapping.dateColumn >= 0 && nextMapping.valueColumn >= 0) {
