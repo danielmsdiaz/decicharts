@@ -1,0 +1,17 @@
+// Test-only entry. Vite production builds only index.html; this fixture is never shipped.
+import { useState } from 'react'
+import { createRoot } from 'react-dom/client'
+import { MemoryRouter, Outlet, Route, Routes } from 'react-router'
+import type { User } from 'firebase/auth'
+import { AuthContext } from '../../src/features/auth/auth-context'
+import { Header } from '../../src/components/layout/Header'
+import { Dashboard } from '../../src/features/measurements/Dashboard'
+import { useTheme } from '../../src/hooks/use-theme'
+import '../../src/styles.css'
+
+function Fixture() {
+  const [signedIn, setSignedIn] = useState(true)
+  const { theme, toggleTheme } = useTheme()
+  return <AuthContext.Provider value={{ user: signedIn ? { uid: 'fixture', displayName: 'Engenheira de teste', email: 'teste@example.invalid', photoURL: null } as User : null, loading: false, busy: false, configured: true, error: '', login: async () => setSignedIn(true), logout: async () => setSignedIn(false) }}><Header theme={theme} toggleTheme={toggleTheme} />{signedIn ? <Outlet context={{ theme }} /> : <p>Sessão de teste encerrada</p>}</AuthContext.Provider>
+}
+createRoot(document.getElementById('root')!).render(<MemoryRouter><Routes><Route element={<Fixture />}><Route path="*" element={<Dashboard />} /></Route></Routes></MemoryRouter>)

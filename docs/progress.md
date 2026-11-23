@@ -2,9 +2,10 @@
 
 ## Estado atual
 
-- Fase atual: 5 — Testes e finalização
-- Status: Em andamento
+- Fase atual: 5 — Testes e finalização (concluída localmente)
+- Status: Bloqueado
 - Última atualização: 2026-11-23
+- Implementação tecnicamente possível concluída; aceite final depende da autenticação Google real.
 
 ## Resumo das fases
 
@@ -14,34 +15,72 @@
 | 2. Autenticação | Bloqueado |
 | 3. Importação | Concluído |
 | 4. Gráficos | Concluído |
-| 5. Finalização | Em andamento |
+| 5. Finalização | Concluído |
+
+A fase 2 possui código e testes concluídos; o bloqueio é exclusivamente sua validação externa.
 
 ## Trabalho concluído
 
-- Inspeção do repositório e definição do escopo.
-- Plano integral preservado com decisões aprovadas.
+- React/Vite/TypeScript strict, Tailwind, shadcn/ui, Router e tema claro/escuro.
+- Login Google com popup, persistência local, proteção de rotas, perfil e logout; configuração ausente tratada sem simulação.
+- CSV/XLS/XLSX, seleção de aba/cabeçalho, mapeamento manual, Web Worker, cancelamento e prévia.
+- Datas brasileiras/ISO/Excel 1900/1904, fusos IANA, decimais, duplicados preservados e diagnóstico de inválidos.
+- Gráfico temporal ECharts, zoom, filtros inclusivos, indicadores e tabela acessível.
+- PNG 3200×1800 e SVG com título, unidade, fuso e intervalo aplicado.
+- Testes unitários, testes Chrome, inspeção visual desktop/mobile/escuro e exportação.
+- README completo, .env.example e configuração SPA da Vercel. Nenhum deploy realizado.
+- Commits por etapa autorizados pelo usuário e realizados localmente.
 
 ## Trabalho em andamento
 
-- Estrutura, tema, autenticação e parser implementados; validação pendente.
-- Interface de importação e gráfico em implementação.
+Nenhuma implementação local pendente. Validação externa da autenticação aguardando configuração.
 
 ## Próximas tarefas
 
-- Instalar dependências e implementar layout e autenticação.
+1. Criar/configurar Firebase Authentication e provedor Google conforme README.
+2. Preencher .env.local e reiniciar a aplicação. Não versionar valores reais.
+3. Validar popup, perfil, recarga com persistência, proteção de rota e logout com uma conta real.
+4. Conferir arquivos reais dos equipamentos e registrar eventuais formatos adicionais.
+5. Atualizar o aceite no plano e este progresso após as verificações externas.
 
 ## Decisões técnicas
 
-- Ver seção 16 de implementation-plan.md.
+- Uma série por vez; troca somente após confirmação. Medições exclusivamente na memória.
+- Limites: 20 MiB e 250 mil registros não vazios. Cabeçalho nas primeiras 100 linhas; área física Excel limitada a 250.100 linhas.
+- America/Recife como fuso inicial, editável; Luxon interpreta IANA e respeita offsets explícitos.
+- Ambiguidades de horário de verão são rejeitadas; não se adivinham instantes.
+- Timestamps duplicados preservados com contagem de ocorrências adicionais.
+- Sem agregação, interpolação, sampling ou suavização; nenhum cálculo normativo.
+- SheetJS oficial 0.20.3; Papa Parse; ECharts modular e carregado sob demanda.
+- Vitest atualizado e override compatível gRPC resolvem a auditoria inicial.
+- Fixture autenticada exclusivamente em tests/browser; confirmada ausente do build de produção.
+- Exportação de instante único usa margem de layout ±1 ms com apenas o instante real rotulado.
 
 ## Bloqueios e pendências
 
-- Configuração e validação real do Firebase Authentication pendentes.
-- Nenhum arquivo real de decibelímetro disponível.
+- Firebase e conta Google reais: configuração não fornecida; testes reais não executados. Não declarar o MVP integralmente validado.
+- Não há amostras reais de decibelímetros; compatibilidade foi testada com fixtures sintéticas.
+- Sem erros conhecidos nos fluxos locais testados.
+- Publicação exige autorização específica; não houve deploy nem push.
 
 ## Validações
 
-- Nenhum teste executado.
+| Verificação | Resultado |
+|-------------|-----------|
+| Vitest | 38 testes aprovados em 5 arquivos |
+| Chrome/Playwright | 4 cenários aprovados |
+| TypeScript strict | Aprovado: npm run typecheck |
+| ESLint | Aprovado |
+| Build de produção | Aprovado, sem avisos de tamanho de chunks |
+| npm audit | Zero vulnerabilidades reportadas |
+| Capacidade | 250 mil registros processados, renderizados e filtrados no Chrome |
+| Exportação | PNG real 3200×1800 e SVG inspecionados |
+| Responsividade | Desktop 1440px e mobile 390px, sem overflow horizontal |
+| Inspeção de dist | Nenhuma fixture de autenticação de teste |
+| Detector visual | Nenhum achado na execução |
+| Google real | Bloqueado por configuração externa |
+
+O último teste de capacidade levou aproximadamente 5,4 segundos nesta máquina, incluindo interações de teste; não é uma garantia para outros dispositivos.
 
 ## Histórico de progresso
 
@@ -119,3 +158,22 @@ Próxima ação:
 - Capturas finais confirmadas sem nova rodada de mudanças visuais.
 - Commit de importação: 3c5b72f.
 - Próxima ação: consolidar testes de navegador e documentação final.
+
+### 2026-11-23 — Encerramento da implementação local
+
+Implementado:
+- Etapas locais finalizadas e documentação sincronizada com o código.
+- Commit dos gráficos: d8a83a9.
+- Testes de navegador e instruções de execução incluídos no commit final.
+
+Validações:
+- 38 testes unitários, 4 cenários Chrome, tipagem, lint e build aprovados.
+- Auditoria final sem vulnerabilidades e fixture de testes ausente de dist.
+- Segunda inspeção confirmou as correções de upload compacto e eixo de instante único; sem novas mudanças visuais.
+
+Pendências:
+- Configuração e validação Google reais.
+- Amostras reais de equipamentos.
+
+Próxima ação:
+- Configurar Firebase seguindo README e executar a lista de validação real.

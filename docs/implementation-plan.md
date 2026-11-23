@@ -316,15 +316,15 @@ project/
 
 ### Fase 5 — Testes e finalização
 
-- [ ] Revisar responsividade.
-- [ ] Validar estados de erro.
-- [ ] Executar testes unitários.
-- [ ] Validar tipagem.
-- [ ] Executar lint.
-- [ ] Executar build.
-- [ ] Preparar configuração da Vercel.
-- [ ] Documentar instalação e execução no README.
-- [ ] Registrar limitações e pendências.
+- [x] Revisar responsividade.
+- [x] Validar estados de erro.
+- [x] Executar testes unitários.
+- [x] Validar tipagem.
+- [x] Executar lint.
+- [x] Executar build.
+- [x] Preparar configuração da Vercel.
+- [x] Documentar instalação e execução no README.
+- [x] Registrar limitações e pendências.
 
 **Critério de conclusão:** aplicação funcional, testes automatizados passando e build de produção concluído.
 
@@ -648,3 +648,16 @@ Código e testes locais implementados. Login, persistência e logout com Google 
 ### Exportação de intervalo com um único instante
 
 Quando início e fim são iguais, o eixo exportado usa apenas uma margem gráfica de ±1 ms e identifica somente o instante real. Essa margem impede a expansão automática do ECharts para vários dias; não cria, altera ou agrega medições.
+
+## 17. Situação de aceite — 2026-11-23
+
+- [x] Fases 1, 3, 4 e 5 implementadas e verificadas localmente.
+- [x] Código da fase 2 e seus testes automatizados implementados.
+- [x] 38 testes unitários e 4 cenários Chrome aprovados.
+- [x] Tipagem, ESLint e build de produção aprovados.
+- [x] Auditoria final: zero vulnerabilidades reportadas.
+- [x] Build inspecionado: fixture de autenticação dos testes ausente de dist.
+- [ ] Validar login, recuperação/persistência da sessão e logout com Firebase e conta Google reais. Bloqueado: configuração externa não fornecida.
+- [ ] Conferir compatibilidade com arquivos reais dos decibelímetros utilizados pelo usuário. Sem amostras disponíveis.
+
+O MVP não é declarado integralmente validado enquanto o aceite de autenticação real permanecer pendente. Deploy não executado e não autorizado.
