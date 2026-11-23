@@ -189,3 +189,10 @@ Próxima ação:
 - Fluxo Chrome de importação, duplicados, filtros, zoom, PNG/SVG, tema e logout aprovado com a rota protegida.
 - Nenhum valor de .env.local lido, alterado ou versionado.
 - Próxima ação: usuário recarregar o aplicativo e continuar a validação da conta Google real.
+
+### 2026-11-23 — CSV sintético para uso manual
+
+- Criado samples/medicao-ruido-sintetica.csv com 3.601 medições de 09:00 a 10:00, a cada segundo.
+- Dados explicitamente sintéticos, com variação de fundo, três picos e um trecho elevado; valores entre 46,0 e 79,7 dB.
+- Validado com as funções reais de parsing, sugestão e normalização: 3.601 válidos, zero inválidos, zero duplicados, mapeamento automático correto e uma hora de intervalo.
+- Instruções de importação e origem sintética em samples/README.md.
