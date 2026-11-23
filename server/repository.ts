@@ -1,9 +1,11 @@
-import { neon } from '@neondatabase/serverless'
+import { isDeepStrictEqual } from 'node:util'
+import type { Analysis, Profile, Prisma, PrismaClient } from './generated/prisma/client'
 import type { AnalysisPage, AnalysisSummary, ChartView, DatasetMetadata, PointTuple, Preferences, StoredAnalysis, UserProfile } from '../shared/persistence'
 import { CHUNK_SIZE } from '../shared/persistence'
 import type { Identity } from './auth'
 import { HttpError, notFound } from './errors'
 import type { chunk } from './validation'
+import { createPrismaClient, getPrismaClient } from './prisma'
 
 export interface AnalysisInput { id: string; name: string; metadata: DatasetMetadata; chart: ChartView }
 export interface Repository {
@@ -19,124 +21,135 @@ export interface Repository {
   remove: (uid: string, id: string) => Promise<void>
 }
 
-type Row = Record<string, unknown>
-function summary(row: Row): AnalysisSummary {
-  const metadata = row.metadata as DatasetMetadata
-  return { id: String(row.id), name: String(row.name), fileName: metadata.fileName,
-    count: Number(row.record_count), start: Number(row.first_ts), end: Number(row.last_ts),
-    unit: metadata.unit, timezone: metadata.timezone, updatedAt: new Date(String(row.updated_at)).toISOString(),
-    chart: row.chart as ChartView }
+const asJson = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue
+const key = (userUid: string, id: string) => ({ userUid_id: { userUid, id } })
+
+function summary(row: Analysis): AnalysisSummary {
+  const metadata = row.metadata as unknown as DatasetMetadata
+  return {
+    id: row.id, name: row.name, fileName: metadata.fileName, count: row.recordCount,
+    start: Number(row.firstTs), end: Number(row.lastTs), unit: metadata.unit,
+    timezone: metadata.timezone, updatedAt: row.updatedAt.toISOString(),
+    chart: row.chart as unknown as ChartView,
+  }
 }
-function stored(row: Row): StoredAnalysis { return { analysis: summary(row), metadata: row.metadata as DatasetMetadata, chunkCount: Number(row.chunk_count) } }
-function profile(row: Row): UserProfile {
-  return { uid: String(row.uid), name: row.name as string | null, email: row.email as string | null, photoURL: row.photo_url as string | null, preferences: { timezone: String(row.timezone), unit: String(row.unit) } }
+function stored(row: Analysis): StoredAnalysis {
+  return { analysis: summary(row), metadata: row.metadata as unknown as DatasetMetadata, chunkCount: row.chunkCount }
+}
+function profile(row: Profile): UserProfile {
+  return { uid: row.uid, name: row.name, email: row.email, photoURL: row.photoUrl, preferences: { timezone: row.timezone, unit: row.unit } }
 }
 
-export function createRepository(connection: string): Repository {
-  const sql = neon(connection)
+// Prisma has no typed SELECT FOR UPDATE. This is the only raw application query;
+// values remain parameterized and all reads/writes below use typed model methods.
+async function lockAnalysis(tx: Prisma.TransactionClient, uid: string, id: string) {
+  const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM decicharts.analyses WHERE user_uid=${uid} AND id=${id}::uuid FOR UPDATE`
+  return rows.length > 0
+}
+
+export function createRepository(connection: string, client: PrismaClient = createPrismaClient(connection)): Repository {
   const repository: Repository = {
     async profile(identity) {
-      const rows = await sql`INSERT INTO decicharts.profiles(uid, name, email, photo_url)
-        VALUES (${identity.uid}, ${identity.name}, ${identity.email}, ${identity.photoURL})
-        ON CONFLICT(uid) DO UPDATE SET name=excluded.name, email=excluded.email, photo_url=excluded.photo_url
-        RETURNING *`
-      return profile(rows[0])
+      const identityFields = { name: identity.name, email: identity.email, photoUrl: identity.photoURL }
+      return profile(await client.profile.upsert({ where: { uid: identity.uid }, create: { uid: identity.uid, ...identityFields }, update: identityFields }))
     },
     async preferences(identity, value) {
-      const rows = await sql`INSERT INTO decicharts.profiles(uid, name, email, photo_url, timezone, unit)
-        VALUES (${identity.uid}, ${identity.name}, ${identity.email}, ${identity.photoURL}, ${value.timezone}, ${value.unit})
-        ON CONFLICT(uid) DO UPDATE SET timezone=excluded.timezone, unit=excluded.unit, updated_at=now()
-        RETURNING *`
-      return profile(rows[0])
+      return profile(await client.profile.upsert({
+        where: { uid: identity.uid },
+        create: { uid: identity.uid, name: identity.name, email: identity.email, photoUrl: identity.photoURL, ...value },
+        update: { ...value, updatedAt: new Date() },
+      }))
     },
     async list(uid, offset) {
-      const rows = await sql`SELECT * FROM decicharts.analyses WHERE user_uid=${uid} AND state='ready' ORDER BY updated_at DESC, id LIMIT 20 OFFSET ${offset}`
-      const totals = await sql`SELECT count(*)::integer AS total FROM decicharts.analyses WHERE user_uid=${uid} AND state='ready'`
-      const total = Number(totals[0].total)
+      const where = { userUid: uid, state: 'ready' }
+      const [rows, total] = await client.$transaction([
+        client.analysis.findMany({ where, orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }], take: 20, skip: offset }),
+        client.analysis.count({ where }),
+      ])
       return { analyses: rows.map(summary), total, hasMore: offset + rows.length < total }
     },
     async start(identity, input) {
       await repository.profile(identity)
-      await sql`DELETE FROM decicharts.analyses WHERE user_uid=${identity.uid} AND state='uploading' AND updated_at < now() - interval '1 day'`
-      const encodedMetadata = JSON.stringify(input.metadata)
-      const rows = await sql`INSERT INTO decicharts.analyses(user_uid, id, name, metadata, chart, record_count, chunk_count)
-        VALUES (${identity.uid}, ${input.id}::uuid, ${input.name}, ${encodedMetadata}::jsonb, ${JSON.stringify(input.chart)}::jsonb, ${input.metadata.validRecords}, ${Math.ceil(input.metadata.validRecords / CHUNK_SIZE)})
-        ON CONFLICT(user_uid, id) DO UPDATE SET name=excluded.name, chart=excluded.chart, updated_at=now()
-        WHERE analyses.state='uploading' AND analyses.metadata=excluded.metadata
-        RETURNING id, state`
-      if (rows.length) return { id: String(rows[0].id), state: String(rows[0].state) }
-      const existing = await sql`SELECT id, state FROM decicharts.analyses WHERE user_uid=${identity.uid} AND id=${input.id}::uuid AND metadata=${encodedMetadata}::jsonb`
-      if (!existing.length) throw new HttpError(409, 'Esta tentativa pertence a outro conjunto de dados. Importe novamente para salvar.')
-      return { id: String(existing[0].id), state: String(existing[0].state) }
+      await client.analysis.deleteMany({ where: { userUid: identity.uid, state: 'uploading', updatedAt: { lt: new Date(Date.now() - 86_400_000) } } })
+      return client.$transaction(async tx => {
+        await tx.analysis.createMany({ data: [{
+          userUid: identity.uid, id: input.id, name: input.name,
+          metadata: asJson(input.metadata), chart: asJson(input.chart),
+          recordCount: input.metadata.validRecords, chunkCount: Math.ceil(input.metadata.validRecords / CHUNK_SIZE),
+        }], skipDuplicates: true })
+        if (!await lockAnalysis(tx, identity.uid, input.id)) throw new HttpError(409, 'A análise foi alterada durante o salvamento. Tente novamente.')
+        const existing = await tx.analysis.findUniqueOrThrow({ where: key(identity.uid, input.id) })
+        if (!isDeepStrictEqual(existing.metadata, input.metadata)) throw new HttpError(409, 'Esta tentativa pertence a outro conjunto de dados. Importe novamente para salvar.')
+        if (existing.state === 'uploading') await tx.analysis.update({ where: key(identity.uid, input.id), data: { name: input.name, chart: asJson(input.chart), updatedAt: new Date() } })
+        return { id: existing.id, state: existing.state }
+      })
     },
     async putChunk(uid, id, index, value) {
-      const rows = await sql`WITH target AS (
-        SELECT * FROM decicharts.analyses WHERE user_uid=${uid} AND id=${id}::uuid AND state='uploading' FOR UPDATE
-      ) INSERT INTO decicharts.analysis_chunks(user_uid, analysis_id, chunk_index, record_count, first_ts, last_ts, duplicate_count, payload)
-        SELECT user_uid, id, ${index}, ${value.count}, ${value.first}, ${value.last}, ${value.duplicates}, ${JSON.stringify(value.points)}::jsonb FROM target
-        WHERE ${index}::integer < chunk_count AND ${value.count}::integer=least(${CHUNK_SIZE}::integer, record_count - ${index}::integer * ${CHUNK_SIZE}::integer)
-        ON CONFLICT(user_uid, analysis_id, chunk_index) DO UPDATE SET record_count=excluded.record_count, first_ts=excluded.first_ts, last_ts=excluded.last_ts, duplicate_count=excluded.duplicate_count, payload=excluded.payload
-        RETURNING analysis_id`
-      if (!rows.length) throw new HttpError(409, 'O bloco não corresponde à análise ou ela já foi concluída.')
+      return client.$transaction(async tx => {
+        const locked = await lockAnalysis(tx, uid, id)
+        const analysis = locked ? await tx.analysis.findUnique({ where: key(uid, id) }) : null
+        if (!analysis || analysis.state !== 'uploading' || index >= analysis.chunkCount || value.count !== Math.min(CHUNK_SIZE, analysis.recordCount - index * CHUNK_SIZE)) throw new HttpError(409, 'O bloco não corresponde à análise ou ela já foi concluída.')
+        const data = { recordCount: value.count, firstTs: BigInt(value.first), lastTs: BigInt(value.last), duplicateCount: value.duplicates, payload: asJson(value.points) }
+        await tx.analysisChunk.upsert({
+          where: { userUid_analysisId_chunkIndex: { userUid: uid, analysisId: id, chunkIndex: index } },
+          create: { userUid: uid, analysisId: id, chunkIndex: index, ...data }, update: data,
+        })
+      })
     },
     async complete(uid, id) {
-      const rows = await sql`WITH target AS (
-          SELECT * FROM decicharts.analyses WHERE user_uid=${uid} AND id=${id}::uuid AND state='uploading' FOR UPDATE
-        ), ordered AS (
-          SELECT c.*, lag(c.last_ts) OVER (ORDER BY c.chunk_index) AS previous_last
-          FROM decicharts.analysis_chunks c JOIN target t ON c.user_uid=t.user_uid AND c.analysis_id=t.id
-        ), stats AS (
-          SELECT count(*)::integer AS chunks, sum(record_count) AS records,
-            min(first_ts) AS first_ts, max(last_ts) AS last_ts,
-            bool_and(previous_last IS NULL OR first_ts >= previous_last) AS ordered,
-            sum(duplicate_count + CASE WHEN first_ts=previous_last THEN 1 ELSE 0 END) AS duplicates
-          FROM ordered
-        ) UPDATE decicharts.analyses a SET state='ready', first_ts=s.first_ts, last_ts=s.last_ts, updated_at=now()
-        FROM stats s, target t WHERE a.user_uid=t.user_uid AND a.id=t.id
-          AND s.chunks=t.chunk_count AND s.records=t.record_count AND s.ordered
-          AND s.duplicates=(t.metadata->>'duplicateTimestamps')::integer
-          AND (t.chart->'range'->>'start')::bigint >= s.first_ts
-          AND (t.chart->'range'->>'end')::bigint <= s.last_ts
-        RETURNING a.*`
-      if (rows.length) return stored(rows[0])
-      const ready = await sql`SELECT * FROM decicharts.analyses WHERE user_uid=${uid} AND id=${id}::uuid AND state='ready'`
-      if (ready.length) return stored(ready[0])
-      throw new HttpError(409, 'O salvamento está incompleto ou os blocos não correspondem. Tente salvar novamente.')
+      return client.$transaction(async tx => {
+        const conflict = () => new HttpError(409, 'O salvamento está incompleto ou os blocos não correspondem. Tente salvar novamente.')
+        if (!await lockAnalysis(tx, uid, id)) throw conflict()
+        const analysis = await tx.analysis.findUniqueOrThrow({ where: key(uid, id) })
+        if (analysis.state === 'ready') return stored(analysis)
+        const chunks = await tx.analysisChunk.findMany({
+          where: { userUid: uid, analysisId: id }, orderBy: { chunkIndex: 'asc' },
+          select: { chunkIndex: true, recordCount: true, firstTs: true, lastTs: true, duplicateCount: true },
+        })
+        if (chunks.length !== analysis.chunkCount || !chunks.length) throw conflict()
+        let records = 0, duplicates = 0
+        for (const [index, current] of chunks.entries()) {
+          const previous = chunks[index - 1]
+          if (current.chunkIndex !== index || (previous && current.firstTs < previous.lastTs)) throw conflict()
+          records += current.recordCount
+          duplicates += current.duplicateCount + (previous?.lastTs === current.firstTs ? 1 : 0)
+        }
+        const metadata = analysis.metadata as unknown as DatasetMetadata
+        const chart = analysis.chart as unknown as ChartView
+        const first = chunks[0].firstTs, last = chunks.at(-1)!.lastTs
+        if (records !== analysis.recordCount || duplicates !== metadata.duplicateTimestamps || chart.range.start < Number(first) || chart.range.end > Number(last)) throw conflict()
+        return stored(await tx.analysis.update({ where: key(uid, id), data: { state: 'ready', firstTs: first, lastTs: last, updatedAt: new Date() } }))
+      })
     },
     async read(uid, id) {
-      const rows = await sql`SELECT * FROM decicharts.analyses WHERE user_uid=${uid} AND id=${id}::uuid AND state='ready'`
-      if (!rows.length) throw notFound()
-      return stored(rows[0])
+      const row = await client.analysis.findFirst({ where: { userUid: uid, id, state: 'ready' } })
+      if (!row) throw notFound()
+      return stored(row)
     },
     async readChunk(uid, id, index) {
-      const rows = await sql`SELECT c.payload FROM decicharts.analysis_chunks c JOIN decicharts.analyses a ON a.user_uid=c.user_uid AND a.id=c.analysis_id
-        WHERE c.user_uid=${uid} AND c.analysis_id=${id}::uuid AND c.chunk_index=${index} AND a.state='ready'`
-      if (!rows.length) throw notFound()
-      return rows[0].payload as PointTuple[]
+      const row = await client.analysisChunk.findFirst({ where: { userUid: uid, analysisId: id, chunkIndex: index, analysis: { state: 'ready' } }, select: { payload: true } })
+      if (!row) throw notFound()
+      return row.payload as PointTuple[]
     },
     async update(uid, id, name, chart) {
-      const rows = await sql`UPDATE decicharts.analyses SET name=${name}, chart=${JSON.stringify(chart)}::jsonb, updated_at=now()
-        WHERE user_uid=${uid} AND id=${id}::uuid AND state='ready'
-          AND ${chart.range.start} >= first_ts AND ${chart.range.end} <= last_ts
-        RETURNING *`
-      if (!rows.length) {
+      const result = await client.analysis.updateMany({ where: { userUid: uid, id, state: 'ready', firstTs: { lte: BigInt(chart.range.start) }, lastTs: { gte: BigInt(chart.range.end) } }, data: { name, chart: asJson(chart), updatedAt: new Date() } })
+      if (!result.count) {
         await repository.read(uid, id)
         throw new HttpError(400, 'O período deve estar dentro das medições salvas.')
       }
-      return stored(rows[0])
+      return repository.read(uid, id)
     },
     async remove(uid, id) {
-      const rows = await sql`DELETE FROM decicharts.analyses WHERE user_uid=${uid} AND id=${id}::uuid RETURNING id`
-      if (!rows.length) throw notFound()
+      const result = await client.analysis.deleteMany({ where: { userUid: uid, id } })
+      if (!result.count) throw notFound()
     },
   }
   return repository
 }
 
-let cached: { connection: string; repository: Repository } | undefined
+let cached: { client: PrismaClient; repository: Repository } | undefined
 export function getRepository() {
-  const connection = process.env.DATABASE_URL
-  if (!connection) throw new HttpError(503, 'O salvamento precisa da conexão Neon configurada no servidor.')
-  if (cached?.connection !== connection) cached = { connection, repository: createRepository(connection) }
+  const client = getPrismaClient()
+  if (cached?.client !== client) cached = { client, repository: createRepository(process.env.DATABASE_URL!, client) }
   return cached.repository
 }

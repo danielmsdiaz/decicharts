@@ -8,18 +8,26 @@
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc -b && vite build",
+    "build": "npm run db:generate && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b",
+    "typecheck": "npm run db:generate && tsc -b",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "db:migrate": "node scripts/migrate.mjs",
-    "test:neon": "RUN_NEON_INTEGRATION=1 vitest run tests/neon.integration.test.ts"
+    "db:migrate": "node scripts/prisma.mjs migrate deploy",
+    "test:neon": "RUN_NEON_INTEGRATION=1 vitest run tests/neon.integration.test.ts",
+    "db:generate": "node scripts/prisma.mjs generate",
+    "db:migrate:dev": "node scripts/prisma.mjs migrate dev",
+    "db:baseline": "node --experimental-strip-types scripts/prisma-baseline.mjs",
+    "db:status": "node scripts/prisma.mjs migrate status",
+    "db:studio": "node scripts/prisma.mjs studio",
+    "postinstall": "npm run db:generate",
+    "db:check": "node scripts/prisma.mjs migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.2.1",
+    "@prisma/adapter-neon": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -52,6 +60,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^26.1.0",
+    "prisma": "^7.10.1",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
@@ -59,6 +68,7 @@
     "vitest": "^5.1.1"
   },
   "overrides": {
-    "@grpc/grpc-js": "^1.13.6"
+    "@grpc/grpc-js": "^1.13.6",
+    "effect": "^3.22.5"
   }
 }

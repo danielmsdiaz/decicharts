@@ -1,0 +1,73 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../server/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["decicharts"]
+}
+
+model Profile {
+  uid       String     @id(map: "profiles_pkey")
+  name      String?
+  email     String?
+  photoUrl  String?    @map("photo_url")
+  timezone  String     @default("America/Recife")
+  unit      String     @default("dB")
+  updatedAt DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
+  analyses  Analysis[]
+
+  @@map("profiles")
+  @@schema("decicharts")
+}
+
+model Analysis {
+  userUid     String          @map("user_uid")
+  id          String          @db.Uuid
+  name        String
+  state       String          @default("uploading")
+  metadata    Json            @db.JsonB
+  chart       Json            @db.JsonB
+  recordCount Int             @map("record_count")
+  chunkCount  Int             @map("chunk_count")
+  firstTs     BigInt?         @map("first_ts")
+  lastTs      BigInt?         @map("last_ts")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @default(now()) @map("updated_at") @db.Timestamptz(6)
+  profile     Profile         @relation(fields: [userUid], references: [uid], onDelete: Cascade, onUpdate: NoAction, map: "analyses_user_uid_fkey")
+  chunks      AnalysisChunk[]
+
+  @@id([userUid, id], map: "analyses_pkey")
+  @@index([userUid, updatedAt(sort: Desc), id], map: "analyses_owner_updated")
+  @@map("analyses")
+  @@schema("decicharts")
+}
+
+model AnalysisChunk {
+  userUid        String   @map("user_uid")
+  analysisId     String   @map("analysis_id") @db.Uuid
+  chunkIndex     Int      @map("chunk_index")
+  recordCount    Int      @map("record_count")
+  firstTs        BigInt   @map("first_ts")
+  lastTs         BigInt   @map("last_ts")
+  duplicateCount Int      @map("duplicate_count")
+  payload        Json     @db.JsonB
+  analysis       Analysis @relation(fields: [userUid, analysisId], references: [userUid, id], onDelete: Cascade, onUpdate: NoAction, map: "analysis_chunks_user_uid_analysis_id_fkey")
+
+  @@id([userUid, analysisId, chunkIndex], map: "analysis_chunks_pkey")
+  @@map("analysis_chunks")
+  @@schema("decicharts")
+}
+
+// Preserved as a historical record of the pre-Prisma migration. Prisma Migrate
+// owns all new migration tracking through its own _prisma_migrations table.
+model LegacyMigration {
+  version   String   @id(map: "schema_migrations_pkey")
+  appliedAt DateTime @default(now()) @map("applied_at") @db.Timestamptz(6)
+
+  @@map("schema_migrations")
+  @@schema("decicharts")
+}

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto'
-import { neon } from '@neondatabase/serverless'
+import { createPrismaClient } from '../server/prisma'
 import { loadEnv } from 'vite'
 import { expect, it } from 'vitest'
 import { createRepository } from '../server/repository'
@@ -12,8 +12,8 @@ const integration = process.env.RUN_NEON_INTEGRATION === '1' ? it : it.skip
 integration('Neon real: preferências, blocos, isolamento, conclusão, leitura e exclusão', async () => {
   const connection = process.env.DATABASE_URL || loadEnv('development', process.cwd(), '').DATABASE_URL
   if (!connection) throw new Error('DATABASE_URL não configurada para a integração.')
-  const sql = neon(connection)
-  const repo = createRepository(connection)
+  const client = createPrismaClient(connection)
+  const repo = createRepository(connection, client)
   const uid = `__decicharts_test_${randomUUID()}`
   const otherUid = `__decicharts_test_${randomUUID()}`
   const alice = { uid, name: 'Teste sintético', email: 'teste@example.invalid', photoURL: null }
@@ -32,15 +32,15 @@ integration('Neon real: preferências, blocos, isolamento, conclusão, leitura e
     const id = randomUUID()
     const chart = { title: 'Teste de integração', range: { start: data.measurements[0].timestamp, end: data.measurements.at(-1)!.timestamp } }
     const input = { id, name: 'Teste isolado', metadata, chart }
-    await repo.start(alice, input)
-    await repo.start(alice, input)
+    await Promise.all([repo.start(alice, input), repo.start(alice, input)])
     const first = chunk(data.measurements.slice(0, 5000).map(point => [point.timestamp, point.value]))
-    await repo.putChunk(uid, id, 0, first)
-    await repo.putChunk(uid, id, 0, first)
+    await Promise.all([repo.putChunk(uid, id, 0, first), repo.putChunk(uid, id, 0, first)])
     await expect(repo.complete(uid, id)).rejects.toMatchObject({ status: 409 })
     expect((await repo.list(uid, 0)).analyses).toHaveLength(0)
     await repo.putChunk(uid, id, 1, chunk(data.measurements.slice(5000).map(point => [point.timestamp, point.value])))
-    const completed = await repo.complete(uid, id)
+    const completions = await Promise.all([repo.complete(uid, id), repo.complete(uid, id)])
+    const completed = completions[0]
+    expect(completions[1].analysis.id).toBe(id)
     expect(completed.analysis.count).toBe(5001)
     expect((await repo.complete(uid, id)).analysis.id).toBe(id)
     expect((await repo.start(alice, input)).state).toBe('ready')
@@ -57,8 +57,7 @@ integration('Neon real: preferências, blocos, isolamento, conclusão, leitura e
     await expect(repo.update(uid, id, 'Inválido', { ...chart, range: { start: 0, end: 1 } })).rejects.toMatchObject({ status: 400 })
     await repo.remove(uid, id)
     await expect(repo.read(uid, id)).rejects.toMatchObject({ status: 404 })
-    const remaining = await sql`SELECT count(*)::integer AS count FROM decicharts.analysis_chunks WHERE user_uid=${uid}`
-    expect(remaining[0].count).toBe(0)
+    expect(await client.analysisChunk.count({ where: { userUid: uid } })).toBe(0)
     const unorderedId = randomUUID()
     await repo.start(alice, { ...input, id: unorderedId, metadata: { ...metadata, duplicateTimestamps: 0 } })
     await repo.putChunk(uid, unorderedId, 0, first)
@@ -72,7 +71,9 @@ integration('Neon real: preferências, blocos, isolamento, conclusão, leitura e
     if (error && typeof error === 'object' && 'code' in error) console.error('Código de falha PostgreSQL:', String(error.code))
     throw new Error('Falha no teste Neon. Credenciais e mensagens internas foram omitidas.')
   } finally {
-    await sql`DELETE FROM decicharts.profiles WHERE uid IN (${uid}, ${otherUid})`
-    console.log('Registros sintéticos de integração removidos.')
+    try {
+      await client.profile.deleteMany({ where: { uid: { in: [uid, otherUid] } } })
+      console.log('Registros sintéticos de integração removidos.')
+    } finally { await client.$disconnect() }
   }
 }, 120_000)

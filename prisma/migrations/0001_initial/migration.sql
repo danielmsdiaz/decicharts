@@ -1,11 +1,14 @@
+-- Baseline of the existing Decicharts schema. Check constraints are retained
+-- in SQL because Prisma schema does not represent PostgreSQL CHECK constraints.
+
 CREATE SCHEMA IF NOT EXISTS decicharts;
 
-CREATE TABLE IF NOT EXISTS decicharts.schema_migrations (
+CREATE TABLE decicharts.schema_migrations (
   version text PRIMARY KEY,
   applied_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS decicharts.profiles (
+CREATE TABLE decicharts.profiles (
   uid text PRIMARY KEY,
   name text,
   email text,
@@ -15,7 +18,7 @@ CREATE TABLE IF NOT EXISTS decicharts.profiles (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS decicharts.analyses (
+CREATE TABLE decicharts.analyses (
   user_uid text NOT NULL REFERENCES decicharts.profiles(uid) ON DELETE CASCADE,
   id uuid NOT NULL,
   name text NOT NULL,
@@ -31,9 +34,9 @@ CREATE TABLE IF NOT EXISTS decicharts.analyses (
   PRIMARY KEY (user_uid, id)
 );
 
-CREATE INDEX IF NOT EXISTS analyses_owner_updated ON decicharts.analyses (user_uid, updated_at DESC, id);
+CREATE INDEX analyses_owner_updated ON decicharts.analyses (user_uid, updated_at DESC, id);
 
-CREATE TABLE IF NOT EXISTS decicharts.analysis_chunks (
+CREATE TABLE decicharts.analysis_chunks (
   user_uid text NOT NULL,
   analysis_id uuid NOT NULL,
   chunk_index integer NOT NULL CHECK (chunk_index BETWEEN 0 AND 49),
