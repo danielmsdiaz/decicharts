@@ -653,11 +653,15 @@ Quando início e fim são iguais, o eixo exportado usa apenas uma margem gráfic
 
 - [x] Fases 1, 3, 4 e 5 implementadas e verificadas localmente.
 - [x] Código da fase 2 e seus testes automatizados implementados.
-- [x] 38 testes unitários e 4 cenários Chrome aprovados.
+- [x] 39 testes unitários aprovados. Quatro cenários Chrome aprovados na implementação inicial; fluxo completo revalidado com a rota protegida após a correção de contexto.
 - [x] Tipagem, ESLint e build de produção aprovados.
 - [x] Auditoria final: zero vulnerabilidades reportadas.
 - [x] Build inspecionado: fixture de autenticação dos testes ausente de dist.
-- [ ] Validar login, recuperação/persistência da sessão e logout com Firebase e conta Google reais. Bloqueado: configuração externa não fornecida.
+- [ ] Validar login, recuperação/persistência da sessão e logout com Firebase e conta Google reais. Pendente: configuração iniciada pelo usuário; validar o fluxo completo com conta real.
 - [ ] Conferir compatibilidade com arquivos reais dos decibelímetros utilizados pelo usuário. Sem amostras disponíveis.
 
 O MVP não é declarado integralmente validado enquanto o aceite de autenticação real permanecer pendente. Deploy não executado e não autorizado.
+
+### Regressão corrigida — contexto da rota protegida
+
+ProtectedRoute deve encaminhar o contexto do Outlet do layout ao dashboard autenticado. O teste de regressão usa App → ProtectedRoute → Dashboard e verifica a troca de tema; a fixture do navegador também percorre a rota protegida. O erro reportado pelo usuário foi reproduzido antes da correção e os testes passaram depois.

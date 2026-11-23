@@ -58,17 +58,17 @@ Nenhuma implementação local pendente. Validação externa da autenticação ag
 
 ## Bloqueios e pendências
 
-- Firebase e conta Google reais: configuração não fornecida; testes reais não executados. Não declarar o MVP integralmente validado.
+- Configuração Firebase iniciada pelo usuário. Validação completa de login, persistência e logout com Google real continua pendente; não declarar o MVP integralmente validado.
 - Não há amostras reais de decibelímetros; compatibilidade foi testada com fixtures sintéticas.
-- Sem erros conhecidos nos fluxos locais testados.
+- Erro de contexto do tema na rota protegida reportado pelo usuário e corrigido; sem erros conhecidos após a validação desta correção.
 - Publicação exige autorização específica; não houve deploy nem push.
 
 ## Validações
 
 | Verificação | Resultado |
 |-------------|-----------|
-| Vitest | 38 testes aprovados em 5 arquivos |
-| Chrome/Playwright | 4 cenários aprovados |
+| Vitest | 39 testes aprovados em 6 arquivos |
+| Chrome/Playwright | 4 cenários aprovados anteriormente; fluxo completo revalidado após correção da rota protegida |
 | TypeScript strict | Aprovado: npm run typecheck |
 | ESLint | Aprovado |
 | Build de produção | Aprovado, sem avisos de tamanho de chunks |
@@ -177,3 +177,15 @@ Pendências:
 
 Próxima ação:
 - Configurar Firebase seguindo README e executar a lista de validação real.
+
+### 2026-11-23 — Correção do contexto do dashboard após login
+
+- Usuário reportou Cannot destructure property theme após configurar o Firebase.
+- Causa reproduzida: ProtectedRoute criava Outlet sem encaminhar o contexto do App.
+- Correção: encaminhar o contexto recebido para o Outlet da rota protegida.
+- Novo teste com a hierarquia App → ProtectedRoute → Dashboard reproduziu o erro antes da correção e passou depois, incluindo alternância de tema.
+- Fixture Chrome passou a incluir ProtectedRoute, eliminando a lacuna de cobertura anterior.
+- 39 testes unitários aprovados; lint e build aprovados.
+- Fluxo Chrome de importação, duplicados, filtros, zoom, PNG/SVG, tema e logout aprovado com a rota protegida.
+- Nenhum valor de .env.local lido, alterado ou versionado.
+- Próxima ação: usuário recarregar o aplicativo e continuar a validação da conta Google real.
