@@ -42,6 +42,7 @@ Triagem inicial concluída e backlog registrado na seção 21 do plano. Nenhuma 
 
 1. Reproduzir o cenário relatado: login com servidor dev parado e reconexão após reiniciar; distinguir recarga visual de logout real.
 2. Implementar proteção para trabalho não salvo e separar banco de desenvolvimento/produção.
+   Avaliar também o arquivo real previsto para 24/11/2026 e definir o cálculo de Leq antes da implementação, conforme seção 21 do plano.
 3. Diferenciar carregamento de página, recuperação de sessão e falha temporária de conexão; permitir nova tentativa do perfil.
 4. Adicionar busca e filtros paginados ao histórico, preservando isolamento por UID.
 5. Validar Google real → importar → salvar → recarregar → reabrir, persistência da sessão e logout; conferir arquivos reais dos equipamentos.
@@ -296,3 +297,10 @@ Próxima ação:
 - Seção 21 do plano adicionada com prioridades, tarefas e critérios de aceite para sessão, proteção do trabalho, separação de ambientes, carregamento/rede e busca no histórico.
 - Mudança somente documental. Não foram executados novos testes nem alterados autenticação, banco ou variáveis de ambiente; resultados anteriores permanecem como histórico, sem validar o relato novo.
 - Próxima ação: reproduzir o reinício do servidor dev durante login e identificar a causa antes de corrigir.
+
+### 2026-11-23 — Leq adicionado ao backlog
+
+- Usuário solicitou registrar Leq após menor/maior nível, incluindo as informações da figura exportada. Implementação permanece pendente; arquivo real do sistema previsto pelo usuário para 24/11/2026.
+- Critérios registrados na seção 21: distinguir leituras instantâneas de Leq por intervalo, calcular média energética ponderada pela duração quando aplicável e definir tratamento de lacunas, duplicados e recortes do período.
+- Tela, PNG e SVG devem usar o mesmo indicador; estimativas e ponderação A devem ser identificadas corretamente. Exemplo de aceite: 50/60/70 dB por durações iguais → 65,68 dB.
+- Mudança somente documental, conferida com git diff --check; nenhum teste adicional executado nem código/banco alterado.

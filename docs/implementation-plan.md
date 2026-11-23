@@ -760,6 +760,21 @@ Aceite: oferecer proteção nas ações suportadas pelo navegador sem impedir sa
 
 Aceite: mudanças e testes locais não alteram os dados de produção; configuração documentada sem expor URLs ou senhas. Nenhum branch ou recurso de nuvem foi criado nesta etapa.
 
+### Prioridade 1 — Leq nas informações do gráfico e na figura exportada
+
+Solicitação do usuário após orientação do pai: calcular Leq e exibi-lo depois de “Menor nível” e “Maior nível”. Implementação ainda não autorizada nesta etapa; aguardar o arquivo real do sistema, com envio previsto pelo usuário para 24/11/2026, para definir o significado dos registros e o método adequado.
+
+- [ ] Examinar o arquivo real e confirmar se cada valor é uma leitura instantânea ou um Leq integrado, a duração representada e a ponderação acústica do equipamento.
+- [ ] Calcular média energética, nunca média aritmética dos valores em dB. Para intervalos iguais: `10 * log10(sum(10 ** (Li / 10)) / n)`; para intervalos diferentes: `10 * log10(sum(ti * 10 ** (Li / 10)) / sum(ti))`.
+- [ ] Definir o tratamento de lacunas, timestamps duplicados, registros inválidos, intervalos sobrepostos, limites do filtro e duração do último registro. Não presumir que a diferença entre timestamps é o tempo de integração do equipamento, nem extrapolar energia por períodos sem dados.
+- [ ] Recalcular o indicador para o período selecionado, usando uma regra explícita para intervalos parcialmente selecionados. Apenas Leq agregado por intervalo não permite recuperar o Leq exato de uma fração desse intervalo.
+- [ ] Acrescentar Leq depois de “Maior nível” na tela e incluir menor nível, maior nível, Leq e período na própria figura PNG/SVG; os cartões da tela atualmente não são exportados com o gráfico.
+- [ ] Identificar como estimado o resultado derivado de leituras instantâneas, explicitando a hipótese de amostragem. Exibir `LAeq` em `dB(A)` somente quando a ponderação A for confirmada; alterar o rótulo não converte a ponderação dos dados.
+- [ ] Calcular a partir dos dados completos do intervalo, sem arredondamentos intermediários ou dependência de simplificação visual do gráfico; manter estabilidade numérica e consistência entre tela, exportação e reabertura de análise salva.
+- [ ] Validar os exemplos conhecidos, duração desigual, série constante, ausência de dados, leitura isolada sem duração, irregularidades temporais e atualização por filtro; conferir o resultado com o relatório do equipamento quando houver dados comparáveis.
+
+Aceite: 50, 60 e 70 dB em três intervalos de igual duração resultam em aproximadamente 65,68 dB (65,7 dB com uma casa), e não 60 dB. Tela e figura mostram o mesmo valor e período. Quando os dados não sustentarem o cálculo, informar a limitação em vez de apresentar um Leq exato. O cálculo não comprova conformidade normativa por si só. Nenhuma alteração de código, modelo Prisma ou banco realizada nesta etapa.
+
 ### Prioridade 2 — Mensagens de carregamento e falhas de conexão
 
 - [ ] Separar a mensagem de recuperação da sessão da mensagem de carregamento das páginas. Hoje os fallbacks de `Suspense` das rotas reutilizam `SessionLoading`.
