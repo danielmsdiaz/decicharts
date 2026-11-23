@@ -12,7 +12,7 @@
 |------|--------|
 | 1. Setup | Concluído |
 | 2. Autenticação | Bloqueado |
-| 3. Importação | Em andamento |
+| 3. Importação | Concluído |
 | 4. Gráficos | Em andamento |
 | 5. Finalização | Pendente |
 
@@ -89,3 +89,11 @@ Próxima ação:
 - Checklists distinguem implementação de validação externa.
 - Primeira execução no Chrome: rota real protegida, mobile e 250 mil registros aprovados; fluxo completo interrompido na leitura e sob investigação.
 - Capacidade: 250 mil registros carregados e renderizados em aproximadamente 6 segundos nesta máquina, incluindo interações do teste.
+
+### 2026-11-23 — Importação validada
+
+- 22 testes de parsing/normalização aprovados: CSV, XLS/XLSX, calendários Excel, fusos, duplicados, limites e diagnósticos.
+- Mapeamento editável, prévia e processamento em worker validados no Chrome com CSV.
+- Limite adicional de 250.100 linhas físicas por aba Excel documentado; leituras truncadas são rejeitadas.
+- Commit de setup e autenticação: 06c0999.
+- Próxima ação: concluir o commit de importação e integrar o workspace de gráficos.

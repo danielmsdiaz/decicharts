@@ -289,15 +289,15 @@ project/
 
 ### Fase 3 — Importação
 
-- [ ] Criar componente de upload.
-- [ ] Implementar leitura de Excel/CSV.
-- [ ] Criar seleção de abas.
-- [ ] Implementar identificação de colunas.
-- [ ] Permitir mapeamento manual.
-- [ ] Normalizar datas e valores.
-- [ ] Validar registros.
-- [ ] Exibir prévia dos dados importados.
-- [ ] Criar testes do parser.
+- [x] Criar componente de upload.
+- [x] Implementar leitura de Excel/CSV.
+- [x] Criar seleção de abas.
+- [x] Implementar identificação de colunas.
+- [x] Permitir mapeamento manual.
+- [x] Normalizar datas e valores.
+- [x] Validar registros.
+- [x] Exibir prévia dos dados importados.
+- [x] Criar testes do parser.
 
 **Critério de conclusão:** importar arquivos válidos e produzir um conjunto de medições corretamente normalizadas.
 
