@@ -665,3 +665,19 @@ O MVP não é declarado integralmente validado enquanto o aceite de autenticaç�
 ### Regressão corrigida — contexto da rota protegida
 
 ProtectedRoute deve encaminhar o contexto do Outlet do layout ao dashboard autenticado. O teste de regressão usa App → ProtectedRoute → Dashboard e verifica a troca de tema; a fixture do navegador também percorre a rota protegida. O erro reportado pelo usuário foi reproduzido antes da correção e os testes passaram depois.
+
+## 18. Simplificação da interface aprovada — 2026-11-23
+
+Esta revisão substitui a apresentação inicial dos campos e os rótulos do fluxo, preservando parsing e precisão.
+
+- [x] Remover o placeholder “Seu próximo gráfico começa aqui”.
+- [x] Mostrar imediatamente o arquivo escolhido e seu estado; manter identificação após gerar o gráfico.
+- [x] Conferir automaticamente quando as colunas forem reconhecidas; ação principal Gerar gráfico.
+- [x] Pedir apenas colunas desconhecidas; opções avançadas ficam em Ajustar leitura do arquivo.
+- [x] Mostrar escolha de aba apenas quando houver várias.
+- [x] Destacar Cancelar importação e Remover arquivo; cancelamento de troca mantém a série anterior.
+- [x] Recolher período e título; preservar início/fim na consulta detalhada.
+- [x] Revisar temas, espaçamento, estados e responsividade.
+- [x] Validar os 7 cenários Chrome e manter os 39 testes unitários aprovados.
+
+A detecção automática gera a prévia; a confirmação do usuário continua necessária para utilizar ou substituir a série. Nenhuma configuração Firebase foi alterada por esta revisão.

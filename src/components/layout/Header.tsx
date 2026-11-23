@@ -6,7 +6,7 @@ import { useAuth } from '@/features/auth/auth-context'
 export function Header({ theme, toggleTheme }: { theme: string; toggleTheme: () => void }) {
   const { user, logout, busy } = useAuth()
   const [failedPhoto, setFailedPhoto] = useState<string | null>(null)
-  return <header className="border-b bg-card"><div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
+  return <header className="border-b bg-card"><div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
     <a href="/" className="flex items-center gap-2.5 font-semibold tracking-tight no-underline"><span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground"><AudioLines className="size-5" aria-hidden="true" /></span><span className="text-lg">Decicharts</span></a>
     <div className="flex items-center gap-2 sm:gap-4">
       <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>{theme === 'dark' ? <Sun /> : <Moon />}</Button>

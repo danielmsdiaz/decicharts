@@ -3,9 +3,9 @@ import { formatTime } from '@/features/measurements/range'
 import type { MeasurementDataset, TimeRange } from '@/features/measurements/types'
 
 export function chartOption(dataset: MeasurementDataset, range: TimeRange, title: string, dark = false, exporting = false): EChartsCoreOption {
-  const foreground = dark ? '#edf2f5' : '#172b36'
-  const muted = dark ? '#afbdc6' : '#556571'
-  const grid = dark ? '#30424d' : '#e6ebee'
+  const foreground = dark ? '#edf1f3' : '#20282e'
+  const muted = dark ? '#a7b4bd' : '#5c6972'
+  const grid = dark ? '#303b43' : '#e6ebee'
   const singleInstant = exporting && range.start === range.end
   const axisFontSize = exporting ? 18 : 14
   return {
@@ -43,8 +43,8 @@ export function chartOption(dataset: MeasurementDataset, range: TimeRange, title
     },
     dataZoom: exporting ? [] : [
       { type: 'inside', startValue: range.start, endValue: range.end, filterMode: 'filter', zoomOnMouseWheel: 'ctrl', moveOnMouseWheel: false },
-      { type: 'slider', startValue: range.start, endValue: range.end, filterMode: 'filter', bottom: 12, height: 25, showDetail: false, showDataShadow: false, borderColor: grid, fillerColor: dark ? '#294a45' : '#cce6e0', handleStyle: { color: dark ? '#5ee0cc' : '#0f766e' }, textStyle: { color: muted } },
+      { type: 'slider', startValue: range.start, endValue: range.end, filterMode: 'filter', bottom: 12, height: 25, showDetail: false, showDataShadow: false, borderColor: grid, fillerColor: dark ? '#294a45' : '#cce6e0', handleStyle: { color: dark ? '#68d9c1' : '#0b7566' }, textStyle: { color: muted } },
     ],
-    series: [{ name: `Nível sonoro (${dataset.unit})`, type: 'line', data: dataset.measurements.map(point => [point.timestamp, point.value]), smooth: false, showSymbol: dataset.measurements.length <= 1, symbolSize: 6, connectNulls: false, clip: true, lineStyle: { width: 1.5, color: dark ? '#5ee0cc' : '#0f766e' }, itemStyle: { color: dark ? '#5ee0cc' : '#0f766e' }, emphasis: { disabled: true } }],
+    series: [{ name: `Nível sonoro (${dataset.unit})`, type: 'line', data: dataset.measurements.map(point => [point.timestamp, point.value]), smooth: false, showSymbol: dataset.measurements.length <= 1, symbolSize: 6, connectNulls: false, clip: true, lineStyle: { width: 1.5, color: dark ? '#68d9c1' : '#0b7566' }, itemStyle: { color: dark ? '#68d9c1' : '#0b7566' }, emphasis: { disabled: true } }],
   }
 }

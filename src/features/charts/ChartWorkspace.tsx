@@ -36,22 +36,64 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
     catch (issue) { setError(issue instanceof Error ? issue.message : 'Não foi possível exportar o gráfico. Tente novamente.') }
     finally { setExporting(false) }
   }
-  return <section className="panel overflow-hidden" aria-labelledby="chart-title">
-    <div className="flex flex-wrap items-start justify-between gap-4 border-b px-5 py-6 sm:px-7"><div><h2 id="chart-title" className="text-lg font-semibold">Explore suas medições</h2><p className="mt-1 break-all text-sm text-muted-foreground">{dataset.fileName} · {dataset.sheetName} · {dataset.timezone}</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" disabled={!stats || exporting} onClick={() => void download('png')}><Download />PNG</Button><Button variant="outline" size="sm" disabled={!stats || exporting} onClick={() => void download('svg')}><Download />SVG</Button></div></div>
-    <div className="px-5 pt-6 sm:px-7"><label className="field max-w-xl">Título do gráfico<Input value={title} maxLength={100} onChange={event => setTitle(event.target.value)} /></label>
-      <form onSubmit={event => { event.preventDefault(); apply() }} className="mt-5 flex flex-wrap items-end gap-3"><label className="field min-w-52 flex-1">Início<Input type="datetime-local" step="0.001" value={startInput} onChange={event => setStartInput(event.target.value)} /></label><label className="field min-w-52 flex-1">Fim<Input type="datetime-local" step="0.001" value={endInput} onChange={event => setEndInput(event.target.value)} /></label><Button type="submit" variant="outline"><SlidersHorizontal />Aplicar intervalo</Button><Button variant="ghost" onClick={() => updateRange(available)}><RotateCcw />Restaurar</Button></form>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">Horários em {dataset.timezone}. Ajuste a faixa abaixo do gráfico ou use Ctrl + rolagem para ampliar. Os indicadores e a exportação acompanham o intervalo aplicado.</p>
-      {error && <p role="alert" className="notice error mt-4">{error}</p>}{(feedback || exporting) && <p role="status" className="mt-4 text-sm text-muted-foreground">{exporting ? 'Preparando gráfico em alta resolução…' : feedback}</p>}
-      <dl className="mt-6 grid grid-cols-2 gap-y-5 border-y py-5 sm:grid-cols-3 lg:grid-cols-5">{[
-        ['Medições no intervalo', stats ? number(stats.count) : '0'],
-        ['Mínimo', stats ? `${number(stats.min)} ${dataset.unit}` : '—'],
-        ['Máximo', stats ? `${number(stats.max)} ${dataset.unit}` : '—'],
-        ['Primeira medição', stats ? formatTime(stats.start, dataset.timezone, 'dd/MM/yyyy HH:mm:ss.SSS') : '—'],
-        ['Última medição', stats ? formatTime(stats.end, dataset.timezone, 'dd/MM/yyyy HH:mm:ss.SSS') : '—'],
-      ].map(([label, value]) => <div key={label} className="pr-4"><dt className="text-sm text-muted-foreground">{label}</dt><dd className="mt-1.5 text-sm font-semibold tabular-nums">{value}</dd></div>)}</dl>
-    </div>
-    {!stats && <p className="notice mx-5 mt-5 sm:mx-7" role="status">Não há medições neste intervalo. Amplie o período ou restaure a série completa.</p>}
-    <TimeSeriesChart dataset={dataset} range={range} title={title} dark={dark} onRangeChange={updateRange} />
-    <div className="border-t px-5 py-5 text-sm sm:px-7"><p className="leading-6 text-muted-foreground">{number(dataset.validRecords)} medições válidas na série · {number(dataset.invalidRecords)} registros inválidos excluídos · {number(dataset.duplicateTimestamps)} timestamps repetidos preservados. Os segmentos unem pontos reais; não foram inseridas medições intermediárias.</p><details className="mt-4"><summary className="font-medium">Consultar medições do intervalo</summary><p className="mt-3 text-muted-foreground">Primeiras 100 de {number(visible.length)} medições, em ordem cronológica.</p><div className="mt-3 max-h-72 overflow-auto"><table className="w-full text-left text-sm"><thead><tr><th className="sticky top-0 bg-card px-3 py-2 font-medium">Data/hora · {dataset.timezone}</th><th className="sticky top-0 bg-card px-3 py-2 font-medium">Nível sonoro ({dataset.unit})</th></tr></thead><tbody>{visible.slice(0, 100).map((point, index) => <tr key={index} className="border-t tabular-nums"><td className="whitespace-nowrap px-3 py-2">{formatTime(point.timestamp, dataset.timezone)}</td><td className="px-3 py-2">{number(point.value)}</td></tr>)}</tbody></table></div></details></div>
-  </section>
+  return (
+    <section className="panel overflow-hidden" aria-labelledby="chart-title">
+      <div className="chart-heading">
+        <div>
+          <h2 id="chart-title" className="text-xl font-semibold tracking-tight">Nível sonoro ao longo do tempo</h2>
+          <p className="mt-2 text-sm text-muted-foreground tabular-nums">
+            {formatTime(range.start, dataset.timezone, 'dd/MM/yyyy HH:mm:ss')} — {formatTime(range.end, dataset.timezone, 'dd/MM/yyyy HH:mm:ss')}
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="outline" disabled={!stats || exporting} onClick={() => void download('png')}><Download />PNG</Button>
+          <Button variant="outline" disabled={!stats || exporting} onClick={() => void download('svg')}><Download />SVG</Button>
+        </div>
+      </div>
+
+      <div className="chart-body">
+        <details className="disclosure chart-settings">
+          <summary><SlidersHorizontal className="size-4" aria-hidden="true" />Ajustar período e título</summary>
+          <div className="mt-5">
+            <label className="field max-w-xl">Título do gráfico<Input value={title} maxLength={100} onChange={event => setTitle(event.target.value)} /></label>
+            <form onSubmit={event => { event.preventDefault(); apply() }} className="mt-5 flex flex-wrap items-end gap-3">
+              <label className="field min-w-0 flex-[1_1_240px]">Início<Input type="datetime-local" step="0.001" value={startInput} onChange={event => setStartInput(event.target.value)} /></label>
+              <label className="field min-w-0 flex-[1_1_240px]">Fim<Input type="datetime-local" step="0.001" value={endInput} onChange={event => setEndInput(event.target.value)} /></label>
+              <Button type="submit" variant="outline">Aplicar intervalo</Button>
+              <Button variant="ghost" onClick={() => updateRange(available)}><RotateCcw />Restaurar</Button>
+            </form>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Horários em {dataset.timezone}. Os limites são inclusivos; o gráfico e a exportação usam o mesmo período.</p>
+          </div>
+        </details>
+        {error && <p role="alert" className="notice error mt-4">{error}</p>}
+        {(feedback || exporting) && <p role="status" className="mt-4 text-sm text-muted-foreground">{exporting ? 'Preparando gráfico em alta resolução…' : feedback}</p>}
+        <dl className="chart-stats">
+          {[
+            ['Medições no período', stats ? number(stats.count) : '0'],
+            ['Menor nível', stats ? `${number(stats.min)} ${dataset.unit}` : '—'],
+            ['Maior nível', stats ? `${number(stats.max)} ${dataset.unit}` : '—'],
+          ].map(([label, value]) => (
+            <div key={label}><dt>{label}</dt><dd className="tabular-nums">{value}</dd></div>
+          ))}
+        </dl>
+      </div>
+      {!stats && <p className="notice mx-5 mt-5 sm:mx-7" role="status">Não há medições neste intervalo. Amplie o período ou restaure a série completa.</p>}
+      <TimeSeriesChart dataset={dataset} range={range} title={title} dark={dark} onRangeChange={updateRange} />
+      <div className="chart-bottom">
+        <p className="text-sm text-muted-foreground">Arraste a faixa para selecionar um período. Ctrl + rolagem amplia o gráfico.</p>
+        {(dataset.invalidRecords > 0 || dataset.duplicateTimestamps > 0) && <p className="mt-3 text-sm text-muted-foreground">{number(dataset.invalidRecords)} registros inválidos excluídos · {number(dataset.duplicateTimestamps)} timestamps repetidos preservados.</p>}
+        <details className="disclosure mt-4">
+          <summary>Consultar medições do intervalo</summary>
+          <p className="mb-3 mt-4 text-sm text-muted-foreground">Primeiras 100 de {number(visible.length)} medições, em ordem cronológica. Os pontos originais foram preservados, sem suavização.</p>
+          {stats && <p className="mb-3 text-sm text-muted-foreground tabular-nums">Primeira medição: {formatTime(stats.start, dataset.timezone)} · Última medição: {formatTime(stats.end, dataset.timezone)}</p>}
+          <div className="table-scroll max-h-72">
+            <table className="data-table">
+              <thead><tr><th className="sticky top-0">Data e hora · {dataset.timezone}</th><th className="sticky top-0">Nível sonoro ({dataset.unit})</th></tr></thead>
+              <tbody>{visible.slice(0, 100).map((point, index) => <tr key={index} className="tabular-nums"><td className="whitespace-nowrap">{formatTime(point.timestamp, dataset.timezone)}</td><td>{number(point.value)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+  )
 }

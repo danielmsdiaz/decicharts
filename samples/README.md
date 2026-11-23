@@ -9,4 +9,4 @@
 - Variação de fundo, três picos e um período de nível elevado entre 09:15 e 09:25.
 - Sem registros inválidos ou timestamps duplicados.
 
-Na aplicação, selecione o CSV, confira as sugestões e clique em **Conferir e gerar prévia → Usar esta série**. Os campos devem ser detectados automaticamente.
+Na aplicação, selecione o CSV, confira as sugestões e aguarde a prévia automática e clique em **Gerar gráfico**. Os campos devem ser detectados automaticamente.

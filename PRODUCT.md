@@ -28,3 +28,7 @@ Sem planilhas reais ou configuração Firebase fornecidas. Não fabricar valida�
 
 ## Product Principles
 Precisão antes de conveniência. Processamento local. Diagnósticos explícitos. Gráfico como foco do trabalho.
+
+## Preferências de usabilidade confirmadas — 2026-11-23
+
+O usuário pediu menos campos e linguagem simples. A importação deve reconhecer o arquivo, mostrar seu estado, gerar prévia automaticamente e oferecer uma ação clara para gerar o gráfico. Campos técnicos ficam sob demanda; cancelamento tem destaque. Não exibir “Seu próximo gráfico começa aqui”.

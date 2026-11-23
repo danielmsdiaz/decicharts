@@ -68,7 +68,7 @@ Nenhuma implementação local pendente. Validação externa da autenticação ag
 | Verificação | Resultado |
 |-------------|-----------|
 | Vitest | 39 testes aprovados em 6 arquivos |
-| Chrome/Playwright | 4 cenários aprovados anteriormente; fluxo completo revalidado após correção da rota protegida |
+| Chrome/Playwright | 7 cenários aprovados após simplificação da interface |
 | TypeScript strict | Aprovado: npm run typecheck |
 | ESLint | Aprovado |
 | Build de produção | Aprovado, sem avisos de tamanho de chunks |
@@ -196,3 +196,24 @@ Próxima ação:
 - Dados explicitamente sintéticos, com variação de fundo, três picos e um trecho elevado; valores entre 46,0 e 79,7 dB.
 - Validado com as funções reais de parsing, sugestão e normalização: 3.601 válidos, zero inválidos, zero duplicados, mapeamento automático correto e uma hora de intervalo.
 - Instruções de importação e origem sintética em samples/README.md.
+
+### 2026-11-23 — Simplificação da interface solicitada pelo usuário
+
+- Em andamento: reduzir os campos visíveis e priorizar arquivo, prévia e gráfico.
+- Remover o placeholder “Seu próximo gráfico começa aqui”.
+- Destacar arquivo carregado, cancelamento e remoção; preservar ajustes técnicos sob demanda.
+- Aplicar Impeccable (Operate/distill); Design Taste consultada, com suas regras específicas de marketing fora do escopo deste dashboard.
+- Revalidar seleção, troca/cancelamento, processamento e exportação após a revisão.
+
+### 2026-11-23 — Interface simplificada concluída
+
+- Fluxo: selecionar arquivo → prévia automática → Gerar gráfico.
+- Apenas escolhas desconhecidas ficam visíveis; ajustes técnicos e filtros/título sob demanda.
+- Arquivo carregado/ativo explícitos; cancelar e remover com destaque.
+- Cancelar uma substituição conserva a série atual; troca só ocorre após confirmação.
+- Placeholder removido; indicadores principais reduzidos a três, com primeira/última medição preservadas na consulta detalhada.
+- 39 testes unitários e 7 cenários Chrome aprovados. Na confirmação final, seis cenários passaram e o seletor do teste de coluna ambígua foi ajustado para o nome acessível; o cenário específico passou na reexecução.
+- Capacidade mantida: 250 mil registros lidos, normalizados e renderizados em cerca de 6 segundos na execução local.
+- Lint, tipagem/build e detector visual aprovados. Inspeção desktop/mobile/escuro concluída em duas rodadas, sem novas mudanças visuais.
+- README, exemplo e documentos atualizados para o novo fluxo.
+- Sem dependências novas, alterações em .env.local, deploy ou push.

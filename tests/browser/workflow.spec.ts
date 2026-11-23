@@ -1,21 +1,22 @@
 import { test, expect, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
+import * as XLSX from 'xlsx'
 
 const csv = 'Data;Nível\n23/11/2026 12:00:00;50,5\n23/11/2026 12:00:01;65,4\n23/11/2026 12:00:01;70\n23/11/2026 12:00:09;55\ninválida;20\n'
 async function importCsv(page: Page, contents = csv) {
   await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'medicao.csv', mimeType: 'text/csv', buffer: Buffer.from(contents) })
-  await page.getByRole('button', { name: 'Conferir e gerar prévia' }).click()
-  await expect(page.getByRole('heading', { name: 'Confira antes de importar' })).toBeVisible()
-  await page.getByRole('button', { name: 'Usar esta série' }).click()
-  await expect(page.getByRole('heading', { name: 'Explore suas medições' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Nível sonoro ao longo do tempo' })).toBeVisible()
 }
 
-test('rota real exige sessão e informa configuração Firebase ausente', async ({ page }) => {
+test('rota real exige sessão e oferece o login Google', async ({ page }) => {
   await page.goto('/')
   await expect(page).toHaveURL(/\/login$/)
-  await expect(page.getByRole('button', { name: 'Continuar com Google' })).toBeDisabled()
-  await expect(page.getByRole('alert')).toContainText('Firebase')
-  await page.screenshot({ path: '/tmp/decicharts-login.png', fullPage: true })
+  const login = page.getByRole('button', { name: 'Continuar com Google' })
+  await expect(login).toBeVisible()
+  if (await login.isDisabled()) await expect(page.getByRole('alert')).toContainText('Firebase')
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-login.png', fullPage: true })
 })
 
 test('importação, duplicados, filtros, zoom, PNG/SVG, tema e logout', async ({ page }) => {
@@ -23,11 +24,13 @@ test('importação, duplicados, filtros, zoom, PNG/SVG, tema e logout', async ({
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/tests/browser/fixture.html')
   await importCsv(page)
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-redesign-chart-default.png', fullPage: true })
   const stats = page.locator('dl')
   await expect(stats).toContainText('50,5 dB')
   await expect(stats).toContainText('70 dB')
   await expect(page.getByText(/1 registros inválidos excluídos/)).toBeVisible()
   await expect(page.getByText(/1 timestamps repetidos preservados/)).toBeVisible()
+  await page.getByText('Ajustar período e título', { exact: true }).click()
   await page.getByLabel('Título do gráfico').fill('Medição ambiental — Ponto 1')
   await page.getByLabel('Início', { exact: true }).fill('2026-11-23T12:00:01.000')
   await page.getByLabel('Fim', { exact: true }).fill('2026-11-23T12:00:01.000')
@@ -75,13 +78,13 @@ test('importação, duplicados, filtros, zoom, PNG/SVG, tema e logout', async ({
   await page.keyboard.up('Control')
   await expect(page.getByLabel('Início', { exact: true })).not.toHaveValue(originalStart)
   await page.getByRole('button', { name: 'Restaurar', exact: true }).click()
-  await page.screenshot({ path: '/tmp/decicharts-desktop.png', fullPage: true })
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-desktop.png', fullPage: true })
   await page.getByRole('button', { name: 'Ativar tema escuro' }).click()
   await expect(page.locator('html')).toHaveClass('dark')
-  await page.screenshot({ path: '/tmp/decicharts-dark.png', fullPage: true })
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-dark.png', fullPage: true })
   await page.getByRole('button', { name: 'Sair', exact: true }).click()
   await expect(page.getByText('Sessão de teste encerrada')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Explore suas medições' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Nível sonoro ao longo do tempo' })).toHaveCount(0)
   expect(errors).toEqual([])
 })
 
@@ -93,7 +96,7 @@ test('layout mobile e erros de importação', async ({ page }) => {
   await importCsv(page)
   await expect(page.locator('dl').locator('dd').first()).toHaveText('4')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await page.screenshot({ path: '/tmp/decicharts-mobile.png', fullPage: true })
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-mobile.png', fullPage: true })
 })
 
 test('processa e representa 250 mil registros no navegador', async ({ page }) => {
@@ -105,17 +108,103 @@ test('processa e representa 250 mil registros no navegador', async ({ page }) =>
   await page.goto('/tests/browser/fixture.html')
   const before = Date.now()
   await page.getByLabel('Arquivo de medições').setInputFiles({ name: '250mil.csv', mimeType: 'text/csv', buffer: Buffer.from('Timestamp;Nível\n' + rows.join('\n')) })
-  await page.getByRole('button', { name: 'Conferir e gerar prévia' }).click()
   // The main thread remains interactive while normalization runs in the worker.
   await page.getByRole('button', { name: 'Ativar tema escuro' }).click({ timeout: 5000 })
-  await expect(page.getByRole('heading', { name: 'Confira antes de importar' })).toBeVisible({ timeout: 120_000 })
-  await page.getByRole('button', { name: 'Usar esta série' }).click()
+  await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeEnabled({ timeout: 120_000 })
+  await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
   await expect(page.locator('dl').locator('dd').first()).toHaveText('250.000', { timeout: 30_000 })
   await expect(page.getByRole('img', { name: /Nível sonoro em/ }).locator('canvas')).toBeVisible()
+  await page.getByText('Ajustar período e título', { exact: true }).click()
   await page.getByLabel('Início', { exact: true }).fill('2026-11-23T12:00:10.000')
   await page.getByLabel('Fim', { exact: true }).fill('2026-11-23T12:00:20.000')
   await page.getByRole('button', { name: 'Aplicar intervalo' }).click()
   await expect(page.locator('dl').locator('dd').first()).toHaveText('11')
   console.log(`250 mil registros: leitura, normalização e primeira renderização em ${Date.now() - before} ms (inclui interação de teste).`)
   expect(errors).toEqual([])
+})
+
+
+test('arquivo carregado, leitura automática, cancelamento, troca e remoção', async ({ page }) => {
+  await page.goto('/tests/browser/fixture.html')
+  await expect(page.getByText('Seu próximo gráfico começa aqui')).toHaveCount(0)
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-redesign-empty.png', fullPage: true })
+  await page.getByLabel('Arquivo de medições').setInputFiles('samples/medicao-ruido-sintetica.csv')
+  await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeEnabled()
+  await expect(page.getByRole('heading', { name: 'Arquivo carregado' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '3.601 medições encontradas' })).toBeVisible()
+  await expect(page.getByLabel('Linha com os títulos das colunas')).not.toBeVisible()
+  await expect(page.getByText('Qual aba você quer analisar?')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Cancelar importação' })).toBeVisible()
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-redesign-loaded.png', fullPage: true })
+  await page.getByRole('button', { name: 'Ativar tema escuro' }).click()
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-redesign-loaded-dark.png', fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ animations: 'disabled', path: '/tmp/decicharts-redesign-loaded-mobile.png', fullPage: true })
+  await page.getByRole('button', { name: 'Cancelar importação' }).click()
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeVisible()
+  await expect(page.getByText('medicao-ruido-sintetica.csv', { exact: true })).toHaveCount(0)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await importCsv(page)
+  await expect(page.getByRole('region', { name: 'Arquivo em análise' })).toContainText('medicao.csv')
+  await expect(page.locator('dl').locator('dd').first()).toHaveText('4')
+  const replacement = { name: 'outro-arquivo.csv', mimeType: 'text/csv', buffer: Buffer.from('Data;Nível\n23/11/2026 13:00:00;80\n23/11/2026 13:00:01;85') }
+  await page.getByLabel('Arquivo de medições').setInputFiles(replacement)
+  await expect(page.getByRole('button', { name: 'Substituir e gerar gráfico' })).toBeEnabled()
+  await expect(page.locator('dl').locator('dd').first()).toHaveText('4')
+  await page.getByRole('button', { name: 'Cancelar importação' }).click()
+  await expect(page.getByRole('region', { name: 'Arquivo em análise' })).toContainText('medicao.csv')
+  await expect(page.locator('dl').locator('dd').first()).toHaveText('4')
+  await page.getByLabel('Arquivo de medições').setInputFiles(replacement)
+  await expect(page.getByRole('button', { name: 'Substituir e gerar gráfico' })).toBeEnabled()
+  page.once('dialog', dialog => dialog.dismiss())
+  await page.getByRole('button', { name: 'Substituir e gerar gráfico' }).click()
+  await expect(page.locator('dl').locator('dd').first()).toHaveText('4')
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: 'Substituir e gerar gráfico' }).click()
+  await expect(page.getByRole('region', { name: 'Arquivo em análise' })).toContainText('outro-arquivo.csv')
+  await expect(page.locator('dl').locator('dd').first()).toHaveText('2')
+  await expect(page.locator('dl')).toContainText('85 dB')
+  await page.getByRole('button', { name: 'Remover arquivo', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Nível sonoro ao longo do tempo' })).toHaveCount(0)
+  await expect(page.getByText('outro-arquivo.csv', { exact: true })).toHaveCount(0)
+})
+
+test('pede apenas o mapeamento necessário quando as colunas são ambíguas', async ({ page }) => {
+  await page.goto('/tests/browser/fixture.html')
+  await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'colunas.csv', mimeType: 'text/csv', buffer: Buffer.from('Data;Nível A;Nível B\n23/11/2026 12:00:00;50;80\n23/11/2026 12:00:01;55;81') })
+  await expect(page.getByRole('combobox', { name: 'Coluna de nível sonoro', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeDisabled()
+  await expect(page.getByLabel('Linha com os títulos das colunas')).not.toBeVisible()
+  await page.getByRole('combobox', { name: 'Coluna de nível sonoro', exact: true }).selectOption({ label: 'Nível B' })
+  await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeEnabled()
+  await page.getByText('Ajustar leitura do arquivo', { exact: true }).click()
+  await page.getByLabel('Unidade dos valores').fill('dB(A)')
+  await page.getByRole('button', { name: 'Atualizar prévia' }).click()
+  await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
+  await expect(page.locator('dl')).toContainText('80 dB(A)')
+  await expect(page.locator('dl')).toContainText('81 dB(A)')
+})
+
+test('mostra a escolha de aba somente em uma planilha com várias abas', async ({ page }) => {
+  const book = XLSX.utils.book_new()
+  for (const [name, level] of [['Manhã', 50], ['Tarde', 95]] as const) {
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([
+      ['Data', 'Nível'], ['23/11/2026 12:00:00', level], ['23/11/2026 12:00:01', level + 2],
+    ]), name)
+  }
+  await page.goto('/tests/browser/fixture.html')
+  await page.getByLabel('Arquivo de medições').setInputFiles({
+    name: 'duas-abas.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from(XLSX.write(book, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer),
+  })
+  await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeEnabled()
+  await page.getByLabel('Qual aba você quer analisar?').selectOption({ label: 'Tarde' })
+  await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
+  await expect(page.locator('dl')).toContainText('95 dB')
+  await expect(page.locator('dl')).toContainText('97 dB')
+  await expect(page.getByRole('region', { name: 'Arquivo em análise' })).toContainText('Tarde')
 })

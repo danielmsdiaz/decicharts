@@ -35,6 +35,17 @@ Qualquer conta Google autenticada pode acessar. A aplicação usa somente Authen
 
 Validação real: entrar com Google, conferir nome/foto/e-mail, recarregar e verificar persistência, sair e confirmar redirecionamento, tentar acessar `/` sem sessão. Esses passos exigem configuração e conta reais; mocks dos testes não os substituem.
 
+## Como usar
+
+1. Selecione ou arraste um Excel ou CSV. O nome e o estado do arquivo aparecem imediatamente.
+2. Quando as colunas forem reconhecidas, a prévia é gerada automaticamente. Confira e clique em **Gerar gráfico**.
+3. Use **Cancelar importação** para descartar o arquivo pendente. Se já houver uma série no gráfico, ela será mantida.
+4. Depois de gerar, o painel **Arquivo em análise** mostra qual arquivo está ativo. **Trocar arquivo** inicia outra importação e **Remover arquivo** limpa a série da sessão.
+
+A escolha de aba só aparece para planilhas com várias abas. Quando uma coluna não é reconhecida, a tela pede somente essa escolha. Os demais campos ficam em **Ajustar leitura do arquivo**; a data de referência aparece apenas para arquivos com horários sem data.
+
+No gráfico, o período e o título podem ser alterados em **Ajustar período e título**. PNG e SVG permanecem disponíveis na barra do gráfico. A consulta detalhada preserva primeira/última medição, tabela e diagnósticos.
+
 ## Importação e precisão
 
 - Uma série, um arquivo, uma aba e uma coluna sonora por vez. A próxima importação só substitui a atual após confirmação.
