@@ -813,3 +813,16 @@ Plano aprovado implementado preservando a identidade visual, o processamento loc
 - [ ] Registrar aceite completo Google real e reprodução de reinício do Vite durante login.
 
 Limites de entrega: leitura instantânea é a origem confirmada; agregação de Leq por intervalos, salvamento do conjunto inteiro, exportação em lote e busca no histórico ficam para futuras etapas. Nenhum arquivo real, endereço real ou segredo foi versionado. Nenhum deploy, push, migração ou escrita no Neon foi realizado nesta fase.
+
+## 23. Navegação, ajuda contextual e gráficos — 2026-11-25
+
+Solicitação do usuário: setas para alternar pontos, explicações sob demanda e maior detalhe nos gráficos.
+
+- [x] Adicionar setas junto ao seletor e desabilitar os limites, preservando seleção e ajustes locais.
+- [x] Mover explicações para ícones de ajuda, acessíveis por cursor, teclado e toque, sem recorte pelos painéis.
+- [x] Manter o estado real de erro/progresso visível e a identificação de Leq estimado.
+- [x] Acrescentar grade fina, guias de leitura, extremos, referência energética e visão geral no zoom, preservando valores e escala temporal.
+- [x] Recalcular referências com os filtros e preservar consistência entre tela e PNG/SVG.
+- [x] Validar 75 testes unitários, 13 cenários Chrome, tipagem/build/lint, capacidade e inspeção visual em desktop/mobile/escuro.
+
+Nenhum cálculo normativo, sampling ou suavização introduzido. As pendências externas da seção 22 permanecem abertas.

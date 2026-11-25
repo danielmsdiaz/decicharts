@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-- Fase atual: 9 — Monitoramento por ponto e figura completa
+- Fase atual: 10 — Navegação, ajuda contextual e detalhe dos gráficos
 - Status: Implementação local concluída; aceites externos pendentes
 - Última atualização: 2026-11-25
 - Importação dinâmica, tempo relativo, indicadores, figura completa e salvamento por ponto concluídos localmente. Google real, reprodução da queda/reinício do Vite e integração em banco separado continuam pendentes; nenhum deploy ou escrita no Neon nesta etapa.
@@ -20,6 +20,7 @@
 | 7. Adoção do Prisma | Concluído |
 | 8. Estabilidade e próximos incrementos | Parcial: proteções/rede concluídas; aceites e busca pendentes |
 | 9. Monitoramento por ponto e figura completa | Implementação local concluída |
+| 10. Navegação e detalhe dos gráficos | Concluído |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -37,7 +38,7 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 ## Trabalho em andamento
 
-Implementação e validação local da fase 9 concluídas. Mensagens de rota/sessão diferenciadas, saída protegida e erro temporário de token separado de sessão inválida. Reprodução com Google real e servidor dev reiniciado continua manual.
+Implementação e validação local das fases 9 e 10 concluídas. Navegação por setas, ajuda contextual e detalhes de leitura dos gráficos entregues. Reprodução com Google real e servidor dev reiniciado continua manual.
 
 ## Próximas tarefas
 
@@ -74,9 +75,9 @@ Implementação e validação local da fase 9 concluídas. Mensagens de rota/ses
 
 | Verificação | Resultado |
 |-------------|-----------|
-| Vitest padrão | 73 aprovados; 1 integração externa ignorada por padrão |
+| Vitest padrão | 75 aprovados; 1 integração externa ignorada por padrão |
 | Neon real com Prisma | Aprovação histórica da fase 7; fase 9 preparada, não reexecutada sem banco separado |
-| Chrome/Playwright | 12 cenários aprovados; PNG com logotipo também conferido por pixels |
+| Chrome/Playwright | 13 cenários aprovados; setas, tooltips por teclado/toque e PNG conferidos |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
@@ -318,3 +319,14 @@ Próxima ação:
 - Implementação usa Impeccable para preservar a interface existente. Nenhum push ou deploy realizado.
 - Bundle final inspecionado: 14 arquivos sem URL/host de banco, Prisma ou fixtures. Schema/migração Prisma permanecem sem diferenças.
 - Commits por parte: 5d5443d (contratos e cálculo), 90b03fb (importação/workspace) e 7754dbe (figura, recuperação e testes); documentação em commit separado.
+
+### 2026-11-25 — Navegação e gráficos refinados
+
+- Setas anterior/próximo sincronizadas ao seletor, desabilitadas nas extremidades; ajustes por ponto preservados.
+- Ajuda de salvamento, leitura, período, figura e Leq movida para tooltips com portal, cursor, foco, Escape e toque. Instruções repetidas retiradas do painel; erros e progresso mantidos visíveis.
+- Gráfico com grade principal/secundária, guias de leitura, extremos identificados, marcadores em séries curtas e referência do Leq estimado. Visão geral na faixa de zoom, sem alterar os pontos desenhados ou os cálculos.
+- Exportação mantém a validação da série completa para não desenhar Leq em um recorte regular de uma série irregular. Dois testes de referência acrescentados.
+- 75 testes unitários, 13 cenários Chrome, tipagem/build e lint aprovados. Capacidade com 250 mil registros mantida (~5,1 s nesta execução).
+- Inspeção conjunta desktop/mobile/escuro concluída; ajuste único de rótulos próximos à borda confirmado em nova rodada. Detector Impeccable sem achados.
+- Sem dependências novas, mudanças na API ou no banco. Aceites externos anteriores continuam pendentes; nenhum deploy ou push.
+- Commits de implementação: cd00794 (navegação e ajuda contextual) e 3675f5f (detalhes dos gráficos); documentação em commit separado.

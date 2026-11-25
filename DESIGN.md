@@ -56,3 +56,11 @@ Ferramenta de trabalho calma, legível e direta. Um arquivo visível, uma ação
 - Figura limpa sobre branco, com identificação, quatro indicadores, gráfico e nota da estimativa. Prévia e PNG/SVG usam a mesma composição; não reproduzir o azul/cinza da referência.
 - Quatro indicadores em linha no desktop e duas colunas no celular. Largura do gráfico independe da duração. Prévia vetorial ajustada à largura disponível.
 - Trabalho não salvo exige confirmação nas ações destrutivas; carregamento de página usa mensagem diferente da restauração da sessão.
+
+## Navegação e leitura do gráfico — 2026-11-25
+
+- Setas anterior/próximo junto ao seletor de ponto, com contagem discreta e limites desabilitados; o seletor continua disponível.
+- Explicações ficam em ícones de ajuda, abertos por cursor, foco ou toque. Tooltip em portal evita recorte dos painéis; Escape e toque fora fecham. Erros e progresso continuam visíveis.
+- Remover instruções repetidas do painel e o texto introdutório quando já houver arquivo ativo. O Leq continua identificado como estimado e sua explicação fica no ícone; a figura exportada mantém a nota técnica.
+- Grade principal/secundária, marcações de extremos, referência do Leq estimado e guias de leitura no cursor. Séries curtas têm marcadores; escala e pontos originais preservados. Faixa de zoom com visão geral.
+- Referências acompanham o período; a exportação usa a série completa como contexto de validação do Leq, mesmo quando desenha só um recorte. Rótulos nas bordas alinham para dentro do gráfico.
