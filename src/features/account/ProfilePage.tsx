@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/auth-context'
 import { DEFAULT_PREFERENCES, type Preferences } from '../../../shared/persistence'
 import { useAccount } from './account-context'
+import { PreferencesSkeleton } from '@/components/layout/LoadingStates'
 
 function PreferencesForm({ initial, onSaved }: { initial: Preferences; onSaved: () => void }) {
   const { savePreferences } = useAccount()
@@ -40,7 +41,7 @@ export default function ProfilePage() {
     <section className="profile-identity"><div className="flex items-center gap-4">{user?.photoURL && user.photoURL !== failedPhoto ? <img src={user.photoURL} alt={user.displayName || 'Foto da conta Google'} className="size-14 rounded-full" referrerPolicy="no-referrer" onError={() => setFailedPhoto(user.photoURL)} /> : <span className="file-symbol"><UserRound aria-hidden="true" /></span>}<div className="min-w-0"><h2 className="break-words font-semibold">{user?.displayName || 'Conta Google'}</h2><p className="mt-1 break-all text-sm text-muted-foreground">{user?.email}</p></div></div><span className="account-source">Conta Google<HelpTooltip label="Sobre os dados da conta">Nome, foto e e-mail são fornecidos pela sua conta Google.</HelpTooltip></span></section>
     <section className="profile-settings" aria-busy={loading}><div className="field-label"><h2 className="text-lg font-semibold">Preferências de leitura</h2><HelpTooltip label="Sobre as preferências">Aplicadas às próximas importações. As análises já abertas ou salvas mantêm o fuso e a unidade originais.</HelpTooltip></div>
       {error && <div role="alert" className="notice error mt-5"><p>{error}</p><Button className="mt-3" variant="outline" onClick={retry}>Tentar carregar preferências novamente</Button></div>}
-      {loading ? <p role="status" className="mt-6 text-sm text-muted-foreground">Carregando preferências…</p> : <PreferencesForm key={`${prefs.timezone}|${prefs.unit}`} initial={prefs} onSaved={() => setFeedback('Preferências salvas na sua conta.')} />}
+      {loading ? <PreferencesSkeleton /> : <PreferencesForm key={`${prefs.timezone}|${prefs.unit}`} initial={prefs} onSaved={() => setFeedback('Preferências salvas na sua conta.')} />}
       {feedback && <p role="status" className="mt-5 text-sm text-primary">{feedback}</p>}
     </section>
   </main>

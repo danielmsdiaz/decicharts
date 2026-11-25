@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { useConfirmation } from '@/components/ui/confirmation-context'
+import { ChartSkeleton } from '@/components/layout/LoadingStates'
 
 const ChartWorkspace = lazy(() => import('@/features/charts/ChartWorkspace'))
 export function Dashboard() {
@@ -43,6 +44,6 @@ export function Dashboard() {
         </div>
       </div>
     </section>}
-    {dataset && <Suspense fallback={<div className="panel p-8" role="status" aria-busy="true">Preparando a visualização…<div className="mt-6 h-80 rounded-lg bg-accent" /></div>}><ChartWorkspace key={revision} dataset={dataset} dark={theme === 'dark'} /></Suspense>}
+    {dataset && <Suspense fallback={<ChartSkeleton />}><ChartWorkspace key={revision} dataset={dataset} dark={theme === 'dark'} /></Suspense>}
   </main>
 }

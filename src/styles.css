@@ -787,6 +787,18 @@ a {
 .chart-tools > details[open] summary {
   margin-bottom: 16px;
 }
+/* Loading placeholders follow the content layout in both themes. */
+.skeleton {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--foreground) 9%, var(--card));
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
 @keyframes dialog-enter { from { opacity:.7; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 @media(max-width:900px) {
   .header-inner {
@@ -945,10 +957,10 @@ a {
   .chart-actions {
     width: 100%;
   }
-  .chart-actions > button:first-child {
+  .chart-actions > button:first-child, .chart-actions > .skeleton:first-child {
     flex-basis: 100%;
   }
-  .chart-actions > button:not(:first-child) {
+  .chart-actions > button:not(:first-child), .chart-actions > .skeleton:not(:first-child) {
     flex: 1;
   }
   .chart-tools {
