@@ -4,8 +4,28 @@ import { chartOption } from '../src/features/charts/options'
 import { reportOption } from '../src/features/charts/report'
 import { reportSvg } from '../src/features/charts/export'
 import { dataset } from './helpers'
+import { chartDetails } from '../src/features/charts/details'
 
 describe('figura e escalas temporais', () => {
+  it('posiciona referências nas leituras reais e recalcula Leq ao filtrar', () => {
+    const data = dataset()
+    data.measurements = [50, 60, 70].map((value, index) => ({ timestamp: (index + 1) * 1000, value }))
+    const full = chartDetails(data, { start: 1000, end: 3000 }, false, false)
+    expect(full.markPoint?.data).toMatchObject([{ coord: [3000, 70] }, { coord: [1000, 50] }])
+    expect(full.markLine?.data).toMatchObject([{ yAxis: expect.closeTo(65.68201724066995, 8) }])
+    const filtered = chartDetails(data, { start: 2000, end: 3000 }, false, false)
+    expect(filtered.markLine?.data).toMatchObject([{ yAxis: expect.closeTo(67.40362689494243, 8) }])
+    const original = data.measurements.map(point => ({ ...point }))
+    chartOption(data, { start: 1000, end: 3000 }, 'Exemplo')
+    expect(data.measurements).toEqual(original)
+  })
+  it('não desenha referência de Leq indisponível, mesmo em um recorte regular', () => {
+    const data = dataset()
+    data.measurements = [1000, 2000, 5000].map((timestamp, index) => ({ timestamp, value: 50 + index * 10 }))
+    const { option } = reportOption(data, { title: 'Irregular', range: { start: 1000, end: 2000 } })
+    const series = option.series as { markLine: { data: unknown[] } }[]
+    expect(series[0].markLine.data).toEqual([])
+  })
   it('mantém todas as amostras e adapta o eixo numérico às durações', () => {
     const data = dataset()
     data.timeBasis = 'elapsed'

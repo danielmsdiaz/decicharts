@@ -68,7 +68,7 @@ export function reportOption(dataset: MeasurementDataset, view: ChartView, logoI
   graphics.push({ type: 'text', left: 48, top: height - 80, style: { text: footnotes.join('\n'), fontSize: 16, lineHeight: 22, fill: muted } })
   if (info.logo) graphics.push({ type: 'image', right: 48, top: 30, style: { image: logoImage ?? info.logo, width: 136, height: 72 } })
   const option: EChartsCoreOption = {
-    ...chartOption({ ...dataset, measurements: selected }, view.range, title, false, true), title: undefined,
+    ...chartOption({ ...dataset, measurements: selected }, view.range, title, false, true, dataset), title: undefined,
     graphic: graphics, grid: { top: graphTop, left: 105, right: 48, bottom: 155 }, tooltip: { show: false },
   }
   return { option, width: 1600, height }
