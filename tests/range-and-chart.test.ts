@@ -28,7 +28,7 @@ describe('intervalos e indicadores', () => {
   })
   it('identifica título, fuso, eixos e limites exatos na exportação', () => {
     const range = { start: series.measurements[0].timestamp + 100, end: series.measurements[2].timestamp - 100 }
-    expect(chartOption(series, range, 'Relatório técnico', false, true)).toMatchObject({ backgroundColor: '#ffffff', title: { text: 'Relatório técnico', subtext: expect.stringContaining('America/Recife') }, xAxis: { min: range.start, max: range.end }, yAxis: { name: 'Nível sonoro (dB(A))' } })
+    expect(chartOption(series, range, 'Relatório técnico', false, true)).toMatchObject({ backgroundColor: '#ffffff', title: { text: 'Relatório técnico', subtext: expect.stringContaining('America/Recife') }, xAxis: { min: range.start, max: range.end }, yAxis: { name: 'Nível sonoro (dB)' } })
   })
   it('exporta um único instante sem expandir o eixo para dias artificiais', () => {
     const instant = series.measurements[0].timestamp

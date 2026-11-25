@@ -5,6 +5,7 @@ export interface AccountState {
   profile: UserProfile | null
   loading: boolean
   error: string
+  retry: () => void
   savePreferences: (preferences: Preferences) => Promise<void>
 }
 export const AccountContext = createContext<AccountState | null>(null)

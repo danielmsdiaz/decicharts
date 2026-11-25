@@ -18,8 +18,8 @@ vi.mock('firebase/auth', () => ({
 }))
 
 function Probe() {
-  const { user, loading, busy, login, logout, error } = useAuth()
-  return <><p>{loading ? 'Recuperando' : user?.email || 'Visitante'}</p><p role="alert">{error}</p><button disabled={busy} onClick={() => void login()}>Login</button><button disabled={busy} onClick={() => void logout()}>Logout</button></>
+  const { user, loading, busy, login, logout, error, setLogoutGuard } = useAuth()
+  return <><p>{loading ? 'Recuperando' : user?.email || 'Visitante'}</p><p role="alert">{error}</p><button disabled={busy} onClick={() => void login()}>Login</button><button disabled={busy} onClick={() => void logout()}>Logout</button><button onClick={() => setLogoutGuard?.(() => false)}>Proteger saída</button><button onClick={() => setLogoutGuard?.(null)}>Liberar saída</button></>
 }
 beforeEach(() => {
   firebase.setPersistence.mockReset().mockResolvedValue(undefined)
@@ -30,6 +30,17 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Firebase Authentication', () => {
+  it('não encerra a conta quando o usuário cancela a saída protegida', async () => {
+    render(<AuthProvider><Probe /></AuthProvider>)
+    act(() => firebase.listener?.({ uid: '1', email: 'engenheiro@example.invalid' } as User))
+    await userEvent.click(screen.getByText('Proteger saída'))
+    await userEvent.click(screen.getByText('Logout'))
+    expect(firebase.signOut).not.toHaveBeenCalled()
+    expect(screen.getByText('engenheiro@example.invalid')).toBeDefined()
+    await userEvent.click(screen.getByText('Liberar saída'))
+    await userEvent.click(screen.getByText('Logout'))
+    expect(firebase.signOut).toHaveBeenCalledOnce()
+  })
   it('recupera sessão, configura persistência e encerra sessão com limpeza de usuário', async () => {
     const result = render(<AuthProvider><Probe /></AuthProvider>)
     expect(screen.getByText('Recuperando')).toBeDefined()

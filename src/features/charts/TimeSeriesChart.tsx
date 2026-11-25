@@ -4,6 +4,7 @@ import { init } from './engine'
 import { chartOption } from './options'
 import type { MeasurementDataset, TimeRange } from '@/features/measurements/types'
 import { fullRange } from '@/features/measurements/range'
+import { levelUnit } from '@/features/measurements/temporal'
 
 export function TimeSeriesChart({ dataset, range, title, dark, onRangeChange }: { dataset: MeasurementDataset; range: TimeRange; title: string; dark: boolean; onRangeChange: (range: TimeRange) => void }) {
   const container = useRef<HTMLDivElement>(null)
@@ -31,5 +32,5 @@ export function TimeSeriesChart({ dataset, range, title, dark, onRangeChange }: 
   }, [dataset, available.start, available.end])
   useEffect(() => { instance.current?.setOption(chartOption(dataset, activeRange.current, title, dark), { notMerge: true }) }, [dataset, title, dark])
   useEffect(() => { instance.current?.setOption({ dataZoom: [{ startValue: range.start, endValue: range.end }, { startValue: range.start, endValue: range.end }] }) }, [range])
-  return <div ref={container} className="h-[420px] w-full sm:h-[480px]" role="img" aria-label={`${title}. Nível sonoro em ${dataset.unit}, no fuso ${dataset.timezone}. Os indicadores e a tabela acessível abaixo descrevem o intervalo.`} />
+  return <div ref={container} className="h-[420px] w-full sm:h-[480px]" role="img" aria-label={`${title}. Nível sonoro em ${levelUnit(dataset)}, ${dataset.timeBasis === 'elapsed' ? 'tempo decorrido em segundos' : `no fuso ${dataset.timezone}`}. Os indicadores e a tabela acessível abaixo descrevem o intervalo.`} />
 }

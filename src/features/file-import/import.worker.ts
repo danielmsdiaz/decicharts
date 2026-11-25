@@ -12,7 +12,10 @@ self.onmessage = (event: MessageEvent<{ id: number; type: 'read'; buffer: ArrayB
     if (message.type === 'read') {
       source = parseFile(message.buffer, message.fileName)
       collections.clear()
-      for (const sheet of source.sheets) sheet.points = discoverPoints(sheet)
+      for (const sheet of source.sheets) {
+        try { sheet.points = discoverPoints(sheet) }
+        catch (issue) { sheet.pointsError = issue instanceof Error ? issue.message : 'Revise a identificação dos pontos nesta aba.' }
+      }
       self.postMessage({ id: message.id, type: 'source', source: { fileName: source.fileName, sheets: source.sheets.map(sheet => ({ ...sheet, rows: sheet.rows.slice(0, 110) })) } })
     } else {
       if (!source?.sheets[message.sheetIndex]) throw new Error('Selecione novamente o arquivo para continuar.')

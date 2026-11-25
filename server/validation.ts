@@ -55,6 +55,7 @@ export function metadata(value: unknown): DatasetMetadata {
   if (!['br', 'iso', 'excel'].includes(String(raw.dateFormat)) || ![',', '.'].includes(String(raw.decimal)) || typeof raw.timeOnly !== 'boolean') throw new HttpError(400, 'Mapeamento de colunas inválido.')
   const mappingPrefs = preferences(raw)
   if (input.schemaVersion !== undefined && input.schemaVersion !== 2) throw new HttpError(400, 'Versão de análise não suportada.')
+  if (input.schemaVersion !== 2 && (input.timeBasis !== undefined || input.point !== undefined || input.sourceKind !== undefined || raw.timeBasis !== undefined || raw.weighting !== undefined)) throw new HttpError(400, 'Os novos metadados exigem a versão 2 da análise.')
   if (input.timeBasis !== undefined && !['absolute', 'elapsed'].includes(String(input.timeBasis))) throw new HttpError(400, 'Tipo de tempo inválido.')
   if (raw.timeBasis !== undefined && !['absolute', 'elapsed'].includes(String(raw.timeBasis))) throw new HttpError(400, 'Tipo de tempo inválido.')
   if ((input.timeBasis ?? 'absolute') !== (raw.timeBasis ?? 'absolute')) throw new HttpError(400, 'Tipo de tempo não corresponde ao mapeamento.')

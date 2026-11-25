@@ -7,11 +7,12 @@ import { createRepository } from '../server/repository'
 import { chunk } from '../server/validation'
 import { metadataFromDataset } from '../shared/persistence'
 import { dataset } from './helpers'
+import { testDatabaseConnection } from '../scripts/test-database.mjs'
 
 const integration = process.env.RUN_NEON_INTEGRATION === '1' ? it : it.skip
 integration('Neon real: preferências, blocos, isolamento, conclusão, leitura e exclusão', async () => {
-  const connection = process.env.DATABASE_URL || loadEnv('development', process.cwd(), '').DATABASE_URL
-  if (!connection) throw new Error('DATABASE_URL não configurada para a integração.')
+  const env = { ...loadEnv('development', process.cwd(), ''), ...process.env }
+  const connection = testDatabaseConnection(env.TEST_DATABASE_URL, [env.DATABASE_URL, env.DATABASE_URL_UNPOOLED, env.DATABASE_URL_POOLED])
   const client = createPrismaClient(connection)
   const repo = createRepository(connection, client)
   const uid = `__decicharts_test_${randomUUID()}`
@@ -65,6 +66,23 @@ integration('Neon real: preferências, blocos, isolamento, conclusão, leitura e
     await expect(repo.complete(uid, unorderedId)).rejects.toMatchObject({ status: 409 })
     expect((await repo.list(uid, 0)).analyses).toHaveLength(0)
     await repo.remove(uid, unorderedId)
+    const elapsed = dataset()
+    elapsed.timeBasis = elapsed.mapping.timeBasis = 'elapsed'
+    elapsed.mapping.weighting = 'A'
+    elapsed.point = { id: 'Ponto sintético', address: 'Endereço de teste', east: '280000', north: '9800000' }
+    elapsed.measurements = [50, 60, 70].map((value, index) => ({ timestamp: (index + 1) * 1000, value }))
+    const elapsedId = randomUUID()
+    const elapsedChart = { title: 'Figura sintética', range: { start: 1000, end: 3000 }, report: { address: 'Endereço revisado', enterprise: 'Teste' } }
+    await repo.start(alice, { id: elapsedId, name: 'Ponto sintético', metadata: metadataFromDataset(elapsed), chart: elapsedChart })
+    await expect(repo.putChunk(uid, elapsedId, 0, chunk([[-1000, 50], [1000, 60], [3000, 70]]))).rejects.toMatchObject({ status: 409 })
+    await repo.putChunk(uid, elapsedId, 0, chunk(elapsed.measurements.map(point => [point.timestamp, point.value])))
+    const relative = await repo.complete(uid, elapsedId)
+    expect(relative.analysis).toMatchObject({ timeBasis: 'elapsed', pointId: 'Ponto sintético', start: 1000, end: 3000, chart: elapsedChart })
+    expect((await repo.read(uid, elapsedId)).metadata).toMatchObject({ schemaVersion: 2, timeBasis: 'elapsed', point: elapsed.point })
+    await expect(repo.read(bob.uid, elapsedId)).rejects.toMatchObject({ status: 404 })
+    await repo.update(uid, elapsedId, 'Figura atualizada', { ...elapsedChart, report: { ...elapsedChart.report, address: 'Outra rua' } })
+    expect((await repo.read(uid, elapsedId)).analysis.chart.report?.address).toBe('Outra rua')
+    await repo.remove(uid, elapsedId)
     console.log('Integração Neon verificada com 5.001 pontos, dois usuários de teste e exclusão em cascata.')
   } catch (error) {
     if (error instanceof Error && error.name === 'AssertionError') throw error

@@ -58,6 +58,7 @@ export function useFileImport(defaults: Preferences = DEFAULT_PREFERENCES) {
   function loadSheet(nextSource: ImportSource, index: number) {
     const sheet = nextSource.sheets[index]
     setSheetIndex(index); setPointIndex(0); setDatasets([]); setCandidate(null); setError('')
+    if (sheet.pointsError) { setBusy(false); setMapping(null); setError(sheet.pointsError); setStatus('Revise os pontos desta aba ou escolha outra aba.'); return }
     if (sheet.points?.length) {
       setBusy(true); setMapping(sheet.points[0].mapping); setStatus('Conferindo os pontos de medição…')
       worker.current?.postMessage({ id: ++request.current, type: 'points', sheetIndex: index, defaults })

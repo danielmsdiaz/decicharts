@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import type { ColumnMapping, MeasurementDataset } from '@/features/measurements/types'
-import { datasetTime } from '@/features/measurements/temporal'
+import { datasetTime, levelUnit } from '@/features/measurements/temporal'
 import { useFileImport } from './use-file-import'
 import { useAccount } from '@/features/account/account-context'
 import { DEFAULT_PREFERENCES } from '../../../shared/persistence'
@@ -58,11 +58,11 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2 text-sm text-primary"><CheckCheck className="size-4" aria-hidden="true" />Arquivo em análise</div>
             <p className="truncate font-semibold" title={dataset.fileName}>{dataset.fileName}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{count(dataset.validRecords)} medições · {dataset.sheetName}{saved ? ' · Salva na sua conta' : ' · Ainda não salva'}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{count(dataset.validRecords)} medições · {dataset.sheetName}{saved ? (dataset.point ? ' · Ponto salvo na sua conta' : ' · Salva na sua conta') : ' · Ainda não salva'}</p>
           </div>
           <div className="file-actions">
             <Button variant="outline" disabled={profileLoading} onClick={() => input.current?.click()}><FolderOpen />Trocar arquivo</Button>
-            <Button variant="destructive" onClick={() => { onRemove(); form.removed() }}><X />{saved ? 'Fechar análise' : 'Remover arquivo'}</Button>
+            <Button variant="destructive" onClick={() => { onRemove(); form.removed() }}><X />{saved ? (dataset.point ? 'Fechar arquivo' : 'Fechar análise') : 'Remover arquivo'}</Button>
           </div>
         </div>
       ) : (
@@ -133,7 +133,7 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
             <div className="table-scroll">
               <table className="data-table">
                 <caption className="sr-only">Prévia das primeiras medições do arquivo carregado</caption>
-                <thead><tr><th>{candidate.timeBasis === 'elapsed' ? 'Tempo decorrido' : 'Data e hora'}</th><th>Nível sonoro ({candidate.unit})</th>{candidate.preview.some(record => record.reason) && <th>Conferência</th>}</tr></thead>
+                <thead><tr><th>{candidate.timeBasis === 'elapsed' ? 'Tempo decorrido' : 'Data e hora'}</th><th>Nível sonoro ({levelUnit(candidate)})</th>{candidate.preview.some(record => record.reason) && <th>Conferência</th>}</tr></thead>
                 <tbody>{candidate.preview.slice(0, 5).map(record => (
                   <tr key={record.row}>
                     <td className="whitespace-nowrap tabular-nums">{record.timestamp === undefined ? String(record.original[mapping?.dateColumn ?? 0] ?? '—') : datasetTime(candidate, record.timestamp, record.timestamp % 1000 ? 'dd/MM/yyyy HH:mm:ss.SSS' : 'dd/MM/yyyy HH:mm:ss')}</td>

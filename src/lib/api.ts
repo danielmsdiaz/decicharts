@@ -9,7 +9,11 @@ export async function api<T>(user: User, path: string, options: RequestInit = {}
     options.signal?.throwIfAborted()
     let token: string
     try { token = await user.getIdToken(attempt === 1) }
-    catch { throw new ApiError(401, 'Não foi possível recuperar a sessão. Entre novamente com Google.') }
+    catch (issue) {
+      const code = issue && typeof issue === 'object' && 'code' in issue ? String(issue.code) : ''
+      if (['auth/user-disabled', 'auth/user-token-expired', 'auth/invalid-user-token', 'auth/user-not-found'].includes(code)) throw new ApiError(401, 'Sua sessão não é mais válida. Entre novamente com Google.')
+      throw new ApiError(0, 'Não foi possível verificar a sessão. Confira sua conexão e tente novamente.')
+    }
     let response: Response
     const timeout = AbortSignal.timeout(30_000)
     const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout

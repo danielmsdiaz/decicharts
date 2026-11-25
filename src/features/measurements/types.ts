@@ -4,7 +4,7 @@ export type TimeBasis = 'absolute' | 'elapsed'
 export type Weighting = 'unknown' | 'A' | 'C' | 'Z'
 export interface PointInfo { id: string; address?: string; east?: string; north?: string; enterprise?: string; monitoringTitle?: string }
 export interface PointCandidate { id: string; mapping: ColumnMapping; info: PointInfo }
-export interface SheetData { name: string; rows: Cell[][]; date1904: boolean; merges?: { s: { r: number; c: number }; e: { r: number; c: number } }[]; points?: PointCandidate[] }
+export interface SheetData { name: string; rows: Cell[][]; date1904: boolean; merges?: { s: { r: number; c: number }; e: { r: number; c: number } }[]; points?: PointCandidate[]; pointsError?: string }
 export interface ImportSource { fileName: string; sheets: SheetData[] }
 export interface ColumnMapping {
   headerRow: number

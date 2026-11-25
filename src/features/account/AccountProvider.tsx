@@ -9,6 +9,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     if (!user) return
     const controller = new AbortController()
@@ -16,12 +17,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : 'Não foi possível carregar suas preferências.')
     }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
-  }, [user])
+  }, [user, attempt])
   async function savePreferences(preferences: Preferences) {
     if (!user) return
     const result = await api<UserProfile>(user, 'profile', { method: 'PUT', body: JSON.stringify(preferences) })
     setProfile(result)
     setError('')
   }
-  return <AccountContext.Provider value={{ profile, loading, error, savePreferences }}>{children}</AccountContext.Provider>
+  return <AccountContext.Provider value={{ profile, loading, error, savePreferences, retry: () => { setLoading(true); setError(''); setAttempt(value => value + 1) } }}>{children}</AccountContext.Provider>
 }

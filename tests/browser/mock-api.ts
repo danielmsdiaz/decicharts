@@ -1,5 +1,7 @@
 import type { Page } from '@playwright/test'
 import type { AnalysisSummary, ChartView, DatasetMetadata, PointTuple } from '../../shared/persistence'
+import * as validate from '../../server/validation'
+import { HttpError } from '../../server/errors'
 
 interface Draft {
   id: string; name: string; metadata: DatasetMetadata; chart: ChartView
@@ -7,7 +9,7 @@ interface Draft {
 }
 function summary(item: Draft): AnalysisSummary {
   const points = Object.keys(item.chunks).map(Number).sort((a, b) => a - b).flatMap(index => item.chunks[index])
-  return { id: item.id, name: item.name, fileName: item.metadata.fileName, count: points.length, start: points[0]?.[0] ?? 0, end: points.at(-1)?.[0] ?? 0, unit: item.metadata.unit, timezone: item.metadata.timezone, updatedAt: item.updatedAt, chart: item.chart }
+  return { timeBasis: item.metadata.timeBasis, pointId: item.metadata.point?.id, id: item.id, name: item.name, fileName: item.metadata.fileName, count: points.length, start: points[0]?.[0] ?? 0, end: points.at(-1)?.[0] ?? 0, unit: item.metadata.unit, timezone: item.metadata.timezone, updatedAt: item.updatedAt, chart: item.chart }
 }
 export async function mockAccountApi(page: Page) {
   const analyses = new Map<string, Draft>()
@@ -35,6 +37,8 @@ export async function mockAccountApi(page: Page) {
       }
       if (method === 'POST') {
         const id = String(data.id)
+        try { validate.uuid(id); data.name = validate.analysisName(data.name); data.metadata = validate.metadata(data.metadata); data.chart = validate.chartView(data.chart) }
+        catch (issue) { return respond({ error: issue instanceof HttpError ? issue.message : 'Dados inválidos.' }, 400) }
         if (!analyses.has(id)) analyses.set(id, { id, name: String(data.name), metadata: data.metadata as DatasetMetadata, chart: data.chart as ChartView, state: 'uploading', chunks: {}, updatedAt: new Date().toISOString() })
         return respond({ id, state: analyses.get(id)!.state }, 201)
       }
@@ -49,7 +53,11 @@ export async function mockAccountApi(page: Page) {
     }
     if (parts[2] === 'complete') { item.state = 'ready'; return respond(stored()) }
     if (method === 'DELETE') { analyses.delete(item.id); return respond({ deleted: true }) }
-    if (method === 'PATCH') { item.name = String(data.name); item.chart = data.chart as ChartView; item.updatedAt = new Date().toISOString() }
+    if (method === 'PATCH') {
+      try { item.name = validate.analysisName(data.name); item.chart = validate.chartView(data.chart) }
+      catch (issue) { return respond({ error: issue instanceof HttpError ? issue.message : 'Dados inválidos.' }, 400) }
+      item.updatedAt = new Date().toISOString()
+    }
     return respond(stored())
   })
 }

@@ -11,9 +11,9 @@ const AnalysesPage = lazy(() => import('@/features/analyses/AnalysesPage'))
 export const router = createBrowserRouter([{ element: <App />, children: [
   { path: '/login', element: <LoginPage /> },
   { element: <ProtectedRoute />, children: [
-    { path: '/', element: <Suspense fallback={<SessionLoading />}><Dashboard /></Suspense> },
-    { path: '/perfil', element: <Suspense fallback={<SessionLoading />}><ProfilePage /></Suspense> },
-    { path: '/analises', element: <Suspense fallback={<SessionLoading />}><AnalysesPage /></Suspense> },
+    { path: '/', element: <Suspense fallback={<SessionLoading page />}><Dashboard /></Suspense> },
+    { path: '/perfil', element: <Suspense fallback={<SessionLoading page />}><ProfilePage /></Suspense> },
+    { path: '/analises', element: <Suspense fallback={<SessionLoading page />}><AnalysesPage /></Suspense> },
   ] },
   { path: '*', element: <Navigate to="/" replace /> },
 ] }])

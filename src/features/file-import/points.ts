@@ -31,8 +31,9 @@ export function discoverPoints(sheet: SheetData): PointCandidate[] {
     .flatMap(row => row.filter(cell => typeof cell === 'string' && cell.trim()).map(String))
     .filter(value => !/^(medicoes|measurements|utm|sirgas)/.test(fold(value)))
   const monitoringTitle = top.find(value => /monitoramento|monitoring/.test(fold(value)))
+  const groupLabels = new Set(blocks.map(({ r, c }) => key(String(sheet.rows[r - 1]?.[c] ?? ''))))
   const enterprise = top.find(value => /^(empresa|empreendimento|cliente)\s*:/i.test(value))?.replace(/^[^:]+:\s*/, '')
-    ?? top.find(value => value !== monitoringTitle && !metadata.has(key(value)) && !/^(ponto|endereco|leste|norte|id|utm)/.test(fold(value)))
+    ?? (monitoringTitle ? top.find(value => value !== monitoringTitle && !metadata.has(key(value)) && !groupLabels.has(key(value)) && !/^(ponto|endereco|leste|norte|id|utm)/.test(fold(value))) : undefined)
   const result = blocks.map(({ r, c }): PointCandidate => {
     let id = ''
     for (let above = r - 1; above >= Math.max(0, r - 3) && !id; above--) {

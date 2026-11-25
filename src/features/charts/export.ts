@@ -1,33 +1,38 @@
 import { init } from './engine'
-import { chartOption } from './options'
+import type { ChartView, ReportInfo } from '../../../shared/persistence'
 import type { MeasurementDataset, TimeRange } from '@/features/measurements/types'
-import { selectMeasurements } from '@/features/measurements/range'
+import { reportOption } from './report'
 
-export async function exportChart(dataset: MeasurementDataset, range: TimeRange, title: string, format: 'png' | 'svg') {
-  const points = selectMeasurements(dataset.measurements, range)
-  if (!points.length) throw new Error('Não há medições no intervalo selecionado para exportar.')
-  const container = document.createElement('div')
-  container.style.cssText = 'position:fixed;left:-10000px;top:0;width:1600px;height:900px;'
-  document.body.appendChild(container)
-  const chart = init(container, undefined, { renderer: format === 'svg' ? 'svg' : 'canvas', width: 1600, height: 900 })
-  try {
-    const options = chartOption({ ...dataset, measurements: points }, range, title, false, true)
-    chart.setOption(options, { notMerge: true })
-    chart.getZr().flush()
-    let blob: Blob
-    if (format === 'svg') {
-      const dataUrl = chart.getDataURL({ type: 'svg', backgroundColor: '#fff' })
-      const comma = dataUrl.indexOf(',')
-      const svg = dataUrl.slice(0, comma).includes(';base64') ? atob(dataUrl.slice(comma + 1)) : decodeURIComponent(dataUrl.slice(comma + 1))
-      blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
-    } else {
-      const dataUrl = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
+export function reportSvg(dataset: MeasurementDataset, view: ChartView) {
+  const { option, width, height } = reportOption(dataset, view)
+  const chart = init(null, undefined, { renderer: 'svg', ssr: true, width, height })
+  try { chart.setOption(option); return chart.renderToSVGString() }
+  finally { chart.dispose() }
+}
+
+export async function exportChart(dataset: MeasurementDataset, range: TimeRange, title: string, format: 'png' | 'svg', report?: ReportInfo) {
+  const view = { title, range, report }
+  await document.fonts.ready
+  let blob: Blob
+  if (format === 'svg') blob = new Blob([reportSvg(dataset, view)], { type: 'image/svg+xml;charset=utf-8' })
+  else {
+    let logoImage: HTMLImageElement | undefined
+    if (report?.logo) { logoImage = new Image(); logoImage.src = report.logo; await logoImage.decode() }
+    const { option, width, height } = reportOption(dataset, view, logoImage)
+    const container = document.createElement('div')
+    container.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:${height}px;`
+    document.body.appendChild(container)
+    const chart = init(container, undefined, { renderer: 'canvas', width, height })
+    try {
+      chart.setOption(option); chart.getZr().flush()
+      const dataUrl = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' })
       blob = await (await fetch(dataUrl)).blob()
-    }
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url; link.download = `decicharts-${dataset.fileName.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 80)}.${format}`
-    document.body.appendChild(link); link.click(); link.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
-  } finally { chart.dispose(); container.remove() }
+    } finally { chart.dispose(); container.remove() }
+  }
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  const name = [dataset.fileName.replace(/\.[^.]+$/, ''), dataset.point?.id].filter(Boolean).join('-')
+  link.href = url; link.download = `decicharts-${name.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100)}.${format}`
+  document.body.appendChild(link); link.click(); link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

@@ -8,7 +8,8 @@ export function indicators(dataset: MeasurementDataset, selected: Measurement[])
   const mean = selected.reduce((sum, item) => sum + item.value / selected.length, 0)
   let reason = ''
   const all = dataset.measurements
-  if (dataset.invalidRecords) reason = 'Há registros inválidos neste ponto.'
+  if (!/^db(?:\([acz]\))?$/i.test(dataset.unit.trim())) reason = 'Leq exige níveis sonoros em decibéis.'
+  else if (dataset.invalidRecords) reason = 'Há registros inválidos neste ponto.'
   else if (dataset.duplicateTimestamps) reason = 'Há tempos repetidos neste ponto.'
   else if (selected.length < 2 || all.length < 2) reason = 'São necessárias pelo menos duas leituras.'
   else {
