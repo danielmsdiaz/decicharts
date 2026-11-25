@@ -50,16 +50,17 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
     catch (issue) { setError(issue instanceof Error ? issue.message : 'Não foi possível exportar. Tente novamente.') }
     finally { setExporting(false) }
   }
-  return <section className="panel overflow-hidden" aria-labelledby="chart-title">
+  return <section className="panel chart-workspace overflow-hidden" aria-labelledby="chart-title">
     <div className="chart-heading"><div><div className="chart-title-row"><h2 id="chart-title" className="text-xl font-semibold tracking-tight">Nível sonoro ao longo do tempo</h2><HelpTooltip label="Como explorar o gráfico">Arraste a faixa inferior para selecionar um período. Ctrl + rolagem amplia o gráfico. Passe o cursor sobre a curva para consultar tempo e nível.</HelpTooltip></div>
       <p className="mt-2 text-sm text-muted-foreground tabular-nums">{dataset.point && <strong>{dataset.point.id} · </strong>}{datasetTime(dataset, range.start)} — {datasetTime(dataset, range.end)}</p>
       <p className="mt-1 text-sm text-muted-foreground"><span data-testid="measurement-count">{visible.length.toLocaleString('pt-BR')}</span> medições no período{!relative && ` · ${dataset.timezone}`}</p>
-    </div><div className="flex flex-wrap gap-2">
+    </div><div className="chart-actions">
       <Button disabled={workspace.saving || !workspace.dirty} onClick={() => void workspace.save()}>{workspace.saved && !workspace.dirty ? <Check /> : <Save />}{workspace.saving ? 'Salvando…' : workspace.saved && !workspace.dirty ? 'Análise salva' : workspace.saved ? 'Salvar alterações' : 'Salvar análise'}</Button>
       <Button variant="outline" disabled={!stats || exporting} onClick={() => void download('png')}><Download />PNG</Button>
       <Button variant="outline" disabled={!stats || exporting} onClick={() => void download('svg')}><Download />SVG</Button>
     </div></div>
     <div className="chart-body">
+      <div className="chart-tools">
       <details className="disclosure chart-settings"><summary><SlidersHorizontal className="size-4" aria-hidden="true" />Ajustar período e título<HelpTooltip label="Sobre o período do gráfico">{relative ? 'Limites em segundos decorridos.' : `Horários em ${dataset.timezone}.`} Os limites são inclusivos. Indicadores e figura exportada usam o mesmo período.</HelpTooltip></summary><div className="mt-5">
         <label className="field max-w-xl">Título do gráfico<Input value={title} maxLength={100} onChange={event => workspace.setView({ ...view, title: event.target.value })} /></label>
         <form onSubmit={event => { event.preventDefault(); apply() }} className="mt-5 flex flex-wrap items-end gap-3">
@@ -69,6 +70,7 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
         </form>
       </div></details>
       <ReportSettings view={view} onChange={workspace.setView} />
+      </div>
       {error && <p role="alert" className="notice error mt-4">{error}</p>}
       {workspace.saveError && <p role="alert" className="notice error mt-4">{workspace.saveError}</p>}
       {workspace.saving && <p role="status" className="mt-4 text-sm">Salvando este ponto: {workspace.progress.toLocaleString('pt-BR')} de {dataset.validRecords.toLocaleString('pt-BR')} medições…</p>}

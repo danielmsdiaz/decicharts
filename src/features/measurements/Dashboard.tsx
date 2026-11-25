@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { useOutletContext } from 'react-router'
-import { ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { FileImport } from '@/features/file-import/FileImport'
 import { useAuth } from '@/features/auth/auth-context'
 import type { MeasurementDataset } from './types'
@@ -8,10 +8,12 @@ import { useWorkspace } from '@/features/analyses/workspace-context'
 import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
+import { useConfirmation } from '@/components/ui/confirmation-context'
 
 const ChartWorkspace = lazy(() => import('@/features/charts/ChartWorkspace'))
 export function Dashboard() {
   const workspace = useWorkspace()
+  const confirm = useConfirmation()
   const { dataset, revision } = workspace
   const { theme } = useOutletContext<{ theme: string }>()
   const { error } = useAuth()
@@ -20,13 +22,16 @@ export function Dashboard() {
     const point = workspace.points[activeIndex + direction]
     if (point) workspace.selectPoint(point.key)
   }
-  function accept(next: MeasurementDataset, all?: MeasurementDataset[]) {
-    if (workspace.anyDirty && !window.confirm('Substituir o arquivo atual? Há pontos ou alterações não salvos nesta sessão.')) return false
+  async function accept(next: MeasurementDataset, all?: MeasurementDataset[]) {
+    if (workspace.anyDirty && !await confirm({ title: 'Substituir o arquivo?', description: 'Os pontos e alterações não salvos do arquivo atual serão descartados.', confirmLabel: 'Substituir arquivo' })) return false
     workspace.acceptMany(all?.length ? all : [next], next); return true
   }
-  function remove() { if (!workspace.anyDirty || window.confirm('Remover o arquivo desta sessão? Os pontos não salvos serão perdidos.')) workspace.clear() }
+  async function remove() {
+    if (workspace.anyDirty && !await confirm({ title: 'Fechar este arquivo?', description: 'Os pontos e alterações não salvos serão descartados. As análises já salvas não serão excluídas.', confirmLabel: 'Fechar arquivo' })) return false
+    workspace.clear(); return true
+  }
   return <main className="dashboard-shell">
-    <div className="dashboard-heading"><div><h1 className="text-3xl font-semibold tracking-tight">Análise de ruído</h1>{!dataset && <p className="mt-2 text-sm leading-6 text-muted-foreground">Importe suas medições e acompanhe o nível sonoro ao longo do tempo.</p>}</div><span className="local-badge"><ShieldCheck className="size-4" aria-hidden="true" />Processamento local<HelpTooltip label="Sobre o processamento local">O arquivo é lido neste navegador. Somente os pontos que você salvar são enviados à sua conta.</HelpTooltip></span></div>
+    <div className="dashboard-heading"><div className="page-title"><h1 className="text-3xl font-semibold tracking-tight">Análise de ruído</h1><HelpTooltip label="Sobre o processamento local">O arquivo é lido neste navegador. Somente os pontos que você salvar são enviados à sua conta.</HelpTooltip></div></div>
     {error && <p className="notice error" role="alert">{error}</p>}
     <FileImport dataset={dataset} saved={Boolean(workspace.saved)} onImport={accept} onRemove={remove} />
     {workspace.points.length > 1 && <section className="point-switcher" aria-label="Pontos do arquivo">

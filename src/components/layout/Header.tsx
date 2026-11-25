@@ -1,5 +1,5 @@
-import { AudioLines, LogOut, Moon, Sun } from 'lucide-react'
-import { useState } from 'react'
+import { AudioLines, ChevronDown, LogOut, Moon, Sun, UserRound } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/auth-context'
@@ -7,11 +7,25 @@ import { useAuth } from '@/features/auth/auth-context'
 export function Header({ theme, toggleTheme }: { theme: string; toggleTheme: () => void }) {
   const { user, logout, busy } = useAuth()
   const [failedPhoto, setFailedPhoto] = useState<string | null>(null)
-  return <header className="border-b bg-card"><div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
-    <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight no-underline"><span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground"><AudioLines className="size-5" aria-hidden="true" /></span><span className="text-lg">Decicharts</span></Link>
-    <div className="flex items-center gap-2 sm:gap-4">
-      <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>{theme === 'dark' ? <Sun /> : <Moon />}</Button>
-      {user && <><div className="hidden h-7 border-l sm:block" /><div className="hidden text-right text-sm sm:block"><p className="max-w-60 truncate font-medium">{user.displayName || 'Usuário'}</p><p className="max-w-60 truncate text-muted-foreground">{user.email}</p></div>{user.photoURL && user.photoURL !== failedPhoto ? <img src={user.photoURL} alt={user.displayName || 'Foto do usuário'} className="size-9 rounded-full" referrerPolicy="no-referrer" onError={() => setFailedPhoto(user.photoURL)} /> : <span className="flex size-9 items-center justify-center rounded-full bg-accent text-sm" aria-label={user.displayName || user.email || 'Usuário'}>{(user.displayName || user.email || 'U')[0].toUpperCase()}</span>}<Button variant="ghost" onClick={() => void logout()} disabled={busy} aria-label="Sair"><LogOut /><span className="hidden sm:inline">Sair</span></Button></>}
+  const [open, setOpen] = useState(false)
+  const account = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const outside = (event: PointerEvent) => { if (!account.current?.contains(event.target as Node)) setOpen(false) }
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus() } }
+    document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape)
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape) }
+  }, [open])
+  return <header className="app-header"><div className="header-inner">
+    <Link to="/" className="brand" aria-label="Decicharts"><AudioLines aria-hidden="true" /><span>Decicharts</span></Link>
+    {user && <nav className="account-nav" aria-label="Navegação principal"><NavLink to="/" end>Análise</NavLink><NavLink to="/analises">Minhas análises</NavLink><NavLink to="/perfil">Meu perfil</NavLink></nav>}
+    <div className="header-actions"><Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>{theme === 'dark' ? <Sun /> : <Moon />}</Button>
+      {user && <div className="account-control" ref={account} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
+        <button ref={trigger} type="button" className="account-trigger" aria-label="Menu da conta" aria-expanded={open} aria-controls="account-popover" data-dialog-focus-fallback onClick={() => setOpen(value => !value)}>
+          {user.photoURL && user.photoURL !== failedPhoto ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" onError={() => setFailedPhoto(user.photoURL)} /> : <span className="avatar-initial">{(user.displayName || user.email || 'U')[0].toUpperCase()}</span>}<ChevronDown aria-hidden="true" />
+        </button>
+        {open && <div className="account-popover" id="account-popover"><div className="account-details"><strong>{user.displayName || 'Conta Google'}</strong><span>{user.email}</span></div><Link to="/perfil" onClick={() => setOpen(false)}><UserRound aria-hidden="true" />Configurações da conta</Link><button type="button" disabled={busy} onClick={() => { setOpen(false); void logout() }}><LogOut aria-hidden="true" />Sair</button></div>}
+      </div>}
     </div>
-  </div>{user && <nav className="account-nav" aria-label="Navegação principal"><NavLink to="/" end>Análise</NavLink><NavLink to="/analises">Minhas análises</NavLink><NavLink to="/perfil">Meu perfil</NavLink></nav>}</header>
+  </div></header>
 }

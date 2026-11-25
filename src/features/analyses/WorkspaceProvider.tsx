@@ -5,6 +5,7 @@ import { fullRange } from '@/features/measurements/statistics'
 import type { AnalysisSummary, ChartView, StoredAnalysis } from '../../../shared/persistence'
 import { saveAnalysis } from './service'
 import { WorkspaceContext } from './workspace-context'
+import { useConfirmation } from '@/components/ui/confirmation-context'
 
 interface Entry {
   key: string; dataset: MeasurementDataset; view: ChartView; saved: AnalysisSummary | null
@@ -26,6 +27,7 @@ function entryFor(dataset: MeasurementDataset, stored?: StoredAnalysis): Entry {
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { user, setLogoutGuard } = useAuth()
+  const confirm = useConfirmation()
   const [state, setState] = useState<{ entries: Entry[]; active: string | null; revision: number }>({ entries: [], active: null, revision: 0 })
   const current = useRef(state)
   const controllers = useRef(new Map<string, AbortController>())
@@ -43,9 +45,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('beforeunload', warn)
   }, [anyDirty])
   useEffect(() => {
-    setLogoutGuard?.(() => !current.current.entries.some(isDirty) || window.confirm('Sair da conta? Há pontos ou alterações ainda não salvos nesta sessão.'))
+    setLogoutGuard?.(() => !current.current.entries.some(isDirty) || confirm({ title: 'Sair da conta?', description: 'Os pontos e alterações não salvos serão descartados. As análises salvas continuam na sua conta.', confirmLabel: 'Sair da conta' }))
     return () => setLogoutGuard?.(null)
-  }, [setLogoutGuard])
+  }, [setLogoutGuard, confirm])
   const active = state.entries.find(entry => entry.key === state.active)
   function accept(dataset: MeasurementDataset, stored?: StoredAnalysis) {
     cancelAll()

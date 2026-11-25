@@ -9,7 +9,7 @@ export interface AuthState {
   configured: boolean
   login: () => Promise<void>
   logout: () => Promise<void>
-  setLogoutGuard?: (guard: (() => boolean) | null) => void
+  setLogoutGuard?: (guard: (() => boolean | Promise<boolean>) | null) => void
 }
 export const AuthContext = createContext<AuthState | null>(null)
 export function useAuth() {

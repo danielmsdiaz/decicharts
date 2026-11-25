@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Save, UserRound } from 'lucide-react'
+import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/auth-context'
@@ -35,9 +36,9 @@ export default function ProfilePage() {
   const [failedPhoto, setFailedPhoto] = useState<string | null>(null)
   const prefs = profile?.preferences ?? DEFAULT_PREFERENCES
   return <main className="dashboard-shell">
-    <div><h1 className="text-3xl font-semibold tracking-tight">Meu perfil</h1><p className="mt-2 text-sm text-muted-foreground">Sua conta e suas preferências de importação.</p></div>
-    <section className="panel p-6 sm:p-8"><div className="flex items-center gap-4">{user?.photoURL && user.photoURL !== failedPhoto ? <img src={user.photoURL} alt={user.displayName || 'Foto da conta Google'} className="size-14 rounded-full" referrerPolicy="no-referrer" onError={() => setFailedPhoto(user.photoURL)} /> : <span className="file-symbol"><UserRound aria-hidden="true" /></span>}<div className="min-w-0"><h2 className="break-words font-semibold">{user?.displayName || 'Conta Google'}</h2><p className="mt-1 break-all text-sm text-muted-foreground">{user?.email}</p></div></div><p className="mt-5 text-sm text-muted-foreground">Nome, foto e e-mail são fornecidos pela sua conta Google.</p></section>
-    <section className="panel p-6 sm:p-8" aria-busy={loading}><h2 className="text-lg font-semibold">Preferências de leitura</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Aplicadas às próximas importações. As análises já abertas ou salvas mantêm o fuso e a unidade originais.</p>
+    <div><h1 className="text-3xl font-semibold tracking-tight">Meu perfil</h1></div>
+    <section className="profile-identity"><div className="flex items-center gap-4">{user?.photoURL && user.photoURL !== failedPhoto ? <img src={user.photoURL} alt={user.displayName || 'Foto da conta Google'} className="size-14 rounded-full" referrerPolicy="no-referrer" onError={() => setFailedPhoto(user.photoURL)} /> : <span className="file-symbol"><UserRound aria-hidden="true" /></span>}<div className="min-w-0"><h2 className="break-words font-semibold">{user?.displayName || 'Conta Google'}</h2><p className="mt-1 break-all text-sm text-muted-foreground">{user?.email}</p></div></div><span className="account-source">Conta Google<HelpTooltip label="Sobre os dados da conta">Nome, foto e e-mail são fornecidos pela sua conta Google.</HelpTooltip></span></section>
+    <section className="profile-settings" aria-busy={loading}><div className="field-label"><h2 className="text-lg font-semibold">Preferências de leitura</h2><HelpTooltip label="Sobre as preferências">Aplicadas às próximas importações. As análises já abertas ou salvas mantêm o fuso e a unidade originais.</HelpTooltip></div>
       {error && <div role="alert" className="notice error mt-5"><p>{error}</p><Button className="mt-3" variant="outline" onClick={retry}>Tentar carregar preferências novamente</Button></div>}
       {loading ? <p role="status" className="mt-6 text-sm text-muted-foreground">Carregando preferências…</p> : <PreferencesForm key={`${prefs.timezone}|${prefs.unit}`} initial={prefs} onSaved={() => setFeedback('Preferências salvas na sua conta.')} />}
       {feedback && <p role="status" className="mt-5 text-sm text-primary">{feedback}</p>}

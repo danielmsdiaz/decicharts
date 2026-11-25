@@ -16,8 +16,8 @@ const count = (value: number) => value.toLocaleString('pt-BR')
 interface FileImportProps {
   dataset: MeasurementDataset | null
   saved?: boolean
-  onImport: (dataset: MeasurementDataset, all?: MeasurementDataset[]) => boolean
-  onRemove: () => void
+  onImport: (dataset: MeasurementDataset, all?: MeasurementDataset[]) => boolean | Promise<boolean>
+  onRemove: () => boolean | Promise<boolean>
 }
 
 export function FileImport({ dataset, saved = false, onImport, onRemove }: FileImportProps) {
@@ -25,6 +25,7 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
   const form = useFileImport(profile?.preferences ?? DEFAULT_PREFERENCES)
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
+  const [accepting, setAccepting] = useState(false)
   const { file, source, mapping, candidate, busy, settingsOpen } = form
   const sheet = source?.sheets[form.sheetIndex]
   const headers = sheet?.rows[mapping?.headerRow ?? 0] ?? []
@@ -63,16 +64,16 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
           </div>
           <div className="file-actions">
             <Button variant="outline" disabled={profileLoading} onClick={() => input.current?.click()}><FolderOpen />Trocar arquivo</Button>
-            <Button variant="destructive" onClick={() => { onRemove(); form.removed() }}><X />{saved ? (dataset.point ? 'Fechar arquivo' : 'Fechar análise') : 'Remover arquivo'}</Button>
+            <Button variant="outline" onClick={async () => { if (await onRemove()) form.removed() }}><X />{saved ? (dataset.point ? 'Fechar arquivo' : 'Fechar análise') : 'Remover arquivo'}</Button>
           </div>
         </div>
       ) : (
         <div className={`upload-zone ${dragging ? 'is-dragging' : ''}`} onDragOver={event => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={drop}>
           <span className="upload-symbol"><Upload aria-hidden="true" /></span>
-          <h2 className="mt-5 text-xl font-semibold tracking-tight">Arraste seu arquivo para cá</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Excel ou CSV com tempos e níveis sonoros de um ou mais pontos.</p>
+          <h2 className="mt-5 text-xl font-semibold tracking-tight">Importar medições</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Arraste uma planilha Excel ou CSV para começar.</p>
           <Button className="mt-6" disabled={profileLoading} onClick={() => input.current?.click()}><FolderOpen />{profileLoading ? 'Carregando preferências…' : 'Selecionar arquivo'}</Button>
-          <p className="mt-5 text-sm text-muted-foreground">CSV, XLS ou XLSX · Até 20 MiB · 250 mil registros</p>
+          <div className="upload-formats"><span>.xlsx</span><span>.xls</span><span>.csv</span><HelpTooltip label="Limites de importação">Até 20 MiB e 250 mil registros por arquivo. Pode conter um ou mais pontos de medição.</HelpTooltip></div>
         </div>
       )}
       {form.error && <p className="notice error mt-4" role="alert">{form.error}</p>}
@@ -192,7 +193,12 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
       </div>
       <div className="import-footer">
         {(busy || !candidate?.validRecords) && <p className="mr-auto text-sm text-muted-foreground">{busy ? 'Preparando seus dados…' : 'Confira a leitura para continuar.'}</p>}
-        <Button disabled={busy || !candidate?.validRecords} onClick={() => { if (candidate && onImport(candidate, form.datasets)) form.finish() }}>
+        <Button disabled={busy || accepting || !candidate?.validRecords} onClick={async () => {
+          if (!candidate || accepting) return
+          setAccepting(true)
+          try { if (await onImport(candidate, form.datasets)) form.finish() }
+          finally { setAccepting(false) }
+        }}>
           {dataset ? 'Substituir e gerar gráfico' : 'Gerar gráfico'}<ArrowRight />
         </Button>
       </div>

@@ -8,10 +8,12 @@ import { formatCoordinate } from '@/features/measurements/temporal'
 import type { AnalysisPage, AnalysisSummary } from '../../../shared/persistence'
 import { loadAnalysis } from './service'
 import { useWorkspace } from './workspace-context'
+import { useConfirmation } from '@/components/ui/confirmation-context'
 
 export default function AnalysesPage() {
   const { user } = useAuth()
   const workspace = useWorkspace()
+  const confirm = useConfirmation()
   const navigate = useNavigate()
   const [items, setItems] = useState<AnalysisSummary[]>([])
   const [hasMore, setHasMore] = useState(false)
@@ -40,7 +42,7 @@ export default function AnalysesPage() {
   }
   async function open(item: AnalysisSummary) {
     if (!user || busy) return
-    if (workspace.anyDirty && !window.confirm('Abrir esta análise? Os pontos e alterações não salvos nesta sessão serão substituídos.')) return
+    if (workspace.anyDirty && !await confirm({ title: 'Abrir esta análise?', description: 'Os pontos e alterações não salvos nesta sessão serão substituídos.', confirmLabel: 'Abrir análise' })) return
     setBusy(item.id); setError('')
     const operation = new AbortController()
     controller.current = operation
@@ -53,7 +55,7 @@ export default function AnalysesPage() {
     finally { if (!operation.signal.aborted) setBusy(null) }
   }
   async function remove(item: AnalysisSummary) {
-    if (!user || busy || !window.confirm(`Excluir definitivamente “${item.name}” e suas medições salvas?`)) return
+    if (!user || busy || !await confirm({ title: 'Excluir análise?', description: `“${item.name}” e suas medições salvas serão excluídas definitivamente.`, confirmLabel: 'Excluir análise', tone: 'danger' })) return
     setBusy(item.id); setError(''); setFeedback('')
     try {
       await api(user, `analyses/${item.id}`, { method: 'DELETE', signal: controller.current?.signal })
@@ -63,15 +65,15 @@ export default function AnalysesPage() {
     } catch (issue) { setError(issue instanceof Error ? issue.message : 'Não foi possível excluir a análise.') }
     finally { setBusy(null) }
   }
-  function startNew() {
-    if (workspace.anyDirty && !window.confirm('Começar outra análise? Os pontos e alterações não salvos serão removidos desta sessão.')) return
+  async function startNew() {
+    if (workspace.anyDirty && !await confirm({ title: 'Começar outra análise?', description: 'Os pontos e alterações não salvos serão descartados.', confirmLabel: 'Nova análise' })) return
     workspace.clear()
     navigate('/')
   }
-  return <main className="dashboard-shell"><div className="dashboard-heading"><div><h1 className="text-3xl font-semibold tracking-tight">Minhas análises</h1><p className="mt-2 text-sm text-muted-foreground">Medições salvas na sua conta, prontas para continuar.</p></div><Button variant="outline" onClick={startNew}>Nova análise</Button></div>
+  return <main className="dashboard-shell"><div className="dashboard-heading"><div><h1 className="text-3xl font-semibold tracking-tight">Minhas análises</h1></div><Button variant="outline" onClick={startNew}>Nova análise</Button></div>
     {error && <div className="notice error" role="alert"><p>{error}</p><Button className="mt-3" variant="outline" onClick={() => setRetry(value => value + 1)}><RefreshCw />Tentar novamente</Button></div>}
     {feedback && <p role="status" className="text-sm text-primary">{feedback}</p>}
-    {loading ? <p className="panel p-8 text-sm" role="status">Carregando suas análises…</p> : !items.length && !error ? <section className="panel p-8"><h2 className="text-lg font-semibold">Nenhuma análise salva</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Importe um arquivo, gere o gráfico e clique em Salvar análise para encontrá-lo aqui depois.</p><Button asChild className="mt-6"><Link to="/">Importar medições</Link></Button></section> : <section className="panel overflow-hidden" aria-label="Análises salvas"><ul>{items.map(item => <li className="analysis-row" key={item.id}><div className="min-w-0 flex-1"><h2 className="break-words font-semibold">{item.name}</h2><p className="mt-1 break-all text-sm text-muted-foreground">{item.pointId ? `${item.pointId} · ` : ''}{item.fileName} · {item.count.toLocaleString('pt-BR')} medições · {item.unit}</p><p className="mt-2 text-sm text-muted-foreground tabular-nums">{formatCoordinate(item.start, item.timeBasis, item.timezone, 'dd/MM/yyyy HH:mm:ss')} — {formatCoordinate(item.end, item.timeBasis, item.timezone, 'dd/MM/yyyy HH:mm:ss')}</p></div><div className="flex gap-2"><Button variant="outline" disabled={Boolean(busy)} onClick={() => void open(item)}><FolderOpen />{busy === item.id ? 'Aguarde…' : 'Abrir'}</Button><Button variant="destructive" disabled={Boolean(busy)} onClick={() => void remove(item)} aria-label={`Excluir análise ${item.name}`}><Trash2 /><span className="hidden sm:inline">Excluir</span></Button></div></li>)}</ul></section>}
+    {loading ? <p className="panel p-8 text-sm" role="status">Carregando suas análises…</p> : !items.length && !error ? <section className="empty-history"><FolderOpen aria-hidden="true" /><h2 className="text-lg font-semibold">Nenhuma análise salva</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">As análises que você salvar aparecerão aqui.</p><Button asChild className="mt-6"><Link to="/">Importar medições</Link></Button></section> : <section className="panel overflow-hidden" aria-label="Análises salvas"><ul>{items.map(item => <li className="analysis-row" key={item.id}><div className="min-w-0 flex-1"><h2 className="break-words font-semibold">{item.name}</h2><p className="mt-1 break-all text-sm text-muted-foreground">{item.pointId ? `${item.pointId} · ` : ''}{item.fileName} · {item.count.toLocaleString('pt-BR')} medições · {item.unit}</p><p className="mt-2 text-sm text-muted-foreground tabular-nums">{formatCoordinate(item.start, item.timeBasis, item.timezone, 'dd/MM/yyyy HH:mm:ss')} — {formatCoordinate(item.end, item.timeBasis, item.timezone, 'dd/MM/yyyy HH:mm:ss')}</p></div><div className="flex gap-2"><Button variant="outline" disabled={Boolean(busy)} onClick={() => void open(item)}><FolderOpen />{busy === item.id ? 'Aguarde…' : 'Abrir'}</Button><Button variant="ghost" disabled={Boolean(busy)} onClick={() => void remove(item)} aria-label={`Excluir análise ${item.name}`}><Trash2 /><span className="hidden sm:inline">Excluir</span></Button></div></li>)}</ul></section>}
     {hasMore && <Button variant="outline" className="justify-self-center" disabled={Boolean(busy)} onClick={() => void more()}>{busy === 'more' ? 'Carregando…' : 'Carregar mais'}</Button>}
   </main>
 }

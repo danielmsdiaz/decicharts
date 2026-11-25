@@ -8,16 +8,16 @@ export function chartOption(dataset: MeasurementDataset, range: TimeRange, title
   const unit = levelUnit(dataset)
   const foreground = dark ? '#edf1f3' : '#20282e'
   const muted = dark ? '#a7b4bd' : '#5c6972'
-  const grid = dark ? '#303b43' : '#e6ebee'
-  const minorGrid = dark ? '#273239' : '#f0f3f5'
-  const accent = dark ? '#68d9c1' : '#0b7566'
-  const surface = dark ? '#1a2024' : '#ffffff'
+  const grid = dark ? '#34413b' : '#e0e7e3'
+  const minorGrid = dark ? '#27362f' : '#f0f4f1'
+  const accent = dark ? '#68d9c1' : '#116b5c'
+  const surface = dark ? '#192420' : '#ffffff'
   const singleInstant = exporting && range.start === range.end
   const axisFontSize = exporting ? 18 : 14
   return {
     animation: false,
     backgroundColor: exporting ? '#ffffff' : 'transparent',
-    textStyle: { fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif', color: foreground, fontSize: exporting ? 18 : 14 },
+    textStyle: { fontFamily: exporting ? '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif' : 'DM Sans Variable, sans-serif', color: foreground, fontSize: exporting ? 18 : 14 },
     title: exporting ? { text: title, subtext: `${datasetTime(dataset, range.start)} — ${datasetTime(dataset, range.end)}${relative ? '' : ` · ${dataset.timezone}`} `, left: 35, top: 24, textStyle: { color: foreground, fontSize: 24, fontWeight: 600 }, subtextStyle: { color: muted, fontSize: 16 } } : undefined,
     grid: { top: exporting ? 140 : 50, left: exporting ? 105 : 85, right: 35, bottom: exporting ? 110 : 100 },
     tooltip: {
