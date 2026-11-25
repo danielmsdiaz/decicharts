@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-- Fase atual: 10 — Navegação, ajuda contextual e detalhe dos gráficos
+- Fase atual: 11 — Redesenho da interface e confirmações próprias
 - Status: Implementação local concluída; aceites externos pendentes
 - Última atualização: 2026-11-25
 - Importação dinâmica, tempo relativo, indicadores, figura completa e salvamento por ponto concluídos localmente. Google real, reprodução da queda/reinício do Vite e integração em banco separado continuam pendentes; nenhum deploy ou escrita no Neon nesta etapa.
@@ -21,6 +21,7 @@
 | 8. Estabilidade e próximos incrementos | Parcial: proteções/rede concluídas; aceites e busca pendentes |
 | 9. Monitoramento por ponto e figura completa | Implementação local concluída |
 | 10. Navegação e detalhe dos gráficos | Concluído |
+| 11. Redesenho e confirmações próprias | Concluído |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -38,7 +39,7 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 ## Trabalho em andamento
 
-Implementação e validação local das fases 9 e 10 concluídas. Navegação por setas, ajuda contextual e detalhes de leitura dos gráficos entregues. Reprodução com Google real e servidor dev reiniciado continua manual.
+Implementação e validação local das fases 9 a 11 concluídas. Todas as telas redesenhadas, navegação integrada e confirmações próprias com proteção de foco. Reprodução com Google real e servidor dev reiniciado continua manual.
 
 ## Próximas tarefas
 
@@ -77,14 +78,14 @@ Implementação e validação local das fases 9 e 10 concluídas. Navegação po
 |-------------|-----------|
 | Vitest padrão | 75 aprovados; 1 integração externa ignorada por padrão |
 | Neon real com Prisma | Aprovação histórica da fase 7; fase 9 preparada, não reexecutada sem banco separado |
-| Chrome/Playwright | 13 cenários aprovados; setas, tooltips por teclado/toque e PNG conferidos |
+| Chrome/Playwright | 15 cenários aprovados; confirmação por teclado, preservação de dados e matriz de telas incluídas |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
 | Migração Prisma | Baseline aplicada; deploy/status sem pendências; diff sem diferenças; fingerprints dos dados preservados |
 | Isolamento/exclusão | Outro UID não lê/altera/exclui dados; cascata verificada |
 | Bundle frontend | Conexão Neon, Prisma Client, adaptador/driver e fixtures ausentes |
-| Inspeção visual | Desktop/mobile do perfil e histórico aprovados; detector sem achados |
+| Inspeção visual | 18 capturas: desktop claro/celular escuro; revisão independente ship; detector sem achados |
 | Google real até API | Aceite manual pendente |
 
 ## Histórico de progresso
@@ -330,3 +331,17 @@ Próxima ação:
 - Inspeção conjunta desktop/mobile/escuro concluída; ajuste único de rótulos próximos à borda confirmado em nova rodada. Detector Impeccable sem achados.
 - Sem dependências novas, mudanças na API ou no banco. Aceites externos anteriores continuam pendentes; nenhum deploy ou push.
 - Commits de implementação: cd00794 (navegação e ajuda contextual) e 3675f5f (detalhes dos gráficos); documentação em commit separado.
+
+### 2026-11-25 — Redesenho e confirmações próprias
+
+- Impeccable e Emil Design Engineering aplicados ao redesenho de todas as telas. Header em uma linha no desktop, navegação abaixo da marca no celular, tema e menu da conta; nome/e-mail sem ocupar a barra inteira.
+- Fonte DM Sans incluída localmente, superfícies e espaçamentos unificados. Login direto, perfil com seções abertas e histórico com ações claras. Rodapé e slogans removidos; explicações de processamento e preferências em ajuda contextual.
+- Seis confirmações nativas substituídas por diálogo próprio assíncrono: trocar/fechar arquivo, abrir análise, começar outra, excluir e sair. Cancelar/Escape preservam trabalho e conta; Tab contido no modal, foco inicial em Cancelar e retorno ao controle ou avatar.
+- Aviso nativo ao fechar/recarregar a aba mantido por escolha expressa do usuário. Não houve alteração em cálculos, leitura, formato salvo ou tabelas.
+- 75 testes unitários aprovados e uma integração externa ignorada por padrão. Quinze cenários Chrome aprovados, incluindo matriz visual e proteção por teclado. Extensão de cancelamento ao abrir análise validada em execução focada adicional.
+- Lint e build final aprovados. Bundle inspecionado: onze módulos sem conexão/host Neon, driver Prisma ou fixture de autenticação. Fonte instalada sem scripts; auditoria da instalação reportou zero vulnerabilidades.
+- Dezoito capturas de login, importação vazia/prévia, gráfico, histórico vazio/preenchido, perfil, menu e confirmação conferidas em desktop claro e celular escuro. Correção única de borda no ícone de ajuda confirmada; detector executado uma vez, sem achados.
+- Revisão independente Impeccable: disposition ship, sem correções materiais. DESIGN.md e sidecar registrados a partir do resultado construído.
+- Capturas e evidências locais em .impeccable/review/, ignoradas pelo Git. Fixtures sintéticas reutilizam o App real para testar a mesma estrutura da aplicação.
+- Pendências externas preservadas: Google real, reinício do Vite e integração em branch Neon separado. Sem migração, escrita no Neon, push ou deploy.
+- Commits: 5edea24 (interface e confirmações) e 47ae81c (regressão e matriz de telas); documentação consolidada em commit separado.

@@ -42,3 +42,7 @@ Neon escolhido pelo usuário. API verifica tokens Firebase, isola os dados por U
 Pontos e durações variáveis; dados e ajustes por ponto preservados na sessão. Salvamento individual explícito, reabrindo apenas o ponto salvo. Gráfico responsivo com tempo absoluto ou decorrido, sem datas fictícias. Mínimo, média aritmética, máximo e Leq estimado nas condições de amostragem regular, sem equivalência normativa. Figura PNG/SVG completa com localização, identificação e logotipo opcional. Compatibilidade com metadados antigos sem alterar tabelas Prisma. Integração de escrita exige TEST_DATABASE_URL separado do banco da aplicação.
 
 Preferência adicional de interface: setas para alternar pontos, explicações em tooltips e gráficos com mais detalhes de leitura. Evitar parágrafos permanentes explicando controles já identificados; manter acessibilidade por teclado e toque.
+
+## Redesenho autorizado — 2026-11-25
+
+Modernizar todas as telas e o header, retirar slogans/rodapés explicativos e manter orientações nos ícones de ajuda. Navegação integrada, dados da conta em menu e gráfico como área principal de trabalho. Popups próprios para confirmações internas; por escolha expressa do usuário, manter o aviso nativo somente ao fechar/recarregar a aba quando houver trabalho não salvo. Fonte local, temas claro/escuro e navegação por teclado e toque.

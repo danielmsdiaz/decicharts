@@ -826,3 +826,17 @@ Solicitação do usuário: setas para alternar pontos, explicações sob demanda
 - [x] Validar 75 testes unitários, 13 cenários Chrome, tipagem/build/lint, capacidade e inspeção visual em desktop/mobile/escuro.
 
 Nenhum cálculo normativo, sampling ou suavização introduzido. As pendências externas da seção 22 permanecem abertas.
+
+## 24. Redesenho da interface e confirmações próprias — 2026-11-25
+
+Pedido: modernizar todas as telas e o header, remover textos soltos com aparência de template e substituir os alerts/confirms do navegador por popups da aplicação. Usuário confirmou manter apenas o aviso nativo ao fechar/recarregar a aba para proteger trabalho não salvo.
+
+- [x] Header compacto com navegação integrada, tema e menu da conta; nome/e-mail dentro do menu.
+- [x] Redesenhar login, importação, gráfico, histórico e perfil com tipografia local DM Sans e superfícies consistentes nos dois temas.
+- [x] Remover o rodapé explicativo e slogans; mover explicações de processamento e preferências para ajuda contextual.
+- [x] Centralizar confirmações assíncronas para substituir/fechar arquivo, abrir análise, iniciar nova análise, excluir e sair da conta.
+- [x] Cancelar/Escape preservam dados e sessão; foco inicial em Cancelar, Tab contido no diálogo e foco devolvido à ação.
+- [x] Manter beforeunload nativo e preservar importação, seleção de ponto, indicadores, filtros, zoom e exportação.
+- [x] Validar 75 testes unitários, 15 cenários Chrome, lint/build e matriz de capturas desktop claro/celular escuro; detector sem achados.
+
+As pendências externas da seção 22 permanecem abertas. Sem migração, escrita no Neon, push ou deploy nesta etapa. A autenticação real usa Firebase; a matriz visual usa identidade e dados sintéticos apenas na fixture de teste.

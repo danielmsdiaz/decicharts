@@ -108,13 +108,17 @@ Rotas da API: `GET/PUT /api/profile`, `GET/POST /api/analyses`, `GET/PATCH/DELET
 - Duplicados permanecem em ordem original no mesmo instante. A contagem informa ocorrências adicionais, não grupos.
 - Mínimo, média aritmética, máximo e Leq estimado são calculados sobre o período selecionado. Não há cálculos normativos, interpolação, preenchimento de lacunas ou suavização. Segmentos retos unem os pontos existentes, sem criar medições.
 
-Medições não salvas ficam apenas na memória. Navegar entre Análise, Minhas análises e Meu perfil preserva o trabalho; recarregar ou sair limpa a cópia local. Há aviso de saída do navegador quando suportado e confirmação no logout voluntário. Esses avisos não protegem contra encerramento forçado do processo. As análises salvas podem ser reabertas pela sua conta. A preferência de tema permanece local; fuso/unidade preferidos ficam no Neon.
+Medições não salvas ficam apenas na memória. Navegar entre Análise, Minhas análises e Meu perfil preserva o trabalho; recarregar ou sair limpa a cópia local. As ações internas de substituir/fechar arquivo, abrir outra análise, começar uma nova análise, excluir e sair da conta usam confirmações próprias, com cancelamento por Escape e retorno do foco. Apenas fechar ou recarregar a aba mantém o aviso nativo do navegador, quando suportado, conforme preferência confirmada. Esses avisos não protegem contra encerramento forçado do processo. As análises salvas podem ser reabertas pela sua conta. A preferência de tema permanece local; fuso/unidade preferidos ficam no Neon.
 
 ### Leq estimado
 
 Origem confirmada pelo usuário: leituras instantâneas de campo feitas com decibelímetro. O aplicativo calcula a média energética dessas amostras, com pesos iguais, e identifica o resultado como **Leq estimado**, sem equipará-lo ao Leq integrado pelo equipamento. 50, 60 e 70 dB com pesos iguais resultam em aproximadamente 65,68 dB, enquanto a média aritmética é 60 dB.
 
 A estimativa exige pelo menos duas leituras selecionadas, série completa igualmente espaçada, sem duplicados ou registros inválidos e unidade em decibéis. Se essas condições não forem atendidas, o indicador fica indisponível com o motivo; gráfico e demais estatísticas continuam disponíveis. Não se inventam durações, não se calcula ponderação temporal a partir de lacunas e não se presume integração de 60 segundos porque existem registros de 1 a 60.
+
+## Interface
+
+Header com navegação integrada, controle de tema e menu da conta. Login, importação, histórico e perfil compartilham a mesma tipografia DM Sans, incluída no bundle sem requisições a serviços de fontes. Explicações de funcionamento ficam nos ícones de ajuda; erros, progresso e resultados de ações continuam visíveis.
 
 ## Gráfico e exportação
 
@@ -151,7 +155,7 @@ Para preparar o ambiente separado:
 
 Nenhum branch é provisionado automaticamente pelo aplicativo. Na entrega de 25/11/2026, a integração de escrita não foi repetida porque não havia TEST_DATABASE_URL separado.
 
-Os testes Playwright usam Chrome em `/usr/bin/google-chrome`. Em outro ambiente, defina `CHROME_PATH` com o executável instalado. O runner inicia Vite em `127.0.0.1:4173` e encerra o servidor ao terminar. Resultados e screenshots ficam em `/tmp/decicharts-*`.
+Os testes Playwright usam Chrome em `/usr/bin/google-chrome`. Em outro ambiente, defina `CHROME_PATH` com o executável instalado. O runner inicia Vite em `127.0.0.1:4173` e encerra o servidor ao terminar. Resultados e screenshots dos fluxos ficam em `/tmp/decicharts-*`. A matriz de interface em `tests/browser/interface.spec.ts` captura desktop claro e celular escuro em `.impeccable/review/`, ignorado pelo Git.
 
 A entrada autenticada `tests/browser/fixture.html` é exclusiva dos testes e não integra `dist`. A aplicação de produção continua exigindo Firebase. Os testes do provedor usam mocks apenas nos testes. Os fluxos de conta no navegador usam uma API simulada restrita ao token sintético da fixture; o teste Neon separado verifica o banco real. O login Google real até a API deve ser validado manualmente com uma conta real.
 
