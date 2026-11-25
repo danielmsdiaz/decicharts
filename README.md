@@ -118,7 +118,7 @@ A estimativa exige pelo menos duas leituras selecionadas, série completa igualm
 
 ## Interface
 
-Header com navegação integrada, controle de tema e menu da conta. Login, importação, histórico e perfil compartilham a mesma tipografia DM Sans, incluída no bundle sem requisições a serviços de fontes. Explicações de funcionamento ficam nos ícones de ajuda; erros, progresso e resultados de ações continuam visíveis.
+Header com navegação integrada, controle de tema e menu da conta. Login, importação, histórico e perfil compartilham a mesma tipografia DM Sans, incluída no bundle sem requisições a serviços de fontes. Explicações de funcionamento ficam nos ícones de ajuda; erros, progresso e resultados de ações continuam visíveis. Histórico, preferências, recuperação da sessão e páginas/gráfico sob demanda usam skeletons com suporte a movimento reduzido. A paginação preserva os resultados já carregados.
 
 ## Gráfico e exportação
 

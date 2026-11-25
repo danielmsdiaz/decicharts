@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-- Fase atual: 11 — Redesenho da interface e confirmações próprias
+- Fase atual: 12 — Estados de carregamento com skeletons
 - Status: Implementação local concluída; aceites externos pendentes
 - Última atualização: 2026-11-25
 - Importação dinâmica, tempo relativo, indicadores, figura completa e salvamento por ponto concluídos localmente. Google real, reprodução da queda/reinício do Vite e integração em banco separado continuam pendentes; nenhum deploy ou escrita no Neon nesta etapa.
@@ -22,6 +22,7 @@
 | 9. Monitoramento por ponto e figura completa | Implementação local concluída |
 | 10. Navegação e detalhe dos gráficos | Concluído |
 | 11. Redesenho e confirmações próprias | Concluído |
+| 12. Skeletons de carregamento | Concluído |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -39,7 +40,7 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 ## Trabalho em andamento
 
-Implementação e validação local das fases 9 a 11 concluídas. Todas as telas redesenhadas, navegação integrada e confirmações próprias com proteção de foco. Reprodução com Google real e servidor dev reiniciado continua manual.
+Implementação e validação local das fases 9 a 12 concluídas. Todas as telas redesenhadas, navegação integrada e confirmações próprias com proteção de foco. Reprodução com Google real e servidor dev reiniciado continua manual.
 
 ## Próximas tarefas
 
@@ -78,14 +79,14 @@ Implementação e validação local das fases 9 a 11 concluídas. Todas as telas
 |-------------|-----------|
 | Vitest padrão | 75 aprovados; 1 integração externa ignorada por padrão |
 | Neon real com Prisma | Aprovação histórica da fase 7; fase 9 preparada, não reexecutada sem banco separado |
-| Chrome/Playwright | 15 cenários aprovados; confirmação por teclado, preservação de dados e matriz de telas incluídas |
+| Chrome/Playwright | 18 cenários aprovados; inclui respostas lentas, erro/nova tentativa, paginação e movimento reduzido |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
 | Migração Prisma | Baseline aplicada; deploy/status sem pendências; diff sem diferenças; fingerprints dos dados preservados |
 | Isolamento/exclusão | Outro UID não lê/altera/exclui dados; cascata verificada |
 | Bundle frontend | Conexão Neon, Prisma Client, adaptador/driver e fixtures ausentes |
-| Inspeção visual | 18 capturas: desktop claro/celular escuro; revisão independente ship; detector sem achados |
+| Inspeção visual | Redesenho aprovado e seis capturas adicionais de skeletons; detector atual com avisos consultivos de tokens existentes |
 | Google real até API | Aceite manual pendente |
 
 ## Histórico de progresso
@@ -345,3 +346,11 @@ Próxima ação:
 - Capturas e evidências locais em .impeccable/review/, ignoradas pelo Git. Fixtures sintéticas reutilizam o App real para testar a mesma estrutura da aplicação.
 - Pendências externas preservadas: Google real, reinício do Vite e integração em branch Neon separado. Sem migração, escrita no Neon, push ou deploy.
 - Commits: 5edea24 (interface e confirmações) e 47ae81c (regressão e matriz de telas); documentação consolidada em commit separado.
+
+### 2026-11-25 — Skeletons de carregamento
+
+- Componentes compartilhados para lista de análises, paginação, preferências, recuperação da sessão e fallbacks específicos de páginas e gráfico.
+- Preservados o visual aprovado, os resultados já carregados durante paginação e o feedback de salvar/exportar/processar arquivos. Sem atraso artificial; os placeholders seguem a conclusão ou falha real da operação.
+- Skeletons com status acessível, blocos decorativos ocultos e animação desativada em movimento reduzido. Nova tentativa do histórico volta ao skeleton; falhas encerram o carregamento sem painel vazio.
+- Validação: 75 testes unitários e 18 cenários Chrome aprovados; uma integração externa continua ignorada. Lint e build aprovados; seis capturas de histórico, perfil e gráfico conferidas em desktop claro/celular escuro. Ajuste de quebra no gráfico móvel confirmado em execução focada dos três novos cenários.
+- Detector executado uma vez: avisos consultivos sobre cores, tipografia e raios existentes no CSS frente à documentação; sem alterar a identidade aprovada para silenciá-los. O raio local do skeleton foi documentado. Sem auditoria adicional de documentação ou mudança no banco.

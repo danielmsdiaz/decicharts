@@ -840,3 +840,12 @@ Pedido: modernizar todas as telas e o header, remover textos soltos com aparênc
 - [x] Validar 75 testes unitários, 15 cenários Chrome, lint/build e matriz de capturas desktop claro/celular escuro; detector sem achados.
 
 As pendências externas da seção 22 permanecem abertas. Sem migração, escrita no Neon, push ou deploy nesta etapa. A autenticação real usa Firebase; a matriz visual usa identidade e dados sintéticos apenas na fixture de teste.
+
+## 25. Skeletons de carregamento — 2026-11-25
+
+- [x] Lista inicial e paginação do histórico com placeholders das linhas e ações.
+- [x] Preferências e recuperação de sessão com placeholders proporcionais ao conteúdo.
+- [x] Fallbacks específicos de páginas e gráfico carregados sob demanda.
+- [x] Preservar dados disponíveis durante ações; não substituir conteúdo por skeleton em salvar/exportar/processar arquivos.
+- [x] Respeitar movimento reduzido e status acessível; encerrar em sucesso ou erro, reativando na nova tentativa.
+- [x] Testar respostas lentas controladas, erro/nova tentativa e paginação sem ocultar resultados. 75 testes unitários, 18 cenários Chrome, lint e build aprovados.

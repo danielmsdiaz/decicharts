@@ -176,11 +176,19 @@ A bancada é plana: superfícies, bordas e espaçamento estabelecem grupos. Somb
 
 A confirmação escurece o restante da interface com backdrop, entra em (180ms) e deslocamento de (6px). Hover de importação usa (150ms ease); botões usam transição de cor e pequeno deslocamento no pressionamento. `prefers-reduced-motion: reduce` desativa animações e transições.
 
+Os skeletons usam uma pulsação discreta de opacidade em (1,8s), sem shimmer, atraso artificial ou transição de entrada. A preferência de movimento reduzido mantém os blocos estáticos.
+
 ## Shapes
 
 Bordas finas e cantos moderados delimitam elementos sem parecer brinquedos: painéis e faixa de arquivo seguem `rounded.panel`; inputs, botões e tabelas seguem `rounded.control`; etiquetas de formato usam `rounded.tag`. O avatar é circular. A área inicial de importação usa cantos de (14px), a confirmação (16px): são formas específicas desses componentes, não uma nova escala geral.
 
 ## Components
+
+### Loading skeletons
+
+Usar `Skeleton` e os padrões de `LoadingStates` para conteúdo ainda desconhecido: lista e paginação de análises, preferências, recuperação de sessão e módulos de página/gráfico carregados sob demanda. Os blocos reproduzem o espaço de textos, campos, ações e área gráfica; combinam foreground (9%) com card, com cantos específicos de (6px). Não desenham medições fictícias.
+
+Cada grupo expõe um status para leitores de tela; os blocos decorativos ficam ocultos e não entram na navegação por teclado. Erros encerram o skeleton e permitem nova tentativa. Na paginação, preservar as linhas já carregadas. Ações sobre conteúdo disponível, como salvar, exportar ou processar arquivos, mantêm os controles e o feedback de progresso.
 
 ### Buttons
 
