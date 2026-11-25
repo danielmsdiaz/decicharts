@@ -1,6 +1,10 @@
 export interface Measurement { timestamp: number; value: number }
 export type Cell = string | number | boolean | null
-export interface SheetData { name: string; rows: Cell[][]; date1904: boolean }
+export type TimeBasis = 'absolute' | 'elapsed'
+export type Weighting = 'unknown' | 'A' | 'C' | 'Z'
+export interface PointInfo { id: string; address?: string; east?: string; north?: string; enterprise?: string; monitoringTitle?: string }
+export interface PointCandidate { id: string; mapping: ColumnMapping; info: PointInfo }
+export interface SheetData { name: string; rows: Cell[][]; date1904: boolean; merges?: { s: { r: number; c: number }; e: { r: number; c: number } }[]; points?: PointCandidate[] }
 export interface ImportSource { fileName: string; sheets: SheetData[] }
 export interface ColumnMapping {
   headerRow: number
@@ -13,10 +17,16 @@ export interface ColumnMapping {
   timeOnly: boolean
   timezone: string
   unit: string
+  timeBasis?: TimeBasis
+  weighting?: Weighting
 }
 export interface InvalidRecord { row: number; reason: string; original: Cell[] }
 export interface PreviewRecord { row: number; original: Cell[]; timestamp?: number; value?: number; reason?: string }
 export interface MeasurementDataset {
+  schemaVersion?: 2
+  timeBasis?: TimeBasis
+  point?: PointInfo
+  sourceKind?: 'instantaneous'
   fileName: string
   sheetName: string
   measurements: Measurement[]

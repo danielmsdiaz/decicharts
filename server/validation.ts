@@ -1,5 +1,5 @@
-import { IANAZone } from 'luxon'
-import type { ChartView, DatasetMetadata, PointTuple, Preferences } from '../shared/persistence'
+import { DateTime, IANAZone } from 'luxon'
+import type { ChartView, DatasetMetadata, PointTuple, Preferences, ReportInfo } from '../shared/persistence'
 import { CHUNK_SIZE, MAX_POINTS } from '../shared/persistence'
 import { HttpError } from './errors'
 
@@ -29,7 +29,20 @@ export function chartView(value: unknown): ChartView {
   const input = object(value), range = object(input.range)
   const start = integer(range.start, -8_640_000_000_000_000, 8_640_000_000_000_000)
   const end = integer(range.end, start, 8_640_000_000_000_000)
-  return { title: text(input.title, 100), range: { start, end } }
+  return { title: text(input.title, 100), range: { start, end }, ...(input.report === undefined ? {} : { report: reportInfo(input.report) }) }
+}
+function reportInfo(value: unknown): ReportInfo {
+  const raw = object(value), result: ReportInfo = {}
+  for (const key of ['enterprise', 'address', 'east', 'north', 'datum', 'zone', 'hemisphere', 'startedAt'] as const) {
+    if (raw[key] !== undefined && raw[key] !== '') result[key] = text(raw[key], key === 'address' ? 500 : 200)
+  }
+  if (result.startedAt && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(result.startedAt) || !DateTime.fromISO(result.startedAt).isValid)) throw new HttpError(400, 'Data inicial do relatório inválida.')
+  if (raw.logo) {
+    const logo = text(raw.logo, 175000)
+    if (!/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(logo) || Buffer.from(logo.split(',')[1], 'base64').byteLength > 131072) throw new HttpError(400, 'Use um logotipo PNG normalizado com até 128 KiB.')
+    result.logo = logo
+  }
+  return result
 }
 export function analysisName(value: unknown) { return text(value, 100) }
 export function metadata(value: unknown): DatasetMetadata {
@@ -41,12 +54,20 @@ export function metadata(value: unknown): DatasetMetadata {
   if (totalRecords !== validRecords + invalidRecords) throw new HttpError(400, 'As contagens de registros não correspondem.')
   if (!['br', 'iso', 'excel'].includes(String(raw.dateFormat)) || ![',', '.'].includes(String(raw.decimal)) || typeof raw.timeOnly !== 'boolean') throw new HttpError(400, 'Mapeamento de colunas inválido.')
   const mappingPrefs = preferences(raw)
+  if (input.schemaVersion !== undefined && input.schemaVersion !== 2) throw new HttpError(400, 'Versão de análise não suportada.')
+  if (input.timeBasis !== undefined && !['absolute', 'elapsed'].includes(String(input.timeBasis))) throw new HttpError(400, 'Tipo de tempo inválido.')
+  if (raw.timeBasis !== undefined && !['absolute', 'elapsed'].includes(String(raw.timeBasis))) throw new HttpError(400, 'Tipo de tempo inválido.')
+  if ((input.timeBasis ?? 'absolute') !== (raw.timeBasis ?? 'absolute')) throw new HttpError(400, 'Tipo de tempo não corresponde ao mapeamento.')
+  if (raw.weighting !== undefined && !['unknown', 'A', 'C', 'Z'].includes(String(raw.weighting))) throw new HttpError(400, 'Ponderação inválida.')
+  if (input.sourceKind !== undefined && input.sourceKind !== 'instantaneous') throw new HttpError(400, 'Origem de medição inválida.')
   if (prefs.timezone !== mappingPrefs.timezone || prefs.unit !== mappingPrefs.unit) throw new HttpError(400, 'Unidade e fuso não correspondem ao mapeamento.')
   const invalidPreview = Array.isArray(input.invalidPreview) ? input.invalidPreview.slice(0, 100).map(item => {
     const row = object(item)
     return { row: integer(row.row, 1, MAX_POINTS + 101), reason: text(row.reason, 500) }
   }) : []
   return {
+    ...(input.schemaVersion === 2 ? { schemaVersion: 2 as const, timeBasis: (input.timeBasis ?? 'absolute') as 'absolute' | 'elapsed', sourceKind: 'instantaneous' as const } : {}),
+    ...(input.point ? { point: pointInfo(input.point) } : {}),
     fileName: text(input.fileName, 255), sheetName: text(input.sheetName, 255),
     totalRecords, validRecords, invalidRecords,
     duplicateTimestamps: integer(input.duplicateTimestamps, 0, validRecords - 1), ...prefs,
@@ -57,8 +78,16 @@ export function metadata(value: unknown): DatasetMetadata {
       dateFormat: raw.dateFormat as 'br' | 'iso' | 'excel', decimal: raw.decimal as ',' | '.',
       timeOnly: raw.timeOnly, referenceDate: typeof raw.referenceDate === 'string' ? raw.referenceDate.slice(0, 10) : '',
       ...mappingPrefs,
+      ...(raw.timeBasis ? { timeBasis: raw.timeBasis as 'absolute' | 'elapsed' } : {}),
+      ...(raw.weighting ? { weighting: raw.weighting as 'unknown' | 'A' | 'C' | 'Z' } : {}),
     }, invalidPreview,
   }
+}
+function pointInfo(value: unknown) {
+  const raw = object(value)
+  const result: NonNullable<DatasetMetadata['point']> = { id: text(raw.id, 100) }
+  for (const key of ['address', 'east', 'north', 'enterprise', 'monitoringTitle'] as const) if (raw[key]) result[key] = text(raw[key], key === 'address' ? 500 : 200)
+  return result
 }
 export function chunk(value: unknown) {
   if (!Array.isArray(value) || !value.length || value.length > CHUNK_SIZE) throw new HttpError(400, 'Bloco de medições inválido.')

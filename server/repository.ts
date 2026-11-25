@@ -28,6 +28,7 @@ function summary(row: Analysis): AnalysisSummary {
   const metadata = row.metadata as unknown as DatasetMetadata
   return {
     id: row.id, name: row.name, fileName: metadata.fileName, count: row.recordCount,
+    ...(metadata.schemaVersion === 2 ? { timeBasis: metadata.timeBasis ?? 'absolute', pointId: metadata.point?.id } : {}),
     start: Number(row.firstTs), end: Number(row.lastTs), unit: metadata.unit,
     timezone: metadata.timezone, updatedAt: row.updatedAt.toISOString(),
     chart: row.chart as unknown as ChartView,
@@ -88,7 +89,7 @@ export function createRepository(connection: string, client: PrismaClient = crea
       return client.$transaction(async tx => {
         const locked = await lockAnalysis(tx, uid, id)
         const analysis = locked ? await tx.analysis.findUnique({ where: key(uid, id) }) : null
-        if (!analysis || analysis.state !== 'uploading' || index >= analysis.chunkCount || value.count !== Math.min(CHUNK_SIZE, analysis.recordCount - index * CHUNK_SIZE)) throw new HttpError(409, 'O bloco não corresponde à análise ou ela já foi concluída.')
+        if (!analysis || analysis.state !== 'uploading' || index >= analysis.chunkCount || value.count !== Math.min(CHUNK_SIZE, analysis.recordCount - index * CHUNK_SIZE) || ((analysis.metadata as unknown as DatasetMetadata).timeBasis === 'elapsed' && value.first < 0)) throw new HttpError(409, 'O bloco não corresponde à análise ou ela já foi concluída.')
         const data = { recordCount: value.count, firstTs: BigInt(value.first), lastTs: BigInt(value.last), duplicateCount: value.duplicates, payload: asJson(value.points) }
         await tx.analysisChunk.upsert({
           where: { userUid_analysisId_chunkIndex: { userUid: uid, analysisId: id, chunkIndex: index } },
