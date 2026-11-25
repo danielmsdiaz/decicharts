@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { AuthContext, type AuthState } from '../src/features/auth/auth-context'
+import { ConfirmationProvider } from '../src/components/ui/ConfirmationProvider'
 import { ProtectedRoute } from '../src/features/auth/ProtectedRoute'
 import { LoginPage } from '../src/features/auth/LoginPage'
 import type { User } from 'firebase/auth'
@@ -10,7 +11,7 @@ import type { User } from 'firebase/auth'
 afterEach(cleanup)
 const state = (overrides: Partial<AuthState> = {}): AuthState => ({ user: null, loading: false, busy: false, error: '', configured: true, login: vi.fn(), logout: vi.fn(), ...overrides })
 function protectedPage(auth: AuthState) {
-  return render(<AuthContext.Provider value={auth}><MemoryRouter initialEntries={['/']}><Routes><Route element={<ProtectedRoute />}><Route path="/" element={<p>Dashboard privado</p>} /></Route><Route path="/login" element={<p>Login necessário</p>} /></Routes></MemoryRouter></AuthContext.Provider>)
+  return render(<AuthContext.Provider value={auth}><ConfirmationProvider><MemoryRouter initialEntries={['/']}><Routes><Route element={<ProtectedRoute />}><Route path="/" element={<p>Dashboard privado</p>} /></Route><Route path="/login" element={<p>Login necessário</p>} /></Routes></MemoryRouter></ConfirmationProvider></AuthContext.Provider>)
 }
 describe('acesso e login', () => {
   it('aguarda recuperação da sessão antes de exibir dados ou redirecionar', () => {

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { User } from 'firebase/auth'
 import { AuthContext } from '../src/features/auth/auth-context'
+import { ConfirmationProvider } from '../src/components/ui/ConfirmationProvider'
 import { WorkspaceProvider } from '../src/features/analyses/WorkspaceProvider'
 import { useWorkspace } from '../src/features/analyses/workspace-context'
 import { saveAnalysis } from '../src/features/analyses/service'
@@ -25,7 +26,7 @@ function Probe() {
 }
 function mount() {
   const setLogoutGuard = vi.fn()
-  render(<AuthContext.Provider value={{ user: { uid: 'synthetic-user' } as User, configured: true, loading: false, busy: false, error: '', login: vi.fn(), logout: vi.fn(), setLogoutGuard }}><WorkspaceProvider><Probe /></WorkspaceProvider></AuthContext.Provider>)
+  render(<AuthContext.Provider value={{ user: { uid: 'synthetic-user' } as User, configured: true, loading: false, busy: false, error: '', login: vi.fn(), logout: vi.fn(), setLogoutGuard }}><ConfirmationProvider><WorkspaceProvider><Probe /></WorkspaceProvider></ConfirmationProvider></AuthContext.Provider>)
   return setLogoutGuard
 }
 it('preserva ajustes por ponto, avisa saída e respeita o cancelamento do logout', async () => {
@@ -39,10 +40,11 @@ it('preserva ajustes por ponto, avisa saída e respeita o cancelamento do logout
   const event = new Event('beforeunload', { cancelable: true })
   window.dispatchEvent(event)
   expect(event.defaultPrevented).toBe(true)
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-  expect(guards.mock.calls.at(-1)![0]()).toBe(false)
+  let pending!: Promise<boolean>
+  act(() => { pending = guards.mock.calls.at(-1)![0]() })
+  await userEvent.click(screen.getByRole('button', { name: 'Cancelar', exact: true }))
+  expect(await pending).toBe(false)
   expect(screen.getByLabelText('Ponto').textContent).toBe('A')
-  confirm.mockRestore()
   await userEvent.click(screen.getByText('Limpar'))
   const clean = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(clean)
   expect(clean.defaultPrevented).toBe(false)

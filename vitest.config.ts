@@ -5,5 +5,5 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-  test: { environment: 'jsdom', clearMocks: true, include: ['tests/**/*.test.{ts,tsx}'] },
+  test: { setupFiles: ['tests/dialog-polyfill.ts'], environment: 'jsdom', clearMocks: true, include: ['tests/**/*.test.{ts,tsx}'] },
 })
