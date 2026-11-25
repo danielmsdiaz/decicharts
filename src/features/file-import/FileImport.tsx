@@ -1,11 +1,12 @@
 import { useRef, useState, type DragEvent } from 'react'
-import { ArrowRight, Check, CheckCheck, FileSpreadsheet, FolderOpen, ShieldCheck, SlidersHorizontal, Upload, X } from 'lucide-react'
+import { ArrowRight, Check, CheckCheck, FileSpreadsheet, FolderOpen, SlidersHorizontal, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import type { ColumnMapping, MeasurementDataset } from '@/features/measurements/types'
 import { datasetTime, levelUnit } from '@/features/measurements/temporal'
 import { useFileImport } from './use-file-import'
+import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { useAccount } from '@/features/account/account-context'
 import { DEFAULT_PREFERENCES } from '../../../shared/persistence'
 
@@ -77,7 +78,7 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
       {form.error && <p className="notice error mt-4" role="alert">{form.error}</p>}
       {profileError && <p className="notice warning mt-4">Preferências da conta indisponíveis. Confira o fuso e a unidade em Ajustar leitura ao importar.</p>}
       {form.status && <p className={dataset ? 'sr-only' : 'mt-4 text-sm text-muted-foreground'} role="status">{form.status}</p>}
-      {!dataset && <p className="mt-5 flex items-center justify-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="size-4 shrink-0" aria-hidden="true" />Seu arquivo é processado apenas neste navegador.</p>}
+
     </section>
   )
 
@@ -122,7 +123,7 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
           </div>
         )}
 
-        {form.datasets.length > 1 && <label className="field mb-5 max-w-lg">Conferir ponto<Select value={form.pointIndex} disabled={busy} onChange={event => form.selectPoint(Number(event.target.value))}>{form.datasets.map((data, index) => <option key={index} value={index}>{data.point?.id ?? `Série ${index + 1}`} · {count(data.validRecords)} medições{data.validRecords ? '' : ' · sem dados válidos'}</option>)}</Select><span className="text-sm font-normal text-muted-foreground">Todos os pontos válidos desta aba ficarão disponíveis após gerar o gráfico.</span></label>}
+        {form.datasets.length > 1 && <label className="field mb-5 max-w-lg">Conferir ponto<Select value={form.pointIndex} disabled={busy} onChange={event => form.selectPoint(Number(event.target.value))}>{form.datasets.map((data, index) => <option key={index} value={index}>{data.point?.id ?? `Série ${index + 1}`} · {count(data.validRecords)} medições{data.validRecords ? '' : ' · sem dados válidos'}</option>)}</Select></label>}
         {candidate && (
           <>
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
@@ -143,7 +144,7 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
                 ))}</tbody>
               </table>
             </div>
-            <p className="mt-3 text-sm text-muted-foreground">Prévia das primeiras {Math.min(candidate.preview.length, 5)} linhas. O gráfico usará todas as medições válidas.</p>
+            <div className="preview-caption"><span>Prévia · {Math.min(candidate.preview.length, 5)} linhas</span><HelpTooltip label="Sobre a prévia">O gráfico usará todas as medições válidas, não apenas as linhas desta prévia. Todos os pontos válidos da aba ficam disponíveis após gerar o gráfico.</HelpTooltip></div>
             {candidate.duplicateTimestamps > 0 && <p className="mt-3 text-sm text-muted-foreground">{count(candidate.duplicateTimestamps)} {candidate.duplicateTimestamps === 1 ? 'horário repetido preservado' : 'horários repetidos preservados'}, com todos os valores originais.</p>}
             {candidate.invalidPreview.length > 0 && (
               <details className="disclosure mt-4"><summary>Ver linhas com problema ({count(candidate.invalidRecords)})</summary>
@@ -155,8 +156,8 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
 
         {mapping && (
           <details className="disclosure reading-settings" open={settingsOpen} onToggle={event => form.setSettingsOpen(event.currentTarget.open)}>
-            <summary><SlidersHorizontal className="size-4" aria-hidden="true" />Ajustar leitura do arquivo</summary>
-            <p className="mb-5 mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Altere somente se as colunas ou os valores acima não corresponderem ao seu arquivo.</p>
+            <summary><SlidersHorizontal className="size-4" aria-hidden="true" />Ajustar leitura do arquivo<HelpTooltip label="Sobre os ajustes de leitura">Altere somente se as colunas ou os valores da prévia não corresponderem ao arquivo. A ponderação acústica deve ser confirmada pelo equipamento.</HelpTooltip></summary>
+
             <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-2"><legend className="sr-only">Configuração de leitura do arquivo</legend>
               <label className="field">Coluna com {mapping.timeOnly ? 'o horário' : 'a data e o horário'}
                 <Select value={mapping.dateColumn} onChange={event => form.changeMapping('dateColumn', Number(event.target.value))}><option value={-1}>Selecione a coluna</option>{columnOptions}</Select>

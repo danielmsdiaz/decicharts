@@ -12,6 +12,7 @@ import { exportChart, reportSvg } from './export'
 import { indicatorItems } from './report'
 import { ReportSettings } from './ReportSettings'
 import { useWorkspace } from '@/features/analyses/workspace-context'
+import { HelpTooltip } from '@/components/ui/help-tooltip'
 
 export default function ChartWorkspace({ dataset, dark }: { dataset: MeasurementDataset; dark: boolean }) {
   const workspace = useWorkspace()
@@ -50,7 +51,7 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
     finally { setExporting(false) }
   }
   return <section className="panel overflow-hidden" aria-labelledby="chart-title">
-    <div className="chart-heading"><div><h2 id="chart-title" className="text-xl font-semibold tracking-tight">Nível sonoro ao longo do tempo</h2>
+    <div className="chart-heading"><div><div className="chart-title-row"><h2 id="chart-title" className="text-xl font-semibold tracking-tight">Nível sonoro ao longo do tempo</h2><HelpTooltip label="Como explorar o gráfico">Arraste a faixa inferior para selecionar um período. Ctrl + rolagem amplia o gráfico. Passe o cursor sobre a curva para consultar tempo e nível.</HelpTooltip></div>
       <p className="mt-2 text-sm text-muted-foreground tabular-nums">{dataset.point && <strong>{dataset.point.id} · </strong>}{datasetTime(dataset, range.start)} — {datasetTime(dataset, range.end)}</p>
       <p className="mt-1 text-sm text-muted-foreground"><span data-testid="measurement-count">{visible.length.toLocaleString('pt-BR')}</span> medições no período{!relative && ` · ${dataset.timezone}`}</p>
     </div><div className="flex flex-wrap gap-2">
@@ -59,26 +60,25 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
       <Button variant="outline" disabled={!stats || exporting} onClick={() => void download('svg')}><Download />SVG</Button>
     </div></div>
     <div className="chart-body">
-      <details className="disclosure chart-settings"><summary><SlidersHorizontal className="size-4" aria-hidden="true" />Ajustar período e título</summary><div className="mt-5">
+      <details className="disclosure chart-settings"><summary><SlidersHorizontal className="size-4" aria-hidden="true" />Ajustar período e título<HelpTooltip label="Sobre o período do gráfico">{relative ? 'Limites em segundos decorridos.' : `Horários em ${dataset.timezone}.`} Os limites são inclusivos. Indicadores e figura exportada usam o mesmo período.</HelpTooltip></summary><div className="mt-5">
         <label className="field max-w-xl">Título do gráfico<Input value={title} maxLength={100} onChange={event => workspace.setView({ ...view, title: event.target.value })} /></label>
         <form onSubmit={event => { event.preventDefault(); apply() }} className="mt-5 flex flex-wrap items-end gap-3">
           <label className="field min-w-0">Início<Input type={relative ? 'number' : 'datetime-local'} step="0.001" value={startInput} onChange={event => setStartInput(event.target.value)} /></label>
           <label className="field min-w-0">Fim<Input type={relative ? 'number' : 'datetime-local'} step="0.001" value={endInput} onChange={event => setEndInput(event.target.value)} /></label>
           <Button type="submit">Aplicar intervalo</Button><Button type="button" variant="outline" onClick={() => updateRange(available)}><RotateCcw />Restaurar</Button>
-        </form><p className="mt-3 text-sm leading-6 text-muted-foreground">{relative ? 'Limites em segundos decorridos.' : `Horários em ${dataset.timezone}.`} Os limites são inclusivos; a figura usa o mesmo período.</p>
+        </form>
       </div></details>
       <ReportSettings view={view} onChange={workspace.setView} />
       {error && <p role="alert" className="notice error mt-4">{error}</p>}
       {workspace.saveError && <p role="alert" className="notice error mt-4">{workspace.saveError}</p>}
       {workspace.saving && <p role="status" className="mt-4 text-sm">Salvando este ponto: {workspace.progress.toLocaleString('pt-BR')} de {dataset.validRecords.toLocaleString('pt-BR')} medições…</p>}
-      {workspace.saved && !workspace.saving && <p role="status" className="mt-4 text-sm text-primary">{workspace.dirty ? 'Há alterações neste ponto ainda não salvas.' : 'Análise salva na sua conta. Você pode reabri-la em Minhas análises.'}</p>}
+      {workspace.saved && workspace.dirty && !workspace.saving && <p role="status" className="mt-4 text-sm text-primary">Alterações não salvas.</p>}
       {(feedback || exporting) && <p role="status" className="mt-4 text-sm text-muted-foreground">{exporting ? 'Preparando figura em alta resolução…' : feedback}</p>}
-      <dl className="chart-stats">{(stats ? indicatorItems(dataset, stats) : [['Menor nível', '—'], ['Média aritmética', '—'], ['Maior nível', '—'], ['Leq estimado', '—']]).map(([label, value]) => <div key={label}><dt>{label}</dt><dd className="tabular-nums">{value}</dd></div>)}</dl>
-      {stats && <p className="estimate-note">{stats.leq === null ? `Leq estimado indisponível: ${stats.reason}` : ESTIMATE_NOTE}</p>}
+      <dl className="chart-stats">{(stats ? indicatorItems(dataset, stats) : [['Menor nível', '—'], ['Média aritmética', '—'], ['Maior nível', '—'], ['Leq estimado', '—']]).map(([label, value]) => <div key={label}><dt>{label}{label.includes('eq') && <HelpTooltip label="Sobre o Leq estimado">{stats?.leq === null ? `Indisponível: ${stats.reason} ` : ''}{ESTIMATE_NOTE}</HelpTooltip>}</dt><dd className="tabular-nums">{value}</dd></div>)}</dl>
     </div>
     {!stats && <p className="notice mx-5 mt-5 sm:mx-7" role="status">Não há medições neste intervalo. Amplie o período ou restaure a série completa.</p>}
     <TimeSeriesChart dataset={dataset} range={range} title={title} dark={dark} onRangeChange={updateRange} />
-    <div className="chart-bottom"><p className="text-sm text-muted-foreground">Arraste a faixa para selecionar um período. Ctrl + rolagem amplia o gráfico.</p>
+    <div className="chart-bottom">
       {(dataset.invalidRecords > 0 || dataset.duplicateTimestamps > 0) && <p className="mt-3 text-sm text-muted-foreground">{dataset.invalidRecords} registros inválidos excluídos · {dataset.duplicateTimestamps} tempos repetidos preservados.</p>}
       <details className="disclosure mt-4" onToggle={event => setPreview(event.currentTarget.open)}><summary>Prévia da figura exportada</summary>
         {figure.error && <p role="alert" className="notice error">{figure.error}</p>}

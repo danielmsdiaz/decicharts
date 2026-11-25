@@ -130,11 +130,11 @@ a { text-underline-offset: 4px; }
 .analysis-row:first-child { border-top:0; }
 @media(max-width:640px) { .account-nav { padding-inline:20px; gap:24px; } .analysis-row { padding:20px 18px; } .analysis-row > div:first-child { flex-basis:100%; } }
 
-.point-switcher { display:grid; grid-template-columns:minmax(240px, 440px) 1fr; gap:24px; align-items:end; padding-bottom:4px; }
+.point-switcher { padding-bottom:4px; }
 .point-switcher > *, .chart-heading > *, .field { min-width:0; }
 .report-settings { padding-bottom:20px; }
 .report-settings[open] { margin-bottom:20px; }
-.estimate-note { padding:14px 0 4px; color:var(--muted-foreground); font-size:13px; line-height:1.6; max-width:90ch; }
+
 .chart-stats dd { overflow-wrap:anywhere; font-size:23px; }
 .report-preview { background:#fff; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
 .report-preview > svg { display:block; width:100%; height:auto; }
@@ -146,3 +146,18 @@ a { text-underline-offset: 4px; }
   .chart-stats dt { min-height:20px; }
   .chart-stats dd { font-size:22px; }
 }
+
+.point-control { max-width:680px; }
+.field-label, .chart-title-row { display:flex; align-items:center; gap:8px; }
+.field-label { margin-bottom:8px; font-size:14px; font-weight:500; }
+.point-navigation { display:grid; grid-template-columns:44px minmax(0, 1fr) 44px auto; align-items:center; gap:8px; }
+.point-navigation select { min-width:0; }
+.point-position { min-width:44px; text-align:right; font-size:13px; color:var(--muted-foreground); }
+.help-anchor { display:inline-flex; vertical-align:middle; flex-shrink:0; }
+.help-trigger { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--muted-foreground); }
+.help-trigger:hover, .help-trigger:focus-visible { background:var(--accent); color:var(--foreground); }
+.help-trigger svg { width:15px; height:15px; }
+.help-tooltip { position:fixed; z-index:100; width:max-content; max-width:min(320px, calc(100vw - 24px)); padding:12px 14px; border-radius:8px; background:var(--foreground); color:var(--background); font-size:13px; font-weight:400; line-height:1.6; overflow-wrap:anywhere; box-shadow:0 4px 14px rgb(0 0 0 / 12%); }
+.chart-stats dt { display:flex; align-items:center; gap:4px; }
+.preview-caption { display:flex; align-items:center; gap:4px; margin-top:8px; font-size:13px; color:var(--muted-foreground); }
+@media(max-width:640px) { .point-position { min-width:32px; } .chart-title-row { align-items:flex-start; } }
