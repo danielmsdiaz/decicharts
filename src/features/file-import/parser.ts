@@ -28,8 +28,8 @@ export function parseFile(buffer: ArrayBuffer, fileName: string): ImportSource {
       const sheet = workbook.Sheets[name]
       const range = XLSX.utils.decode_range(sheet['!fullref'] ?? sheet['!ref'] ?? 'A1')
       if (range.e.r + 1 > MAX_RECORDS + 100) throw new Error('Uma aba excede o limite de 250.100 linhas físicas, incluindo cabeçalho e linhas vazias.')
-      const rows = XLSX.utils.sheet_to_json<Cell[]>(sheet, { header: 1, raw: true, defval: null, blankrows: true, range: 0 })
-      return { name, rows, date1904: Boolean(workbook.Workbook?.WBProps?.date1904) }
+      const rows = XLSX.utils.sheet_to_json<Cell[]>(sheet, { header: 1, raw: true, defval: null, blankrows: true, range: { s: { r: 0, c: 0 }, e: range.e } })
+      return { name, rows, merges: sheet['!merges'] ?? [], date1904: Boolean(workbook.Workbook?.WBProps?.date1904) }
     }).filter(sheet => sheet.rows.some(isNonEmpty))
     if (!sheets.length) throw new Error('A planilha não contém abas com dados.')
     return { fileName, sheets }

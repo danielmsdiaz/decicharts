@@ -6,9 +6,11 @@ import { DEFAULT_PREFERENCES, type Preferences } from '../../../shared/persisten
 
 interface WorkerResponse {
   id: number
-  type: 'source' | 'dataset' | 'error'
+  type: 'source' | 'dataset' | 'datasets' | 'error'
   source?: ImportSource
   dataset?: MeasurementDataset
+  datasets?: MeasurementDataset[]
+  pointIndex?: number
   error?: string
 }
 
@@ -18,6 +20,8 @@ export function useFileImport(defaults: Preferences = DEFAULT_PREFERENCES) {
   const [sheetIndex, setSheetIndex] = useState(0)
   const [mapping, setMapping] = useState<ColumnMapping | null>(null)
   const [candidate, setCandidate] = useState<MeasurementDataset | null>(null)
+  const [datasets, setDatasets] = useState<MeasurementDataset[]>([])
+  const [pointIndex, setPointIndex] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
@@ -35,6 +39,8 @@ export function useFileImport(defaults: Preferences = DEFAULT_PREFERENCES) {
     setSource(null)
     setMapping(null)
     setCandidate(null)
+    setDatasets([])
+    setPointIndex(0)
     setBusy(false)
     setError('')
     setSettingsOpen(false)
@@ -47,7 +53,23 @@ export function useFileImport(defaults: Preferences = DEFAULT_PREFERENCES) {
     setError('')
     setCandidate(null)
     setStatus('Conferindo as medições…')
-    worker.current.postMessage({ id: ++request.current, type: 'normalize', sheetIndex: nextSheet, mapping: nextMapping })
+    worker.current.postMessage({ id: ++request.current, type: 'normalize', sheetIndex: nextSheet, mapping: nextMapping, pointIndex })
+  }
+  function loadSheet(nextSource: ImportSource, index: number) {
+    const sheet = nextSource.sheets[index]
+    setSheetIndex(index); setPointIndex(0); setDatasets([]); setCandidate(null); setError('')
+    if (sheet.points?.length) {
+      setBusy(true); setMapping(sheet.points[0].mapping); setStatus('Conferindo os pontos de medição…')
+      worker.current?.postMessage({ id: ++request.current, type: 'points', sheetIndex: index, defaults })
+      return
+    }
+    const nextMapping = suggestMapping(sheet)
+    nextMapping.timezone = defaults.timezone; nextMapping.unit = defaults.unit
+    setMapping(nextMapping)
+    if (nextMapping.dateColumn >= 0 && nextMapping.valueColumn >= 0) {
+      setBusy(true); setStatus('Conferindo as medições…')
+      worker.current?.postMessage({ id: ++request.current, type: 'normalize', sheetIndex: index, mapping: nextMapping, pointIndex: 0 })
+    } else { setBusy(false); setSettingsOpen(false); setStatus('Escolha as colunas de horário e nível sonoro para continuar.') }
   }
 
   async function read(nextFile: File) {
@@ -64,6 +86,8 @@ export function useFileImport(defaults: Preferences = DEFAULT_PREFERENCES) {
     setError('')
     setStatus('Lendo seu arquivo…')
     setCandidate(null)
+    setDatasets([])
+    setPointIndex(0)
     setSource(null)
     setMapping(null)
     setSheetIndex(0)
@@ -82,21 +106,19 @@ export function useFileImport(defaults: Preferences = DEFAULT_PREFERENCES) {
         }
         if (event.data.source) {
           const nextSource = event.data.source
-          const nextMapping = suggestMapping(nextSource.sheets[0])
-          nextMapping.timezone = defaults.timezone
-          nextMapping.unit = defaults.unit
           setSource(nextSource)
-          setMapping(nextMapping)
-          if (nextMapping.dateColumn >= 0 && nextMapping.valueColumn >= 0) {
-            normalize(nextMapping, 0)
-          } else {
-            setBusy(false)
-            setSettingsOpen(false)
-            setStatus('Escolha as colunas de horário e nível sonoro para continuar.')
-          }
+          loadSheet(nextSource, 0)
+        }
+        if (event.data.datasets) {
+          const items = event.data.datasets
+          const active = Math.max(0, items.findIndex(data => data.validRecords > 0))
+          setDatasets(items); setPointIndex(active); setCandidate(items[active]); setMapping(items[active].mapping)
+          setBusy(false); setStatus(`${items.length} ${items.length === 1 ? 'ponto encontrado' : 'pontos encontrados'}. Confira a prévia.`)
         }
         if (event.data.dataset) {
           setCandidate(event.data.dataset)
+          const data = event.data.dataset, index = event.data.pointIndex ?? 0
+          setDatasets(previous => { const next = [...previous]; next[index] = data; return next })
           setBusy(false)
           setStatus(event.data.dataset.validRecords ? 'Leitura concluída.' : 'Revise a leitura: nenhuma medição válida foi encontrada.')
           if (!event.data.dataset.validRecords) setSettingsOpen(true)
@@ -131,20 +153,17 @@ export function useFileImport(defaults: Preferences = DEFAULT_PREFERENCES) {
 
   function selectSheet(index: number) {
     if (!source) return
-    const nextMapping = suggestMapping(source.sheets[index])
-    // Preserve explicit interpretation choices when switching worksheets.
-    if (mapping) { nextMapping.timezone = mapping.timezone; nextMapping.unit = mapping.unit }
-    setSheetIndex(index)
-    setMapping(nextMapping)
-    setCandidate(null)
-    setError('')
-    if (nextMapping.dateColumn >= 0 && nextMapping.valueColumn >= 0) normalize(nextMapping, index)
-    else { setSettingsOpen(false); setStatus('Escolha as colunas desta aba para continuar.') }
+    loadSheet(source, index)
+  }
+  function selectPoint(index: number) {
+    const data = datasets[index]
+    if (!data || busy) return
+    setPointIndex(index); setCandidate(data); setMapping(data.mapping); setError('')
   }
 
   return {
-    file, source, sheetIndex, mapping, candidate, busy, error, status,
-    settingsOpen, setSettingsOpen, setError, read, normalize, changeMapping, selectSheet,
+    file, source, sheetIndex, mapping, candidate, datasets, pointIndex, busy, error, status,
+    settingsOpen, setSettingsOpen, setError, read, normalize, changeMapping, selectSheet, selectPoint,
     cancel: () => reset('Importação cancelada.'),
     finish: () => reset('Arquivo importado.'),
     removed: () => reset('Arquivo removido.'),

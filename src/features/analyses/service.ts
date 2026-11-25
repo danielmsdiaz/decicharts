@@ -8,7 +8,8 @@ async function batches(total: number, run: (index: number) => Promise<void>) {
 }
 
 export async function saveAnalysis(user: User, dataset: MeasurementDataset, view: ChartView, id: string, existing: boolean, signal: AbortSignal, progress: (count: number) => void) {
-  const name = view.title === 'Série temporal de nível sonoro' ? dataset.fileName.replace(/\.[^.]+$/, '').slice(0, 100) : view.title
+  const baseName = view.title === 'Série temporal de nível sonoro' ? dataset.fileName.replace(/\.[^.]+$/, '').slice(0, 100) : view.title
+  const name = (dataset.point ? `${dataset.point.id} — ${baseName}` : baseName).slice(0, 100)
   const chart = { ...view, title: view.title.trim() || 'Série temporal de nível sonoro' }
   if (!existing) {
     const started = await api<{ state: string }>(user, 'analyses', { method: 'POST', signal, body: JSON.stringify({ id, name: name.trim() || chart.title, metadata: metadataFromDataset(dataset), chart }) })

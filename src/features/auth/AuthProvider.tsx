@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { GoogleAuthProvider, browserLocalPersistence, onAuthStateChanged, setPersistence, signInWithPopup, signOut, type User } from 'firebase/auth'
 import { firebaseAuth, firebaseConfigurationError } from '@/lib/firebase'
 import { AuthContext } from './auth-context'
@@ -19,6 +19,8 @@ function authMessage(error: unknown) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const logoutGuard = useRef<(() => boolean) | null>(null)
+  const setLogoutGuard = useCallback((guard: (() => boolean) | null) => { logoutGuard.current = guard }, [])
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(Boolean(firebaseAuth))
   const [busy, setBusy] = useState(false)
@@ -41,10 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   async function logout() {
     if (!firebaseAuth || busy) return
+    if (logoutGuard.current && !logoutGuard.current()) return
     setBusy(true); setError('')
     try { await signOut(firebaseAuth); setUser(null) }
     catch (issue) { setError(authMessage(issue)) }
     finally { setBusy(false) }
   }
-  return <AuthContext.Provider value={{ user, loading, busy, error, configured: Boolean(firebaseAuth), login, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, loading, busy, error, configured: Boolean(firebaseAuth), login, logout, setLogoutGuard }}>{children}</AuthContext.Provider>
 }

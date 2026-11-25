@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import type { ColumnMapping, MeasurementDataset } from '@/features/measurements/types'
-import { formatTime } from '@/features/measurements/range'
+import { datasetTime } from '@/features/measurements/temporal'
 import { useFileImport } from './use-file-import'
 import { useAccount } from '@/features/account/account-context'
 import { DEFAULT_PREFERENCES } from '../../../shared/persistence'
@@ -15,7 +15,7 @@ const count = (value: number) => value.toLocaleString('pt-BR')
 interface FileImportProps {
   dataset: MeasurementDataset | null
   saved?: boolean
-  onImport: (dataset: MeasurementDataset) => boolean
+  onImport: (dataset: MeasurementDataset, all?: MeasurementDataset[]) => boolean
   onRemove: () => void
 }
 
@@ -69,7 +69,7 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
         <div className={`upload-zone ${dragging ? 'is-dragging' : ''}`} onDragOver={event => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={drop}>
           <span className="upload-symbol"><Upload aria-hidden="true" /></span>
           <h2 className="mt-5 text-xl font-semibold tracking-tight">Arraste seu arquivo para cá</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Excel ou CSV com os horários e níveis sonoros.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Excel ou CSV com tempos e níveis sonoros de um ou mais pontos.</p>
           <Button className="mt-6" disabled={profileLoading} onClick={() => input.current?.click()}><FolderOpen />{profileLoading ? 'Carregando preferências…' : 'Selecionar arquivo'}</Button>
           <p className="mt-5 text-sm text-muted-foreground">CSV, XLS ou XLSX · Até 20 MiB · 250 mil registros</p>
         </div>
@@ -122,20 +122,21 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
           </div>
         )}
 
+        {form.datasets.length > 1 && <label className="field mb-5 max-w-lg">Conferir ponto<Select value={form.pointIndex} disabled={busy} onChange={event => form.selectPoint(Number(event.target.value))}>{form.datasets.map((data, index) => <option key={index} value={index}>{data.point?.id ?? `Série ${index + 1}`} · {count(data.validRecords)} medições{data.validRecords ? '' : ' · sem dados válidos'}</option>)}</Select><span className="text-sm font-normal text-muted-foreground">Todos os pontos válidos desta aba ficarão disponíveis após gerar o gráfico.</span></label>}
         {candidate && (
           <>
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="font-semibold">{count(candidate.validRecords)} medições encontradas</h3>
-              <p className="text-sm text-muted-foreground">Horários em {candidate.timezone}</p>
+              <p className="text-sm text-muted-foreground">{candidate.timeBasis === 'elapsed' ? 'Tempo decorrido em segundos' : `Horários em ${candidate.timezone}`}</p>
             </div>
             {candidate.invalidRecords > 0 && <p className="notice warning mb-4">{count(candidate.invalidRecords)} {candidate.invalidRecords === 1 ? 'linha não pôde ser lida e será ignorada' : 'linhas não puderam ser lidas e serão ignoradas'}. Confira os motivos abaixo ou ajuste a leitura.</p>}
             <div className="table-scroll">
               <table className="data-table">
                 <caption className="sr-only">Prévia das primeiras medições do arquivo carregado</caption>
-                <thead><tr><th>Data e hora</th><th>Nível sonoro ({candidate.unit})</th>{candidate.preview.some(record => record.reason) && <th>Conferência</th>}</tr></thead>
+                <thead><tr><th>{candidate.timeBasis === 'elapsed' ? 'Tempo decorrido' : 'Data e hora'}</th><th>Nível sonoro ({candidate.unit})</th>{candidate.preview.some(record => record.reason) && <th>Conferência</th>}</tr></thead>
                 <tbody>{candidate.preview.slice(0, 5).map(record => (
                   <tr key={record.row}>
-                    <td className="whitespace-nowrap tabular-nums">{record.timestamp === undefined ? String(record.original[mapping?.dateColumn ?? 0] ?? '—') : formatTime(record.timestamp, candidate.timezone, record.timestamp % 1000 ? 'dd/MM/yyyy HH:mm:ss.SSS' : 'dd/MM/yyyy HH:mm:ss')}</td>
+                    <td className="whitespace-nowrap tabular-nums">{record.timestamp === undefined ? String(record.original[mapping?.dateColumn ?? 0] ?? '—') : datasetTime(candidate, record.timestamp, record.timestamp % 1000 ? 'dd/MM/yyyy HH:mm:ss.SSS' : 'dd/MM/yyyy HH:mm:ss')}</td>
                     <td className="tabular-nums">{record.value === undefined ? String(record.original[mapping?.valueColumn ?? 1] ?? '—') : record.value.toLocaleString('pt-BR', { maximumFractionDigits: 6 })}</td>
                     {candidate.preview.some(item => item.reason) && <td className="min-w-52 text-muted-foreground">{record.reason ?? 'Válido'}</td>}
                   </tr>
@@ -166,20 +167,22 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
               <label className="field">Linha com os títulos das colunas
                 <Input type="number" min="1" max="100" value={mapping.headerRow + 1} onChange={event => form.changeMapping('headerRow', Number(event.target.value) - 1)} />
               </label>
+              <label className="field">O tempo representa<Select value={mapping.timeBasis ?? 'absolute'} onChange={event => form.changeMapping('timeBasis', event.target.value as 'absolute' | 'elapsed')}><option value="absolute">Data e hora</option><option value="elapsed">Segundos decorridos</option></Select></label>
+              <label className="field">Ponderação confirmada do equipamento<Select value={mapping.weighting ?? 'unknown'} onChange={event => form.changeMapping('weighting', event.target.value as 'unknown' | 'A' | 'C' | 'Z')}><option value="unknown">Não informada</option><option value="A">A</option><option value="C">C</option><option value="Z">Z</option></Select></label>
               <label className="field">Formato da data
-                <Select disabled={mapping.timeOnly} value={mapping.dateFormat} onChange={event => form.changeMapping('dateFormat', event.target.value as ColumnMapping['dateFormat'])}><option value="br">Dia/mês/ano · 23/11/2026</option><option value="iso">Ano-mês-dia · 2026-11-23</option><option value="excel">Número de data do Excel</option></Select>
+                <Select disabled={mapping.timeOnly || mapping.timeBasis === 'elapsed'} value={mapping.dateFormat} onChange={event => form.changeMapping('dateFormat', event.target.value as ColumnMapping['dateFormat'])}><option value="br">Dia/mês/ano · 23/11/2026</option><option value="iso">Ano-mês-dia · 2026-11-23</option><option value="excel">Número de data do Excel</option></Select>
               </label>
               <label className="field">Como os decimais aparecem?
                 <Select value={mapping.decimal} onChange={event => form.changeMapping('decimal', event.target.value as ',' | '.')}><option value=",">Com vírgula · 65,4</option><option value=".">Com ponto · 65.4</option></Select>
               </label>
               <label className="field">Unidade dos valores<Input value={mapping.unit} maxLength={30} onChange={event => form.changeMapping('unit', event.target.value)} /></label>
               <label className="field">Horário em outra coluna
-                <Select disabled={mapping.timeOnly} value={mapping.timeColumn ?? -1} onChange={event => form.changeMapping('timeColumn', Number(event.target.value) === -1 ? null : Number(event.target.value))}><option value={-1}>Data e hora estão juntas</option>{columnOptions}</Select>
+                <Select disabled={mapping.timeOnly || mapping.timeBasis === 'elapsed'} value={mapping.timeColumn ?? -1} onChange={event => form.changeMapping('timeColumn', Number(event.target.value) === -1 ? null : Number(event.target.value))}><option value={-1}>Data e hora estão juntas</option>{columnOptions}</Select>
               </label>
               <label className="field">Fuso horário do arquivo
-                <Input list="timezones" value={mapping.timezone} onChange={event => form.changeMapping('timezone', event.target.value)} /><datalist id="timezones">{timezoneOptions.map(zone => <option key={zone} value={zone} />)}</datalist>
+                <Input list="timezones" disabled={mapping.timeBasis === 'elapsed'} value={mapping.timezone} onChange={event => form.changeMapping('timezone', event.target.value)} /><datalist id="timezones">{timezoneOptions.map(zone => <option key={zone} value={zone} />)}</datalist>
               </label>
-              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={mapping.timeOnly} onChange={event => form.changeMapping('timeOnly', event.target.checked)} className="size-4 accent-primary" />O arquivo tem horários, mas não informa a data</label>
+              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" disabled={mapping.timeBasis === 'elapsed'} checked={mapping.timeOnly} onChange={event => form.changeMapping('timeOnly', event.target.checked)} className="size-4 accent-primary" />O arquivo tem horários, mas não informa a data</label>
               {mapping.timeOnly && <label className="field">Data das medições<Input type="date" value={mapping.referenceDate} onChange={event => form.changeMapping('referenceDate', event.target.value)} /></label>}
             </fieldset>
             <Button className="mt-5" variant="outline" disabled={busy || mapping.dateColumn < 0 || mapping.valueColumn < 0} onClick={() => form.normalize()}>Atualizar prévia</Button>
@@ -188,7 +191,7 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
       </div>
       <div className="import-footer">
         {(busy || !candidate?.validRecords) && <p className="mr-auto text-sm text-muted-foreground">{busy ? 'Preparando seus dados…' : 'Confira a leitura para continuar.'}</p>}
-        <Button disabled={busy || !candidate?.validRecords} onClick={() => { if (candidate && onImport(candidate)) form.finish() }}>
+        <Button disabled={busy || !candidate?.validRecords} onClick={() => { if (candidate && onImport(candidate, form.datasets)) form.finish() }}>
           {dataset ? 'Substituir e gerar gráfico' : 'Gerar gráfico'}<ArrowRight />
         </Button>
       </div>

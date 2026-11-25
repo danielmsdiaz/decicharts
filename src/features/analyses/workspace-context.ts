@@ -11,6 +11,11 @@ export interface WorkspaceState {
   progress: number
   saveError: string
   dirty: boolean
+  anyDirty: boolean
+  points: { key: string; id: string; count: number; saved: boolean; dirty: boolean; saving: boolean }[]
+  activeKey: string | null
+  selectPoint: (key: string) => void
+  acceptMany: (datasets: MeasurementDataset[], active?: MeasurementDataset) => void
   setView: (view: ChartView) => void
   accept: (dataset: MeasurementDataset, stored?: StoredAnalysis) => void
   clear: () => void

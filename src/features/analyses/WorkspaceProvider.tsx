@@ -6,52 +6,86 @@ import type { AnalysisSummary, ChartView, StoredAnalysis } from '../../../shared
 import { saveAnalysis } from './service'
 import { WorkspaceContext } from './workspace-context'
 
-export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
-  const [dataset, setDataset] = useState<MeasurementDataset | null>(null)
-  const [view, setView] = useState<ChartView | null>(null)
-  const [saved, setSaved] = useState<AnalysisSummary | null>(null)
-  const [revision, setRevision] = useState(0)
-  const [saving, setSaving] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [saveError, setSaveError] = useState('')
-  const controller = useRef<AbortController | null>(null)
-  const draftId = useRef<string | null>(null)
-  useEffect(() => () => controller.current?.abort(), [])
-  const dirty = Boolean(dataset && (!saved || JSON.stringify(saved.chart) !== JSON.stringify(view)))
+interface Entry {
+  key: string; dataset: MeasurementDataset; view: ChartView; saved: AnalysisSummary | null
+  saving: boolean; progress: number; saveError: string; draftId: string
+}
+const isDirty = (entry: Entry) => !entry.saved || JSON.stringify(entry.saved.chart) !== JSON.stringify(entry.view)
+function entryFor(dataset: MeasurementDataset, stored?: StoredAnalysis): Entry {
+  const point = dataset.point
+  return {
+    key: crypto.randomUUID(), dataset, saved: stored?.analysis ?? null,
+    view: stored?.analysis.chart ?? {
+      title: point?.monitoringTitle?.slice(0, 100) ?? 'Série temporal de nível sonoro',
+      range: fullRange(dataset.measurements)!,
+      report: { enterprise: point?.enterprise ?? '', address: point?.address ?? '', east: point?.east ?? '', north: point?.north ?? '' },
+    },
+    saving: false, progress: 0, saveError: '', draftId: crypto.randomUUID(),
+  }
+}
 
-  function accept(next: MeasurementDataset, stored?: StoredAnalysis) {
-    controller.current?.abort()
-    setSaving(false)
-    setSaveError('')
-    draftId.current = null
-    setDataset(next)
-    setView(stored?.analysis.chart ?? { title: 'Série temporal de nível sonoro', range: fullRange(next.measurements)! })
-    setSaved(stored?.analysis ?? null)
-    setRevision(value => value + 1)
+export function WorkspaceProvider({ children }: { children: ReactNode }) {
+  const { user, setLogoutGuard } = useAuth()
+  const [state, setState] = useState<{ entries: Entry[]; active: string | null; revision: number }>({ entries: [], active: null, revision: 0 })
+  const current = useRef(state)
+  const controllers = useRef(new Map<string, AbortController>())
+  function replace(next: typeof state) { current.current = next; setState(next) }
+  function modify(key: string, update: (entry: Entry) => Entry) {
+    replace({ ...current.current, entries: current.current.entries.map(entry => entry.key === key ? update(entry) : entry) })
   }
-  function clear() {
-    controller.current?.abort()
-    setDataset(null); setView(null); setSaved(null); setSaving(false); setSaveError('')
-    draftId.current = null
+  function cancelAll() { controllers.current.forEach(controller => controller.abort()); controllers.current.clear() }
+  useEffect(() => { const pending = controllers.current; return () => { pending.forEach(controller => controller.abort()); pending.clear() } }, [])
+  const anyDirty = state.entries.some(isDirty)
+  useEffect(() => {
+    if (!anyDirty) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [anyDirty])
+  useEffect(() => {
+    setLogoutGuard?.(() => !current.current.entries.some(isDirty) || window.confirm('Sair da conta? Há pontos ou alterações ainda não salvos nesta sessão.'))
+    return () => setLogoutGuard?.(null)
+  }, [setLogoutGuard])
+  const active = state.entries.find(entry => entry.key === state.active)
+  function accept(dataset: MeasurementDataset, stored?: StoredAnalysis) {
+    cancelAll()
+    const entry = entryFor(dataset, stored)
+    replace({ entries: [entry], active: entry.key, revision: current.current.revision + 1 })
   }
+  function acceptMany(datasets: MeasurementDataset[], selected?: MeasurementDataset) {
+    cancelAll()
+    const entries = datasets.filter(data => data.validRecords > 0).map(data => entryFor(data))
+    const active = entries.find(entry => entry.dataset === selected) ?? entries[0]
+    replace({ entries, active: active?.key ?? null, revision: current.current.revision + 1 })
+  }
+  function clear() { cancelAll(); replace({ entries: [], active: null, revision: current.current.revision + 1 }) }
   async function save() {
-    if (!user || !dataset || !view || saving) return
+    const entry = current.current.entries.find(item => item.key === current.current.active)
+    if (!user || !entry || entry.saving) return
     const operation = new AbortController()
-    controller.current = operation
-    setSaving(true); setSaveError(''); setProgress(0)
-    draftId.current ??= crypto.randomUUID()
+    controllers.current.set(entry.key, operation)
+    modify(entry.key, value => ({ ...value, saving: true, saveError: '', progress: 0 }))
     try {
-      const result = await saveAnalysis(user, dataset, view, saved?.id ?? draftId.current, Boolean(saved), operation.signal, setProgress)
-      if (!operation.signal.aborted) {
-        setSaved(result.analysis)
-        setView(current => JSON.stringify(current) === JSON.stringify(view) ? result.analysis.chart : current)
-        draftId.current = null
-      }
-    } catch (error) {
-      if (!operation.signal.aborted) setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar a análise. Tente novamente.')
-    } finally { if (!operation.signal.aborted) setSaving(false) }
+      const result = await saveAnalysis(user, entry.dataset, entry.view, entry.saved?.id ?? entry.draftId, Boolean(entry.saved), operation.signal,
+        count => { if (!operation.signal.aborted) modify(entry.key, value => ({ ...value, progress: count })) })
+      if (!operation.signal.aborted) modify(entry.key, value => ({ ...value, saved: result.analysis,
+        view: JSON.stringify(value.view) === JSON.stringify(entry.view) ? result.analysis.chart : value.view }))
+    } catch (issue) {
+      if (!operation.signal.aborted) modify(entry.key, value => ({ ...value, saveError: issue instanceof Error ? issue.message : 'Não foi possível salvar. Tente novamente.' }))
+    } finally {
+      if (!operation.signal.aborted) modify(entry.key, value => ({ ...value, saving: false }))
+      controllers.current.delete(entry.key)
+    }
   }
-  function detach(id: string) { if (saved?.id === id) { setSaved(null); draftId.current = null } }
-  return <WorkspaceContext.Provider value={{ dataset, view, revision, saved, saving, progress, saveError, dirty, setView, accept, clear, save, detach }}>{children}</WorkspaceContext.Provider>
+  return <WorkspaceContext.Provider value={{
+    dataset: active?.dataset ?? null, view: active?.view ?? null, saved: active?.saved ?? null,
+    saving: active?.saving ?? false, progress: active?.progress ?? 0, saveError: active?.saveError ?? '',
+    dirty: active ? isDirty(active) : false, anyDirty, revision: state.revision, activeKey: state.active,
+    points: state.entries.map(entry => ({ key: entry.key, id: entry.dataset.point?.id ?? entry.dataset.fileName,
+      count: entry.dataset.validRecords, saved: Boolean(entry.saved), dirty: isDirty(entry), saving: entry.saving })),
+    selectPoint: key => { if (current.current.entries.some(entry => entry.key === key)) replace({ ...current.current, active: key, revision: current.current.revision + 1 }) },
+    setView: view => { if (active) modify(active.key, entry => ({ ...entry, view })) },
+    accept, acceptMany, clear, save,
+    detach: id => replace({ ...current.current, entries: current.current.entries.map(entry => entry.saved?.id === id ? { ...entry, saved: null, draftId: crypto.randomUUID() } : entry) }),
+  }}>{children}</WorkspaceContext.Provider>
 }

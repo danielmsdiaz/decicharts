@@ -1,6 +1,7 @@
 import { DateTime, IANAZone } from 'luxon'
 import type { Cell, ColumnMapping, MeasurementDataset, SheetData } from '@/features/measurements/types'
 import { isNonEmpty, MAX_RECORDS } from './validation'
+import { elapsedMilliseconds } from '@/features/measurements/temporal'
 
 const DAY_MS = 86_400_000
 
@@ -34,6 +35,7 @@ function timeParts(cell: Cell) {
 }
 
 export function parseTimestamp(dateCell: Cell, timeCell: Cell, mapping: ColumnMapping, date1904: boolean) {
+  if (mapping.timeBasis === 'elapsed') return elapsedMilliseconds(String(dateCell ?? ''))
   const text = String(dateCell ?? '').trim()
   if (!text) throw new Error('Data/hora vazia.')
   if (mapping.timeOnly) {
@@ -82,7 +84,7 @@ export function normalizeSheet(fileName: string, sheet: SheetData, mapping: Colu
   if (new Set(selected).size !== selected.length || selected.some(column => !Number.isInteger(column) || column < 0 || column >= (sheet.rows[mapping.headerRow]?.length ?? 0))) throw new Error('Selecione colunas existentes e diferentes para data, hora e nível sonoro.')
   if (!mapping.unit.trim() || mapping.unit.length > 30) throw new Error('Informe uma unidade de até 30 caracteres.')
   if (sheet.rows.length - mapping.headerRow - 1 > MAX_RECORDS && sheet.rows.slice(mapping.headerRow + 1).filter(isNonEmpty).length > MAX_RECORDS) throw new Error('A aba excede o limite de 250 mil registros não vazios.')
-  const result: MeasurementDataset = { fileName, sheetName: sheet.name, measurements: [], totalRecords: 0, validRecords: 0, invalidRecords: 0, duplicateTimestamps: 0, unit: mapping.unit.trim(), timezone: mapping.timezone, mapping: { ...mapping }, invalidPreview: [], preview: [] }
+  const result: MeasurementDataset = { schemaVersion: 2, timeBasis: mapping.timeBasis ?? 'absolute', sourceKind: 'instantaneous', fileName, sheetName: sheet.name, measurements: [], totalRecords: 0, validRecords: 0, invalidRecords: 0, duplicateTimestamps: 0, unit: mapping.unit.trim(), timezone: mapping.timezone, mapping: { ...mapping }, invalidPreview: [], preview: [] }
   const seen = new Set<number>()
   for (let index = mapping.headerRow + 1; index < sheet.rows.length; index++) {
     const row = sheet.rows[index]
