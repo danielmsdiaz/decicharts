@@ -2,10 +2,10 @@
 
 ## Estado atual
 
-- Fase atual: 8 — Estabilidade e próximos incrementos
-- Status: Pendente
-- Última atualização: 2026-11-23
-- Fases de implementação anteriores concluídas nas validações locais/Neon. Backlog de estabilidade registrado; oscilação visual relatada ao reiniciar o servidor dev ainda não reproduzida. Aceite manual com Google real e eventual deploy permanecem pendentes.
+- Fase atual: 9 — Monitoramento por ponto e figura completa
+- Status: Implementação local concluída; aceites externos pendentes
+- Última atualização: 2026-11-25
+- Importação dinâmica, tempo relativo, indicadores, figura completa e salvamento por ponto concluídos localmente. Google real, reprodução da queda/reinício do Vite e integração em banco separado continuam pendentes; nenhum deploy ou escrita no Neon nesta etapa.
 
 ## Resumo das fases
 
@@ -18,7 +18,8 @@
 | 5. Finalização | Concluído |
 | 6. Perfil e Neon | Concluído |
 | 7. Adoção do Prisma | Concluído |
-| 8. Estabilidade e próximos incrementos | Pendente |
+| 8. Estabilidade e próximos incrementos | Parcial: proteções/rede concluídas; aceites e busca pendentes |
+| 9. Monitoramento por ponto e figura completa | Implementação local concluída |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -36,17 +37,15 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 ## Trabalho em andamento
 
-Triagem inicial concluída e backlog registrado na seção 21 do plano. Nenhuma correção de sessão implementada nesta etapa; a causa do relato ainda precisa ser reproduzida.
+Implementação e validação local da fase 9 concluídas. Mensagens de rota/sessão diferenciadas, saída protegida e erro temporário de token separado de sessão inválida. Reprodução com Google real e servidor dev reiniciado continua manual.
 
 ## Próximas tarefas
 
-1. Reproduzir o cenário relatado: login com servidor dev parado e reconexão após reiniciar; distinguir recarga visual de logout real.
-2. Implementar proteção para trabalho não salvo e separar banco de desenvolvimento/produção.
-   Avaliar também o arquivo real previsto para 24/11/2026 e definir o cálculo de Leq antes da implementação, conforme seção 21 do plano.
-3. Diferenciar carregamento de página, recuperação de sessão e falha temporária de conexão; permitir nova tentativa do perfil.
-4. Adicionar busca e filtros paginados ao histórico, preservando isolamento por UID.
-5. Validar Google real → importar → salvar → recarregar → reabrir, persistência da sessão e logout; conferir arquivos reais dos equipamentos.
-6. Publicar na Vercel somente após autorização; configurar as variáveis de servidor no ambiente escolhido.
+1. Criar manualmente um branch/banco Neon separado e configurar TEST_DATABASE_URL; executar a integração preparada sem usar o banco atual como alternativa.
+2. Validar Google real → importar → salvar ponto → recarregar → reabrir; conferir persistência, logout protegido e o cenário de reinício do Vite durante login.
+3. Conferir outros layouts reais e a ponderação efetiva do equipamento; o arquivo recebido não comprova ponderação A nem integração energética.
+4. Adicionar busca e filtros paginados ao histórico em entrega futura.
+5. Publicar somente após autorização explícita.
 
 ## Decisões técnicas
 
@@ -66,18 +65,18 @@ Triagem inicial concluída e backlog registrado na seção 21 do plano. Nenhuma 
 ## Bloqueios e pendências
 
 - Aceite manual completo com conta Google real ainda não registrado. Testes criptográficos e de interface não o substituem.
-- Sem arquivos reais de equipamentos; fixtures são sintéticas.
+- EXEMPLO.xlsx recebido e validado localmente em 25/11/2026: dez pontos, 600 medições e localização associada. Fixtures versionadas continuam sintéticas; outros layouts e propriedades acústicas ainda precisam de confirmação.
 - Roteamento Vercel preparado e API local testada; publicação real ainda não executada.
 - Relato de oscilação visual ao recuperar a conta depois de reiniciar o Vite durante login. Logout real não confirmado; cenário ainda não reproduzido e não coberto pelos testes atuais de navegador com sessão sintética.
-- Ausência de aviso ao recarregar/fechar com trabalho não salvo e reutilização de “Recuperando sua sessão…” no carregamento de rotas registradas no backlog.
+- TEST_DATABASE_URL ainda não configurado; integração de escrita da fase 9 não executada. Há bloqueio para o banco da aplicação, inclusive pooled/direto. Proteção de saída e mensagens de carregamento já implementadas.
 
 ## Validações
 
 | Verificação | Resultado |
 |-------------|-----------|
-| Vitest padrão | 56 aprovados; integração real separada fica ignorada por padrão |
-| Neon real com Prisma | 1 teste aprovado, 5.001 pontos e dois usuários sintéticos; concorrência e cleanup verificados |
-| Chrome/Playwright | 10 cenários aprovados |
+| Vitest padrão | 73 aprovados; 1 integração externa ignorada por padrão |
+| Neon real com Prisma | Aprovação histórica da fase 7; fase 9 preparada, não reexecutada sem banco separado |
+| Chrome/Playwright | 12 cenários aprovados; PNG com logotipo também conferido por pixels |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
@@ -304,3 +303,18 @@ Próxima ação:
 - Critérios registrados na seção 21: distinguir leituras instantâneas de Leq por intervalo, calcular média energética ponderada pela duração quando aplicável e definir tratamento de lacunas, duplicados e recortes do período.
 - Tela, PNG e SVG devem usar o mesmo indicador; estimativas e ponderação A devem ser identificadas corretamente. Exemplo de aceite: 50/60/70 dB por durações iguais → 65,68 dB.
 - Mudança somente documental, conferida com git diff --check; nenhum teste adicional executado nem código/banco alterado.
+
+### 2026-11-25 — Monitoramento por ponto e figura completa
+
+- Plano aprovado implementado: detecção de quantidade variável de blocos Tempo (s)/dB, IDs arbitrários e durações distintas. Metadados de localização associados por ID; origens/mesclagens das células preservadas.
+- Arquivo real conferido sem versionar: 10 pontos, 600 medições, zero inválidos, tempos de 1 a 60 segundos preservados. P1: mínimo 40, média 75,4, máximo 100 e média energética estimada 91,4927309226 dB.
+- Workspace mantém ajustes e progresso independentes por ponto, inclusive quando o envio termina após alternar a seleção. Salvar é individual; reabrir recupera somente o ponto salvo.
+- Coordenadas internas em milissegundos, tipo temporal explícito e metadados versão 2. Contratos antigos seguem absolutos; campos JSON existentes preservam informações/figura sem alterações de schema Prisma, migração ou reset.
+- Quatro indicadores e figura completa em PNG/SVG, com identificação, localização e logotipo opcional. PNG usa a imagem já decodificada; pixels do logo conferidos por teste. Leq sempre identificado como estimado, indisponível para irregularidades, duplicados, inválidos ou amostra única.
+- Inspeção visual desktop/mobile/escuro realizada em lote; detector Impeccable sem achados. Gráfico mantém largura e adapta eixo temporal, sem sampling ou suavização.
+- 73 testes unitários e 12 cenários Chrome aprovados, incluindo os 250 mil registros (~5,3 s na regressão completa), reabertura da figura e recuperação do perfil. Tipagem/build, lint e auditoria npm aprovados, zero vulnerabilidades.
+- Guards de saída, mensagens separadas de rota/sessão e falha de rede do token sem logout implementados. Google real e reinício do Vite permanecem como aceites manuais; os testes não fingem validar esse cenário.
+- TEST_DATABASE_URL exclusivo obrigatório para integração. Não configurado nesta sessão; nenhum teste de escrita, migração ou mudança de dados executado no Neon atual. Provisionamento do branch permanece manual.
+- Implementação usa Impeccable para preservar a interface existente. Nenhum push ou deploy realizado.
+- Bundle final inspecionado: 14 arquivos sem URL/host de banco, Prisma ou fixtures. Schema/migração Prisma permanecem sem diferenças.
+- Commits por parte: 5d5443d (contratos e cálculo), 90b03fb (importação/workspace) e 7754dbe (figura, recuperação e testes); documentação em commit separado.

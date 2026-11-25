@@ -28,10 +28,10 @@ Ferramenta de trabalho calma, legível e direta. Um arquivo visível, uma ação
 
 ## Gráfico
 
-- PNG/SVG no cabeçalho; três indicadores principais: quantidade, menor e maior nível.
+- PNG/SVG no cabeçalho; quatro indicadores: menor nível, média aritmética, maior nível e Leq estimado. Quantidade ao lado do período.
 - Período/título sob demanda. Primeira/última medição e tabela acessível na consulta detalhada.
-- Sem sampling, médias, interpolação ou suavização.
-- Exportação com fundo claro; eixos de 18px no layout 1600×900, PNG 2×.
+- Sem sampling, interpolação ou suavização. Média aritmética e estimativa energética são indicadores separados, sem alterar os pontos desenhados.
+- Exportação com fundo claro; eixos de 18px no layout base 1600×1000 com altura adaptada ao conteúdo, PNG 2×.
 
 ## Verificação
 
@@ -47,3 +47,12 @@ Ferramenta de trabalho calma, legível e direta. Um arquivo visível, uma ação
 - Histórico paginado com Abrir e Excluir; excluir requer confirmação e não se confunde com Fechar análise do workspace.
 - Leituras, erros, repetição após falha e progresso de envio recebem feedback em português.
 - Inspeção desktop/mobile das telas de conta e histórico concluída; sistema visual existente preservado.
+
+## Monitoramento por ponto — 2026-11-25
+
+- Seletor aparece apenas para vários pontos e informa medições/situação de salvamento. Alternância mantém ajustes locais; o arquivo continua visível.
+- Tempo decorrido usa segundos e eixo numérico. Período e título ficam recolhidos; ponderação explícita fica nos ajustes de leitura.
+- Informações da figura recolhidas: empreendimento, endereço, coordenadas, datum/zona/hemisfério opcionais, data inicial e logotipo. Valores ausentes não são inventados.
+- Figura limpa sobre branco, com identificação, quatro indicadores, gráfico e nota da estimativa. Prévia e PNG/SVG usam a mesma composição; não reproduzir o azul/cinza da referência.
+- Quatro indicadores em linha no desktop e duas colunas no celular. Largura do gráfico independe da duração. Prévia vetorial ajustada à largura disponível.
+- Trabalho não salvo exige confirmação nas ações destrutivas; carregamento de página usa mensagem diferente da restauração da sessão.

@@ -39,21 +39,21 @@ Validação real: entrar com Google, conferir nome/foto/e-mail, recarregar e ver
 ## Como usar
 
 1. Selecione ou arraste um Excel ou CSV. O nome e o estado do arquivo aparecem imediatamente.
-2. Quando as colunas forem reconhecidas, a prévia é gerada automaticamente. Confira e clique em **Gerar gráfico**.
+2. Quando as colunas forem reconhecidas, a prévia é gerada automaticamente. Em planilhas com blocos Tempo (s)/dB, confira os pontos detectados e clique em **Gerar gráfico**. Quantidade de pontos e duração são variáveis.
 3. Use **Cancelar importação** para descartar o arquivo pendente. Se já houver uma série no gráfico, ela será mantida.
 4. Depois de gerar, o painel **Arquivo em análise** mostra qual arquivo está ativo. **Trocar arquivo** inicia outra importação e **Remover arquivo** limpa a série da sessão.
 
 A escolha de aba só aparece para planilhas com várias abas. Quando uma coluna não é reconhecida, a tela pede somente essa escolha. Os demais campos ficam em **Ajustar leitura do arquivo**; a data de referência aparece apenas para arquivos com horários sem data.
 
-No gráfico, o período e o título podem ser alterados em **Ajustar período e título**. PNG e SVG permanecem disponíveis na barra do gráfico. A consulta detalhada preserva primeira/última medição, tabela e diagnósticos.
+No gráfico, escolha **Ponto de medição** quando houver vários pontos. Cada um mantém título, período e informações da figura ao alternar. O período e o título podem ser alterados em **Ajustar período e título**; dados de localização, data inicial e logotipo ficam em **Informações da figura**. Abra **Prévia da figura exportada** para conferir a composição completa. PNG e SVG permanecem na barra do gráfico.
 
 ## Perfil e análises salvas
 
 - **Meu perfil:** nome/foto/e-mail do Google e preferências de fuso/unidade para novas importações. Alterar preferências não reinterpreta medições já abertas ou salvas.
-- **Salvar análise:** salva os pontos normalizados, metadados de importação, título e intervalo aplicado. **Salvar alterações** atualiza o título/período de uma análise existente.
+- **Salvar análise:** salva somente o ponto selecionado, suas medições, metadados e configuração da figura. **Salvar alterações** atualiza título, período, informações da figura e logotipo. Os demais pontos continuam apenas na sessão até serem salvos individualmente; reabrir pelo histórico recupera somente o ponto salvo.
 - **Minhas análises:** histórico paginado de sua conta, com Abrir e Excluir. Excluir remove os metadados e blocos de medições por cascata no banco.
 - **Fechar análise:** remove apenas a cópia do workspace; a versão salva continua no histórico.
-- O arquivo original Excel/CSV e as células originais dos diagnósticos não são enviados ao Neon. Guardamos somente os dados necessários para reabrir a análise, incluindo razões e números de linhas inválidas.
+- O arquivo original Excel/CSV e as células originais dos diagnósticos não são enviados ao Neon. Guardamos somente os dados necessários para reabrir a análise, incluindo razões e números de linhas inválidas. Um logotipo opcional é normalizado localmente para PNG de até 512 px/128 KiB e enviado somente ao salvar.
 
 ## Neon, Prisma e criação das tabelas
 
@@ -90,8 +90,10 @@ Rotas da API: `GET/PUT /api/profile`, `GET/POST /api/analyses`, `GET/PATCH/DELET
 
 ## Importação e precisão
 
-- Uma série, um arquivo, uma aba e uma coluna sonora por vez. A próxima importação só substitui a atual após confirmação.
-- CSV, XLSX e XLS binário genuíno; até **20 MiB** e **250.000 registros não vazios**. Cabeçalho selecionável nas primeiras 100 linhas. A área física de uma aba Excel também fica limitada a 250.100 linhas para impedir leituras truncadas.
+- Um arquivo e uma aba selecionada, com vários pontos e um gráfico ativo por vez. A próxima importação só substitui a coleção atual após confirmação quando houver trabalho não salvo.
+- CSV, XLSX e XLS binário genuíno; até **20 MiB** e **250.000 medições válidas somadas entre os pontos da aba selecionada**. Cada série mantém o limite de 250 mil registros não vazios. Cabeçalho selecionável nas primeiras 100 linhas. A área física de uma aba Excel também fica limitada a 250.100 linhas para impedir leituras truncadas.
+- Blocos adjacentes Tempo (s)/dB são reconhecidos dinamicamente; os IDs nos cabeçalhos são associados à tabela de localização pelo ID, independentemente da ordem. Células mescladas, colunas vazias e extensões diferentes são preservadas. IDs duplicados ou ausentes em vários blocos exigem revisão do arquivo. Não há regra fixa P1–P10 ou duração de 60 segundos.
+- Tempo decorrido usa segundos, inclusive frações com precisão máxima de 1 ms. Não é convertido em datas Excel nem ganha uma data fictícia. Data/hora inicial opcional aparece somente como informação da figura.
 - Arquivos HTML/XML renomeados como `.xls` devem ser salvos novamente como XLSX ou CSV.
 - CSV: delimitador detectado automaticamente, UTF-8/BOM e alternativa Windows-1252. Valores com vírgula decimal em arquivos delimitados por vírgulas devem estar entre aspas.
 - Confira aba, cabeçalho, colunas, formato de data, decimal, unidade e fuso antes de confirmar. Colunas ambíguas permanecem sem seleção automática.
@@ -99,18 +101,26 @@ Rotas da API: `GET/PUT /api/profile`, `GET/POST /api/analyses`, `GET/PATCH/DELET
 - Para arquivos só com horários, informe uma data de referência. Todas as linhas usam essa data; não se deduz mudança de dia. Para vários dias, forneça datas nas linhas.
 - Fuso IANA selecionável, inicialmente `America/Recife` ou a preferência salva no perfil. Offsets ISO explícitos preservam o instante; os demais horários usam o fuso escolhido. Mudanças históricas são respeitadas. Horários ambíguos/inexistentes exigem correção ou offset explícito.
 - Valores usam o separador decimal escolhido, sem separador de milhar. Zero e negativos não são descartados automaticamente. Células numéricas Excel preservam seu valor.
-- Unidade inicial `dB` ou a preferência salva no perfil; informe outra identificação somente se corresponder ao arquivo. Não se infere ponderação acústica.
+- Unidade inicial `dB` ou a preferência salva no perfil para a leitura genérica; blocos explícitos dB mantêm essa unidade. Confirme a ponderação em **Ajustar leitura do arquivo** para usar dB(A/C/Z). Uma preferência escrita como dB(A) não comprova ponderação A.
 - Linhas vazias são ignoradas; inválidas são contadas e diagnosticadas com a linha original, até 100 exemplos. A prévia visível mostra até 5 registros.
 - Duplicados permanecem em ordem original no mesmo instante. A contagem informa ocorrências adicionais, não grupos.
-- Não há médias, cálculos normativos, interpolação, preenchimento de lacunas ou suavização. Segmentos retos unem os pontos existentes, sem criar medições.
+- Mínimo, média aritmética, máximo e Leq estimado são calculados sobre o período selecionado. Não há cálculos normativos, interpolação, preenchimento de lacunas ou suavização. Segmentos retos unem os pontos existentes, sem criar medições.
 
-Medições não salvas ficam apenas na memória. Navegar entre Análise, Minhas análises e Meu perfil preserva o trabalho na sessão; recarregar ou sair limpa essa cópia local. As análises salvas podem ser reabertas pela sua conta. A preferência de tema permanece local; fuso/unidade preferidos ficam no Neon.
+Medições não salvas ficam apenas na memória. Navegar entre Análise, Minhas análises e Meu perfil preserva o trabalho; recarregar ou sair limpa a cópia local. Há aviso de saída do navegador quando suportado e confirmação no logout voluntário. Esses avisos não protegem contra encerramento forçado do processo. As análises salvas podem ser reabertas pela sua conta. A preferência de tema permanece local; fuso/unidade preferidos ficam no Neon.
+
+### Leq estimado
+
+Origem confirmada pelo usuário: leituras instantâneas de campo feitas com decibelímetro. O aplicativo calcula a média energética dessas amostras, com pesos iguais, e identifica o resultado como **Leq estimado**, sem equipará-lo ao Leq integrado pelo equipamento. 50, 60 e 70 dB com pesos iguais resultam em aproximadamente 65,68 dB, enquanto a média aritmética é 60 dB.
+
+A estimativa exige pelo menos duas leituras selecionadas, série completa igualmente espaçada, sem duplicados ou registros inválidos e unidade em decibéis. Se essas condições não forem atendidas, o indicador fica indisponível com o motivo; gráfico e demais estatísticas continuam disponíveis. Não se inventam durações, não se calcula ponderação temporal a partir de lacunas e não se presume integração de 60 segundos porque existem registros de 1 a 60.
 
 ## Gráfico e exportação
 
-Filtros são inclusivos e usam o fuso da série. Ajuste a faixa inferior ou use **Ctrl + rolagem** para zoom; **Restaurar** retorna à série completa. Indicadores e exportação acompanham o intervalo aplicado.
+Filtros são inclusivos: segundos para tempo decorrido, data/hora e fuso para séries absolutas. Ajuste a faixa inferior ou use **Ctrl + rolagem** para zoom; **Restaurar** retorna à série completa. Indicadores e exportação acompanham o intervalo aplicado. A largura permanece responsiva; o eixo X adapta sua escala à duração real, sem descartar dados ou comprimir lacunas.
 
-Exporte **PNG de 3200 × 1800 pixels** ou **SVG vetorial**, com título, eixos, unidade, fuso e intervalo, sempre com fundo branco. Intervalos sem medições não podem ser exportados.
+Exporte uma figura completa em **PNG com largura de 3200 pixels** ou **SVG vetorial**: título, empreendimento, ponto, endereço/coordenadas disponíveis, data inicial quando informada, indicadores, gráfico e identificação da estimativa. Layout base de 1600 × 1000, altura ampliada quando o conteúdo exigir; PNG em escala 2×. Não se presumem datum, zona ou hemisfério. Campos vazios são omitidos. Intervalos sem medições não podem ser exportados.
+
+Metadados novos usam versão 2 e tipo temporal explícito. Análises antigas sem versão continuam sendo interpretadas como datas absolutas. As tabelas Prisma e a migração inicial permanecem intactas; essa evolução usa os campos JSON existentes.
 
 ## Validação
 
@@ -121,18 +131,27 @@ npm run lint
 npm run build
 npm run preview
 npm run test:e2e
-npm run test:neon  # Integração opcional contra DATABASE_URL real
+npm run test:neon  # Exige TEST_DATABASE_URL exclusivo e diferente da aplicação
 ```
 
 `npm run dev` serve frontend e API local. `npm run preview` serve apenas o frontend estático e não substitui o servidor da API.
 
-O teste Neon é separado dos testes comuns: cria dois usuários sintéticos e 5.001 pontos, testa persistência/isolamento/exclusão e remove seus registros ao final. Requer migração aplicada e conexão de rede.
+O teste Neon é separado dos testes comuns: cria dois usuários sintéticos e 5.001 medições, testa persistência/isolamento/exclusão e remove seus registros ao final. Requer migração aplicada e conexão de rede. **TEST_DATABASE_URL é obrigatório**; não há alternativa automática para DATABASE_URL. O teste bloqueia o mesmo host/banco da aplicação, incluindo URLs pooled/diretas.
+
+Para preparar o ambiente separado:
+
+1. No dashboard Neon, crie manualmente um branch de desenvolvimento, por exemplo `decicharts-dev`.
+2. Copie a conexão desse branch para `TEST_DATABASE_URL` em `.env.local`; mantenha as URLs da aplicação apontando para seu ambiente atual enquanto roda a integração.
+3. Se o branch copiar o esquema atual, confira-o; em banco vazio, aplique migrações com uma configuração explícita dedicada ao branch de desenvolvimento.
+4. Execute `npm run test:neon`. Nunca use `db:migrate:dev` ou reset no banco com dados reais. Para desenvolvimento cotidiano, use configuração/arquivo de ambiente próprio do branch dev; mantenha as variáveis de produção na hospedagem correspondente.
+
+Nenhum branch é provisionado automaticamente pelo aplicativo. Na entrega de 25/11/2026, a integração de escrita não foi repetida porque não havia TEST_DATABASE_URL separado.
 
 Os testes Playwright usam Chrome em `/usr/bin/google-chrome`. Em outro ambiente, defina `CHROME_PATH` com o executável instalado. O runner inicia Vite em `127.0.0.1:4173` e encerra o servidor ao terminar. Resultados e screenshots ficam em `/tmp/decicharts-*`.
 
 A entrada autenticada `tests/browser/fixture.html` é exclusiva dos testes e não integra `dist`. A aplicação de produção continua exigindo Firebase. Os testes do provedor usam mocks apenas nos testes. Os fluxos de conta no navegador usam uma API simulada restrita ao token sintético da fixture; o teste Neon separado verifica o banco real. O login Google real até a API deve ser validado manualmente com uma conta real.
 
-As fixtures são sintéticas: compatibilidade com exportações específicas de equipamentos depende de arquivos reais. O teste de capacidade cobre 250 mil registros no navegador desktop; tempos dependem da máquina e não garantem desempenho equivalente em celulares.
+As fixtures versionadas são sintéticas. EXEMPLO.xlsx foi validado localmente em 25/11/2026: dez pontos, 600 medições, nenhum registro inválido e localização associada por ID; o arquivo e seus endereços não foram versionados. Outros layouts específicos de equipamentos ainda podem exigir revisão de leitura. O teste de capacidade cobre 250 mil registros no navegador desktop; tempos dependem da máquina e não garantem desempenho equivalente em celulares.
 
 ## Estrutura
 

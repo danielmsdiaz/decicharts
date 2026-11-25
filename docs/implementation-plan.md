@@ -746,9 +746,9 @@ Aceite: em uma sessão ainda válida, a interface aguarda a restauração sem ex
 
 ### Prioridade 1 — Proteção do trabalho não salvo
 
-- [ ] Avisar antes de recarregar/fechar a aba quando houver análise ou alterações ainda não salvas, usando os mecanismos permitidos pelo navegador.
-- [ ] Confirmar saída voluntária da conta quando houver trabalho não salvo e permitir cancelar.
-- [ ] Cobrir arquivo recém-importado, alteração de título/período, análise já salva e salvamento em andamento.
+- [x] Avisar antes de recarregar/fechar a aba quando houver análise ou alterações ainda não salvas, usando os mecanismos permitidos pelo navegador.
+- [x] Confirmar saída voluntária da conta quando houver trabalho não salvo e permitir cancelar.
+- [x] Cobrir arquivo recém-importado, alteração de título/período, análise já salva e salvamento em andamento.
 
 Aceite: oferecer proteção nas ações suportadas pelo navegador sem impedir saída após salvar; cancelamento conserva o gráfico. Não prometer proteção contra queda do processo ou recarga forçada pelo servidor. Persistência local automática fica para decisão futura; não enviar dados ao Neon sem ação de salvar.
 
@@ -762,24 +762,24 @@ Aceite: mudanças e testes locais não alteram os dados de produção; configura
 
 ### Prioridade 1 — Leq nas informações do gráfico e na figura exportada
 
-Solicitação do usuário após orientação do pai: calcular Leq e exibi-lo depois de “Menor nível” e “Maior nível”. Implementação ainda não autorizada nesta etapa; aguardar o arquivo real do sistema, com envio previsto pelo usuário para 24/11/2026, para definir o significado dos registros e o método adequado.
+Solicitação aprovada e implementada em 25/11/2026 após receber EXEMPLO.xlsx. O usuário confirmou leituras instantâneas de campo, salvamento por ponto e figura limpa. A seção 22 consolida a entrega e as pendências externas.
 
-- [ ] Examinar o arquivo real e confirmar se cada valor é uma leitura instantânea ou um Leq integrado, a duração representada e a ponderação acústica do equipamento.
-- [ ] Calcular média energética, nunca média aritmética dos valores em dB. Para intervalos iguais: `10 * log10(sum(10 ** (Li / 10)) / n)`; para intervalos diferentes: `10 * log10(sum(ti * 10 ** (Li / 10)) / sum(ti))`.
-- [ ] Definir o tratamento de lacunas, timestamps duplicados, registros inválidos, intervalos sobrepostos, limites do filtro e duração do último registro. Não presumir que a diferença entre timestamps é o tempo de integração do equipamento, nem extrapolar energia por períodos sem dados.
-- [ ] Recalcular o indicador para o período selecionado, usando uma regra explícita para intervalos parcialmente selecionados. Apenas Leq agregado por intervalo não permite recuperar o Leq exato de uma fração desse intervalo.
-- [ ] Acrescentar Leq depois de “Maior nível” na tela e incluir menor nível, maior nível, Leq e período na própria figura PNG/SVG; os cartões da tela atualmente não são exportados com o gráfico.
-- [ ] Identificar como estimado o resultado derivado de leituras instantâneas, explicitando a hipótese de amostragem. Exibir `LAeq` em `dB(A)` somente quando a ponderação A for confirmada; alterar o rótulo não converte a ponderação dos dados.
-- [ ] Calcular a partir dos dados completos do intervalo, sem arredondamentos intermediários ou dependência de simplificação visual do gráfico; manter estabilidade numérica e consistência entre tela, exportação e reabertura de análise salva.
-- [ ] Validar os exemplos conhecidos, duração desigual, série constante, ausência de dados, leitura isolada sem duração, irregularidades temporais e atualização por filtro; conferir o resultado com o relatório do equipamento quando houver dados comparáveis.
+- [x] Examinar o arquivo real e confirmar a origem: leituras instantâneas de campo. Ponderação permanece desconhecida até confirmação explícita; duração de integração não é presumida.
+- [x] Calcular estimativa por média energética de amostras regulares, separada da média aritmética. Agregação de Leq integrado por durações fica fora da versão, pois os dados foram confirmados como leituras instantâneas.
+- [x] Preservar irregularidades e limites inclusivos; tornar Leq estimado indisponível para lacunas, duplicados, inválidos ou amostra única. Não inventar duração ou extrapolar energia.
+- [x] Recalcular a estimativa com as amostras selecionadas, sem atribuir frações de integração a leituras instantâneas.
+- [x] Acrescentar Leq depois de “Maior nível” na tela e incluir menor nível, maior nível, Leq e período na própria figura PNG/SVG; os cartões da tela atualmente não são exportados com o gráfico.
+- [x] Identificar como estimado o resultado derivado de leituras instantâneas, explicitando a hipótese de amostragem. Exibir `LAeq` em `dB(A)` somente quando a ponderação A for confirmada; alterar o rótulo não converte a ponderação dos dados.
+- [x] Calcular a partir dos dados completos do intervalo, sem arredondamentos intermediários ou dependência de simplificação visual do gráfico; manter estabilidade numérica e consistência entre tela, exportação e reabertura de análise salva.
+- [x] Validar exemplos energéticos, série constante, ausência de dados, leitura isolada, irregularidades e filtros. Comparação com Leq integrado do equipamento permanece dependente de dados comparáveis.
 
-Aceite: 50, 60 e 70 dB em três intervalos de igual duração resultam em aproximadamente 65,68 dB (65,7 dB com uma casa), e não 60 dB. Tela e figura mostram o mesmo valor e período. Quando os dados não sustentarem o cálculo, informar a limitação em vez de apresentar um Leq exato. O cálculo não comprova conformidade normativa por si só. Nenhuma alteração de código, modelo Prisma ou banco realizada nesta etapa.
+Aceite: 50, 60 e 70 dB em três intervalos de igual duração resultam em aproximadamente 65,68 dB (65,7 dB com uma casa), e não 60 dB. Tela e figura mostram o mesmo valor e período. Quando os dados não sustentarem o cálculo, informar a limitação em vez de apresentar um Leq exato. O cálculo não comprova conformidade normativa por si só. Implementado na seção 22, sem alteração das tabelas Prisma ou do banco de produção.
 
 ### Prioridade 2 — Mensagens de carregamento e falhas de conexão
 
-- [ ] Separar a mensagem de recuperação da sessão da mensagem de carregamento das páginas. Hoje os fallbacks de `Suspense` das rotas reutilizam `SessionLoading`.
-- [ ] Diferenciar falha de rede/API de sessão efetivamente inválida, incluindo falha de rede ao obter um token, sem induzir novo login desnecessário.
-- [ ] Oferecer nova tentativa de carregar o perfil após uma falha temporária, preservando a análise aberta e a conta autenticada enquanto forem válidas.
+- [x] Separar a mensagem de recuperação da sessão da mensagem de carregamento das páginas. Hoje os fallbacks de `Suspense` das rotas reutilizam `SessionLoading`.
+- [x] Diferenciar falha de rede/API de sessão efetivamente inválida, incluindo falha de rede ao obter um token, sem induzir novo login desnecessário.
+- [x] Oferecer nova tentativa de carregar o perfil após uma falha temporária, preservando a análise aberta e a conta autenticada enquanto forem válidas.
 
 Aceite: abrir Perfil/Minhas análises não informa que o usuário está entrando novamente; falhas temporárias apresentam recuperação clara e não apagam o trabalho em memória. Expiração/revogação real continua sendo tratada como autenticação necessária.
 
@@ -792,3 +792,24 @@ Aceite: abrir Perfil/Minhas análises não informa que o usuário está entrando
 Aceite: localizar análises além da primeira página sem carregar todos os pontos; nenhum resultado de outra conta é exibido.
 
 Continuam pendentes os aceites anteriores: fluxo completo Google real → API → Neon e compatibilidade com arquivos reais dos equipamentos. Publicação permanece dependente de autorização explícita.
+
+## 22. Monitoramento por ponto e figura completa — 2026-11-25
+
+Plano aprovado implementado preservando a identidade visual, o processamento local e as análises antigas. Pontos e durações variam; dez pontos/600 medições são apenas o caso de EXEMPLO.xlsx.
+
+- [x] Reconhecer blocos e IDs dinamicamente, preservar células mescladas e associar localização por ID; conflitos exigem revisão.
+- [x] Importar uma aba com até 250 mil medições válidas somadas, dentro de 20 MiB; manter importação genérica de datas e CSV.
+- [x] Distinguir tempo absoluto/decorrido, manter milissegundos inteiros internamente e segundos na interface; nunca criar datas de 1900.
+- [x] Manter largura responsiva e ajustar escala/marcações ao período, preservando medições, lacunas, zoom e filtros.
+- [x] Manter coleção local e ajustes independentes por ponto; salvar somente o selecionado, com conclusão de envio aplicada ao ponto correto.
+- [x] Mínimo, média aritmética, máximo e Leq estimado sob as condições explícitas da seção 21; ponderação acústica não inferida da preferência.
+- [x] Figura completa com prévia, PNG/SVG, identificação, localização, campos opcionais e logotipo local normalizado, enviado somente ao salvar.
+- [x] Metadados v2 e informações da figura nos JSON existentes; compatibilidade de leitura com contratos antigos, sem migração ou reset.
+- [x] Proteger trabalho não salvo e logout voluntário; separar carregamento de página/sessão e falhas transitórias de token; permitir repetir perfil.
+- [x] Documentar branch dev manual e exigir TEST_DATABASE_URL diferente das conexões da aplicação, incluindo host pooled/direto.
+- [x] Validar arquivo recebido localmente, fixtures sintéticas com quantidades/durações variáveis, 73 testes unitários e 12 cenários de navegador.
+- [x] Tipagem/build e lint aprovados; auditoria com zero vulnerabilidades; inspeção visual e detector sem achados.
+- [ ] Provisionar branch/banco exclusivo e executar a integração Neon ampliada para tempo relativo e informações da figura.
+- [ ] Registrar aceite completo Google real e reprodução de reinício do Vite durante login.
+
+Limites de entrega: leitura instantânea é a origem confirmada; agregação de Leq por intervalos, salvamento do conjunto inteiro, exportação em lote e busca no histórico ficam para futuras etapas. Nenhum arquivo real, endereço real ou segredo foi versionado. Nenhum deploy, push, migração ou escrita no Neon foi realizado nesta fase.
