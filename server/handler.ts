@@ -61,6 +61,40 @@ export function createHandler(dependencies: { authenticate: (request: Request) =
           if (parts[2] === 'complete' && parts.length === 3 && method === 'POST') return json(await repo.complete(identity.uid, id))
         }
       }
+      if (parts[0] === 'imports') {
+        if (parts.length === 1) {
+          if (method === 'GET') return json(await repo.listImports(identity.uid, validate.pageOffset(url.searchParams.get('offset'))))
+          if (method === 'POST') return json(await repo.startImport(identity, validate.importInput(await body(request))), 201)
+        }
+        if (parts.length >= 2) {
+          const id = validate.uuid(parts[1])
+          if (parts.length === 2) {
+            if (method === 'GET') return json(await repo.readImport(identity.uid, id))
+            if (method === 'DELETE') { await repo.removeImport(identity.uid, id); return json({ deleted: true }) }
+          }
+          if (parts[2] === 'points' && method === 'GET') {
+            if (parts.length === 3) return json(await repo.readImportPoints(identity.uid, id, validate.uuid(url.searchParams.get('saveId')), validate.pageOffset(url.searchParams.get('offset'))))
+            if (parts.length === 6 && parts[4] === 'chunks') return json({ points: await repo.readImportChunk(identity.uid, id, validate.uuid(parts[3]), validate.chunkIndex(parts[5])) })
+          }
+          if (parts[2] === 'saves') {
+            if (parts.length === 3 && method === 'POST') return json(await repo.startSave(identity.uid, id, validate.saveInput(await body(request))), 201)
+            if (parts.length >= 4) {
+              const saveId = validate.uuid(parts[3])
+              if (parts.length === 5 && parts[4] === 'complete' && method === 'POST') return json(await repo.completeSave(identity.uid, id, saveId))
+              if (parts[4] === 'points' && parts.length >= 6) {
+                const pointId = validate.uuid(parts[5])
+                if (parts.length === 6 && method === 'PUT') return json(await repo.putImportPoint(identity.uid, id, saveId, pointId, validate.importPoint(await body(request))))
+                if (parts.length === 7 && parts[6] === 'complete' && method === 'POST') { await repo.completeImportPoint(identity.uid, id, saveId, pointId); return json({ ready: true }) }
+                if (parts.length === 8 && parts[6] === 'chunks' && method === 'PUT') {
+                  const input = await body(request)
+                  await repo.putImportChunk(identity.uid, id, saveId, pointId, validate.chunkIndex(parts[7]), validate.chunk(input.points))
+                  return json({ stored: true })
+                }
+              }
+            }
+          }
+        }
+      }
       throw new HttpError(404, 'Endpoint não encontrado.')
     } catch (error) {
       if (error instanceof HttpError) return json({ error: error.message }, error.status)

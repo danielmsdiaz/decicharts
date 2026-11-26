@@ -17,7 +17,7 @@ function integer(value: unknown, min: number, max: number) {
 }
 export function uuid(value: unknown) {
   if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new HttpError(400, 'Identificador de análise inválido.')
-  return value
+  return value.toLowerCase()
 }
 export function preferences(value: unknown): Preferences {
   const input = object(value)
@@ -50,6 +50,22 @@ function reportInfo(value: unknown): ReportInfo {
   return result
 }
 export function analysisName(value: unknown) { return text(value, 100) }
+export function importInput(value: unknown) {
+  const raw = object(value)
+  return { id: uuid(raw.id), name: analysisName(raw.name), fileName: text(raw.fileName, 255), sheetName: text(raw.sheetName, 255),
+    pointCount: integer(raw.pointCount, 1, MAX_POINTS), recordCount: integer(raw.recordCount, 1, MAX_POINTS) }
+}
+export function saveInput(value: unknown) {
+  const raw = object(value)
+  return { id: uuid(raw.id), baseVersion: integer(raw.baseVersion, 0, 2_147_483_646), name: analysisName(raw.name) }
+}
+export function importPoint(value: unknown) {
+  const raw = object(value)
+  return { ordinal: integer(raw.ordinal, 0, MAX_POINTS - 1), chart: chartView(raw.chart), ...(raw.metadata === undefined ? {} : { metadata: metadata(raw.metadata) }) }
+}
+export function pageOffset(value: string | null) {
+  return integer(Number(value || 0), 0, 2_147_483_647)
+}
 export function metadata(value: unknown): DatasetMetadata {
   const input = object(value), raw = object(input.mapping)
   const prefs = preferences(input)

@@ -1,14 +1,15 @@
+import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
-import type { Analysis, Profile, Prisma, PrismaClient } from './generated/prisma/client'
+import type { Analysis, Profile, PrismaClient } from './generated/prisma/client'
 import type { AnalysisPage, AnalysisSummary, ChartView, DatasetMetadata, PointTuple, Preferences, StoredAnalysis, UserProfile } from '../shared/persistence'
-import { CHUNK_SIZE } from '../shared/persistence'
 import type { Identity } from './auth'
 import { HttpError, notFound } from './errors'
 import type { chunk } from './validation'
 import { createPrismaClient, getPrismaClient } from './prisma'
+import { createImportRepository, importKey, type ImportRepository } from './import-repository'
 
 export interface AnalysisInput { id: string; name: string; metadata: DatasetMetadata; chart: ChartView }
-export interface Repository {
+export interface Repository extends ImportRepository {
   profile: (identity: Identity) => Promise<UserProfile>
   preferences: (identity: Identity, value: Preferences) => Promise<UserProfile>
   list: (uid: string, offset: number) => Promise<AnalysisPage>
@@ -21,128 +22,97 @@ export interface Repository {
   remove: (uid: string, id: string) => Promise<void>
 }
 
-const asJson = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue
-const key = (userUid: string, id: string) => ({ userUid_id: { userUid, id } })
-
-function summary(row: Analysis): AnalysisSummary {
+function summary(row: Analysis, chart: ChartView, name: string): AnalysisSummary {
   const metadata = row.metadata as unknown as DatasetMetadata
-  return {
-    id: row.id, name: row.name, fileName: metadata.fileName, count: row.recordCount,
+  return { id: row.id, name, fileName: metadata.fileName, count: row.recordCount,
     ...(metadata.schemaVersion === 2 ? { timeBasis: metadata.timeBasis ?? 'absolute', pointId: metadata.point?.id } : {}),
-    start: Number(row.firstTs), end: Number(row.lastTs), unit: metadata.unit,
-    timezone: metadata.timezone, updatedAt: row.updatedAt.toISOString(),
-    chart: row.chart as unknown as ChartView,
-  }
-}
-function stored(row: Analysis): StoredAnalysis {
-  return { analysis: summary(row), metadata: row.metadata as unknown as DatasetMetadata, chunkCount: row.chunkCount }
+    start: Number(row.firstTs), end: Number(row.lastTs), unit: metadata.unit, timezone: metadata.timezone,
+    updatedAt: row.updatedAt.toISOString(), chart }
 }
 function profile(row: Profile): UserProfile {
   return { uid: row.uid, name: row.name, email: row.email, photoURL: row.photoUrl, preferences: { timezone: row.timezone, unit: row.unit } }
 }
 
-// Prisma has no typed SELECT FOR UPDATE. This is the only raw application query;
-// values remain parameterized and all reads/writes below use typed model methods.
-async function lockAnalysis(tx: Prisma.TransactionClient, uid: string, id: string) {
-  const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM decicharts.analyses WHERE user_uid=${uid} AND id=${id}::uuid FOR UPDATE`
-  return rows.length > 0
-}
-
 export function createRepository(connection: string, client: PrismaClient = createPrismaClient(connection)): Repository {
+  const ensureProfile = async (identity: Identity) => {
+    const identityFields = { name: identity.name, email: identity.email, photoUrl: identity.photoURL }
+    return profile(await client.profile.upsert({ where: { uid: identity.uid }, create: { uid: identity.uid, ...identityFields }, update: identityFields }))
+  }
+  const imports = createImportRepository(client, ensureProfile)
+  async function unit(uid: string, id: string) {
+    const row = await client.analysis.findUnique({ where: importKey(uid, id), include: { import: true } })
+    if (!row) throw notFound()
+    if (row.import.pointCount !== 1) throw new HttpError(409, 'Este ponto pertence a um conjunto. Use o salvamento da importação inteira.')
+    return row
+  }
   const repository: Repository = {
-    async profile(identity) {
-      const identityFields = { name: identity.name, email: identity.email, photoUrl: identity.photoURL }
-      return profile(await client.profile.upsert({ where: { uid: identity.uid }, create: { uid: identity.uid, ...identityFields }, update: identityFields }))
-    },
+    ...imports,
+    profile: ensureProfile,
     async preferences(identity, value) {
-      return profile(await client.profile.upsert({
-        where: { uid: identity.uid },
+      return profile(await client.profile.upsert({ where: { uid: identity.uid },
         create: { uid: identity.uid, name: identity.name, email: identity.email, photoUrl: identity.photoURL, ...value },
-        update: { ...value, updatedAt: new Date() },
-      }))
+        update: { ...value, updatedAt: new Date() } }))
     },
+    // Legacy routes remain available for singleton imports. Multi-point writes
+    // must always use the collection publication protocol.
     async list(uid, offset) {
-      const where = { userUid: uid, state: 'ready' }
+      const where = { userUid: uid, state: 'ready', import: { state: 'ready', pointCount: 1 } }
       const [rows, total] = await client.$transaction([
         client.analysis.findMany({ where, orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }], take: 20, skip: offset }),
         client.analysis.count({ where }),
       ])
-      return { analyses: rows.map(summary), total, hasMore: offset + rows.length < total }
+      const analyses = await Promise.all(rows.map(row => repository.read(uid, row.id).then(value => value.analysis)))
+      return { analyses, total, hasMore: offset + rows.length < total }
     },
     async start(identity, input) {
-      await repository.profile(identity)
-      await client.analysis.deleteMany({ where: { userUid: identity.uid, state: 'uploading', updatedAt: { lt: new Date(Date.now() - 86_400_000) } } })
-      return client.$transaction(async tx => {
-        await tx.analysis.createMany({ data: [{
-          userUid: identity.uid, id: input.id, name: input.name,
-          metadata: asJson(input.metadata), chart: asJson(input.chart),
-          recordCount: input.metadata.validRecords, chunkCount: Math.ceil(input.metadata.validRecords / CHUNK_SIZE),
-        }], skipDuplicates: true })
-        if (!await lockAnalysis(tx, identity.uid, input.id)) throw new HttpError(409, 'A análise foi alterada durante o salvamento. Tente novamente.')
-        const existing = await tx.analysis.findUniqueOrThrow({ where: key(identity.uid, input.id) })
-        if (!isDeepStrictEqual(existing.metadata, input.metadata)) throw new HttpError(409, 'Esta tentativa pertence a outro conjunto de dados. Importe novamente para salvar.')
-        if (existing.state === 'uploading') await tx.analysis.update({ where: key(identity.uid, input.id), data: { name: input.name, chart: asJson(input.chart), updatedAt: new Date() } })
-        return { id: existing.id, state: existing.state }
-      })
+      await imports.startImport(identity, { id: input.id, name: input.name, fileName: input.metadata.fileName, sheetName: input.metadata.sheetName,
+        pointCount: 1, recordCount: input.metadata.validRecords })
+      const root = await client.measurementImport.findUniqueOrThrow({ where: importKey(identity.uid, input.id) })
+      if (root.state === 'ready') {
+        const row = await unit(identity.uid, input.id)
+        if (!isDeepStrictEqual(row.metadata, input.metadata)) throw new HttpError(409, 'A análise já existe com outros metadados.')
+        return { id: input.id, state: 'ready' }
+      }
+      await imports.startSave(identity.uid, input.id, { id: input.id, name: input.name, baseVersion: 0 })
+      await imports.putImportPoint(identity.uid, input.id, input.id, input.id, { ordinal: 0, metadata: input.metadata, chart: input.chart })
+      return { id: input.id, state: 'uploading' }
     },
     async putChunk(uid, id, index, value) {
-      return client.$transaction(async tx => {
-        const locked = await lockAnalysis(tx, uid, id)
-        const analysis = locked ? await tx.analysis.findUnique({ where: key(uid, id) }) : null
-        if (!analysis || analysis.state !== 'uploading' || index >= analysis.chunkCount || value.count !== Math.min(CHUNK_SIZE, analysis.recordCount - index * CHUNK_SIZE) || ((analysis.metadata as unknown as DatasetMetadata).timeBasis === 'elapsed' && value.first < 0)) throw new HttpError(409, 'O bloco não corresponde à análise ou ela já foi concluída.')
-        const data = { recordCount: value.count, firstTs: BigInt(value.first), lastTs: BigInt(value.last), duplicateCount: value.duplicates, payload: asJson(value.points) }
-        await tx.analysisChunk.upsert({
-          where: { userUid_analysisId_chunkIndex: { userUid: uid, analysisId: id, chunkIndex: index } },
-          create: { userUid: uid, analysisId: id, chunkIndex: index, ...data }, update: data,
-        })
-      })
+      const row = await unit(uid, id)
+      await imports.putImportChunk(uid, row.importId, row.importId, id, index, value)
     },
     async complete(uid, id) {
-      return client.$transaction(async tx => {
-        const conflict = () => new HttpError(409, 'O salvamento está incompleto ou os blocos não correspondem. Tente salvar novamente.')
-        if (!await lockAnalysis(tx, uid, id)) throw conflict()
-        const analysis = await tx.analysis.findUniqueOrThrow({ where: key(uid, id) })
-        if (analysis.state === 'ready') return stored(analysis)
-        const chunks = await tx.analysisChunk.findMany({
-          where: { userUid: uid, analysisId: id }, orderBy: { chunkIndex: 'asc' },
-          select: { chunkIndex: true, recordCount: true, firstTs: true, lastTs: true, duplicateCount: true },
-        })
-        if (chunks.length !== analysis.chunkCount || !chunks.length) throw conflict()
-        let records = 0, duplicates = 0
-        for (const [index, current] of chunks.entries()) {
-          const previous = chunks[index - 1]
-          if (current.chunkIndex !== index || (previous && current.firstTs < previous.lastTs)) throw conflict()
-          records += current.recordCount
-          duplicates += current.duplicateCount + (previous?.lastTs === current.firstTs ? 1 : 0)
-        }
-        const metadata = analysis.metadata as unknown as DatasetMetadata
-        const chart = analysis.chart as unknown as ChartView
-        const first = chunks[0].firstTs, last = chunks.at(-1)!.lastTs
-        if (records !== analysis.recordCount || duplicates !== metadata.duplicateTimestamps || chart.range.start < Number(first) || chart.range.end > Number(last)) throw conflict()
-        return stored(await tx.analysis.update({ where: key(uid, id), data: { state: 'ready', firstTs: first, lastTs: last, updatedAt: new Date() } }))
-      })
-    },
-    async read(uid, id) {
-      const row = await client.analysis.findFirst({ where: { userUid: uid, id, state: 'ready' } })
-      if (!row) throw notFound()
-      return stored(row)
-    },
-    async readChunk(uid, id, index) {
-      const row = await client.analysisChunk.findFirst({ where: { userUid: uid, analysisId: id, chunkIndex: index, analysis: { state: 'ready' } }, select: { payload: true } })
-      if (!row) throw notFound()
-      return row.payload as PointTuple[]
-    },
-    async update(uid, id, name, chart) {
-      const result = await client.analysis.updateMany({ where: { userUid: uid, id, state: 'ready', firstTs: { lte: BigInt(chart.range.start) }, lastTs: { gte: BigInt(chart.range.end) } }, data: { name, chart: asJson(chart), updatedAt: new Date() } })
-      if (!result.count) {
-        await repository.read(uid, id)
-        throw new HttpError(400, 'O período deve estar dentro das medições salvas.')
+      const row = await unit(uid, id)
+      if (row.import.state !== 'ready') {
+        await imports.completeImportPoint(uid, row.importId, row.importId, id)
+        await imports.completeSave(uid, row.importId, row.importId)
       }
       return repository.read(uid, id)
     },
+    async read(uid, id) {
+      const row = await unit(uid, id)
+      if (row.state !== 'ready' || row.import.state !== 'ready' || !row.import.activeSaveId) throw notFound()
+      const snapshot = await client.importSavePoint.findUniqueOrThrow({ where: { userUid_importId_saveId_pointId: {
+        userUid: uid, importId: row.importId, saveId: row.import.activeSaveId, pointId: id } } })
+      return { analysis: { ...summary(row, snapshot.chart as unknown as ChartView, row.import.name), updatedAt: row.import.updatedAt.toISOString() },
+        metadata: row.metadata as unknown as DatasetMetadata, chunkCount: row.chunkCount }
+    },
+    async readChunk(uid, id, index) {
+      const row = await unit(uid, id)
+      return imports.readImportChunk(uid, row.importId, id, index) as Promise<PointTuple[]>
+    },
+    async update(uid, id, name, chart) {
+      const row = await unit(uid, id)
+      if (row.import.state !== 'ready') throw notFound()
+      const saveId = randomUUID()
+      await imports.startSave(uid, row.importId, { id: saveId, name, baseVersion: row.import.version })
+      await imports.putImportPoint(uid, row.importId, saveId, id, { ordinal: 0, chart })
+      await imports.completeSave(uid, row.importId, saveId)
+      return repository.read(uid, id)
+    },
     async remove(uid, id) {
-      const result = await client.analysis.deleteMany({ where: { userUid: uid, id } })
-      if (!result.count) throw notFound()
+      const row = await unit(uid, id)
+      await imports.removeImport(uid, row.importId)
     },
   }
   return repository

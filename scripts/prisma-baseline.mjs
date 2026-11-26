@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises'
 import { isDeepStrictEqual } from 'node:util'
+import { fileURLToPath } from 'node:url'
 import { withDatabase, snapshot } from './prisma-db.mjs'
 import { redact, runPrisma } from './prisma.mjs'
 
@@ -7,11 +8,6 @@ try {
   await withDatabase(async client => {
     const before = await snapshot(client)
     await writeFile('/tmp/decicharts-prisma-before.json', JSON.stringify(before, null, 2))
-    const diff = await runPrisma(['migrate', 'diff', '--from-config-datasource', '--to-schema', 'prisma/schema.prisma', '--exit-code'], true)
-    if (diff.code !== 0) {
-      process.stdout.write(diff.output)
-      throw new Error('A estrutura existente não corresponde ao schema Prisma. Baseline não aplicada.')
-    }
     const history = await client.$queryRaw`SELECT to_regclass('decicharts._prisma_migrations')::text AS name`
     let applied = false
     if (history[0].name) {
@@ -19,6 +15,12 @@ try {
       applied = rows.length > 0
     }
     if (!applied) {
+      const baseline = fileURLToPath(new URL('../prisma/baseline.prisma', import.meta.url))
+      const diff = await runPrisma(['migrate', 'diff', '--from-config-datasource', '--to-schema', baseline, '--exit-code'], true)
+      if (diff.code !== 0) {
+        process.stdout.write(diff.output)
+        throw new Error('A estrutura existente não corresponde à baseline 0001. Nenhuma migração foi registrada.')
+      }
       const result = await runPrisma(['migrate', 'resolve', '--applied', '0001_initial'])
       if (result.code !== 0) throw new Error('Não foi possível registrar a baseline Prisma.')
     } else console.log('Baseline Prisma já registrada.')

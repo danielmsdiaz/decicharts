@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto'
-import { createPrismaClient } from '../server/prisma'
+import { testClient } from './database-client'
 import { loadEnv } from 'vite'
 import { expect, it } from 'vitest'
 import { createRepository } from '../server/repository'
@@ -13,7 +13,7 @@ const integration = process.env.RUN_NEON_INTEGRATION === '1' ? it : it.skip
 integration('Neon real: preferências, blocos, isolamento, conclusão, leitura e exclusão', async () => {
   const env = { ...loadEnv('development', process.cwd(), ''), ...process.env }
   const connection = testDatabaseConnection(env.TEST_DATABASE_URL, [env.DATABASE_URL, env.DATABASE_URL_UNPOOLED, env.DATABASE_URL_POOLED])
-  const client = createPrismaClient(connection)
+  const client = await testClient(connection)
   const repo = createRepository(connection, client)
   const uid = `__decicharts_test_${randomUUID()}`
   const otherUid = `__decicharts_test_${randomUUID()}`

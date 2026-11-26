@@ -19,6 +19,7 @@ model Profile {
   unit      String     @default("dB")
   updatedAt DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
   analyses  Analysis[]
+  imports   MeasurementImport[]
 
   @@map("profiles")
   @@schema("decicharts")
@@ -33,16 +34,82 @@ model Analysis {
   chart       Json            @db.JsonB
   recordCount Int             @map("record_count")
   chunkCount  Int             @map("chunk_count")
+  importId    String          @map("import_id") @db.Uuid
+  ordinal     Int
   firstTs     BigInt?         @map("first_ts")
   lastTs      BigInt?         @map("last_ts")
   createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime        @default(now()) @map("updated_at") @db.Timestamptz(6)
   profile     Profile         @relation(fields: [userUid], references: [uid], onDelete: Cascade, onUpdate: NoAction, map: "analyses_user_uid_fkey")
   chunks      AnalysisChunk[]
+  import      MeasurementImport @relation(fields: [userUid, importId], references: [userUid, id], onDelete: Cascade, onUpdate: NoAction)
+  snapshots   ImportSavePoint[]
 
   @@id([userUid, id], map: "analyses_pkey")
   @@index([userUid, updatedAt(sort: Desc), id], map: "analyses_owner_updated")
+  @@unique([userUid, importId, ordinal])
+  @@unique([userUid, importId, id])
   @@map("analyses")
+  @@schema("decicharts")
+}
+
+model MeasurementImport {
+  userUid      String @map("user_uid")
+  id           String @db.Uuid
+  name         String
+  fileName     String @map("file_name")
+  sheetName    String @map("sheet_name")
+  pointCount   Int @map("point_count")
+  recordCount  Int @map("record_count")
+  state        String @default("uploading")
+  version      Int @default(0)
+  activeSaveId String? @map("active_save_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  profile      Profile @relation(fields: [userUid], references: [uid], onDelete: Cascade, onUpdate: NoAction)
+  points       Analysis[]
+  saves        ImportSave[] @relation("ImportSaves")
+  activeSave   ImportSave? @relation("PublishedSave", fields: [userUid, id, activeSaveId], references: [userUid, importId, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([userUid, id])
+  @@index([userUid, updatedAt(sort: Desc), id])
+  @@map("measurement_imports")
+  @@schema("decicharts")
+}
+
+model ImportSave {
+  userUid     String @map("user_uid")
+  importId    String @map("import_id") @db.Uuid
+  id          String @db.Uuid
+  name        String
+  baseVersion Int @map("base_version")
+  state       String @default("uploading")
+  version     Int?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  import      MeasurementImport @relation("ImportSaves", fields: [userUid, importId], references: [userUid, id], onDelete: Cascade, onUpdate: NoAction)
+  publishedBy MeasurementImport[] @relation("PublishedSave")
+  points      ImportSavePoint[]
+
+  @@id([userUid, importId, id])
+  @@index([userUid, updatedAt])
+  @@map("import_saves")
+  @@schema("decicharts")
+}
+
+model ImportSavePoint {
+  userUid  String @map("user_uid")
+  importId String @map("import_id") @db.Uuid
+  saveId   String @map("save_id") @db.Uuid
+  pointId  String @map("point_id") @db.Uuid
+  ordinal  Int
+  chart    Json @db.JsonB
+  save     ImportSave @relation(fields: [userUid, importId, saveId], references: [userUid, importId, id], onDelete: Cascade, onUpdate: NoAction)
+  point    Analysis @relation(fields: [userUid, importId, pointId], references: [userUid, importId, id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([userUid, importId, saveId, pointId])
+  @@unique([userUid, importId, saveId, ordinal])
+  @@map("import_save_points")
   @@schema("decicharts")
 }
 

@@ -44,6 +44,18 @@ export interface AnalysisSummary {
 export interface StoredAnalysis { analysis: AnalysisSummary; metadata: DatasetMetadata; chunkCount: number }
 export interface AnalysisPage { analyses: AnalysisSummary[]; total: number; hasMore: boolean }
 export type PointTuple = [number, number]
+export interface ImportSummary {
+  id: string; name: string; fileName: string; sheetName: string
+  pointCount: number; recordCount: number; version: number; saveId: string | null; updatedAt: string
+}
+export interface ImportPage { imports: ImportSummary[]; total: number; hasMore: boolean }
+export interface ImportInput { id: string; name: string; fileName: string; sheetName: string; pointCount: number; recordCount: number }
+export interface SaveInput { id: string; baseVersion: number; name: string }
+export interface SaveReceipt { id: string; state: 'uploading' | 'committed'; version: number | null; updatedAt?: string }
+export interface ImportPointInput { ordinal: number; chart: ChartView; metadata?: DatasetMetadata }
+export interface StoredImportPoint { id: string; ordinal: number; metadata: DatasetMetadata; chart: ChartView; chunkCount: number }
+export interface ImportPointPage { points: StoredImportPoint[]; nextOffset: number | null }
+export interface LoadedImport { summary: ImportSummary; points: { stored: StoredImportPoint; dataset: MeasurementDataset }[] }
 export function metadataFromDataset(dataset: MeasurementDataset): DatasetMetadata {
   return {
     schemaVersion: 2, timeBasis: dataset.timeBasis ?? 'absolute', sourceKind: 'instantaneous',

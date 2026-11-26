@@ -8,7 +8,7 @@ import { dataset } from './helpers'
 
 const identity = { uid: 'alice', name: 'Alice', email: 'alice@example.invalid', photoURL: null }
 const id = '22222222-2222-4222-8222-222222222222'
-const repo: Repository = { profile: vi.fn(), preferences: vi.fn(), list: vi.fn(), start: vi.fn(), putChunk: vi.fn(), complete: vi.fn(), read: vi.fn(), readChunk: vi.fn(), update: vi.fn(), remove: vi.fn() }
+const repo: Repository = { profile: vi.fn(), preferences: vi.fn(), list: vi.fn(), start: vi.fn(), putChunk: vi.fn(), complete: vi.fn(), read: vi.fn(), readChunk: vi.fn(), update: vi.fn(), remove: vi.fn(), listImports: vi.fn(), startImport: vi.fn(), readImport: vi.fn(), startSave: vi.fn(), putImportPoint: vi.fn(), putImportChunk: vi.fn(), completeImportPoint: vi.fn(), completeSave: vi.fn(), readImportPoints: vi.fn(), readImportChunk: vi.fn(), removeImport: vi.fn() }
 const handler = createHandler({ authenticate: async request => {
   if (request.headers.get('authorization') !== 'Bearer alice') throw new HttpError(401, 'Sessão necessária.')
   return identity
@@ -19,6 +19,40 @@ function request(path: string, method = 'GET', data?: unknown, authenticated = t
 beforeEach(() => { vi.resetAllMocks() })
 
 describe('contrato e autorização da API', () => {
+  it('usa somente o UID autenticado nos contratos de importação e tentativa', async () => {
+    const pointId = '33333333-3333-4333-8333-333333333333'
+    const saveId = '44444444-4444-4444-8444-444444444444'
+    const data = dataset()
+    const chart = { title: 'Ponto', range: { start: data.measurements[0].timestamp, end: data.measurements.at(-1)!.timestamp } }
+    const input = { id, name: 'Conjunto', fileName: data.fileName, sheetName: data.sheetName, pointCount: 10, recordCount: 30 }
+    expect((await handler(request('imports', 'POST', { ...input, userUid: 'bob' }))).status).toBe(201)
+    expect(repo.startImport).toHaveBeenCalledWith(identity, input)
+    await handler(request('imports?offset=20')); expect(repo.listImports).toHaveBeenCalledWith('alice', 20)
+    await handler(request(`imports/${id}`)); expect(repo.readImport).toHaveBeenCalledWith('alice', id)
+    await handler(request(`imports/${id}/saves`, 'POST', { id: saveId, name: 'Conjunto', baseVersion: 0 }))
+    expect(repo.startSave).toHaveBeenCalledWith('alice', id, { id: saveId, name: 'Conjunto', baseVersion: 0 })
+    await handler(request(`imports/${id}/saves/${saveId}/points/${pointId}`, 'PUT', { ordinal: 0, metadata: metadataFromDataset(data), chart }))
+    expect(repo.putImportPoint).toHaveBeenCalledWith('alice', id, saveId, pointId, expect.objectContaining({ ordinal: 0, chart }))
+    await handler(request(`imports/${id}/saves/${saveId}/points/${pointId}/chunks/0`, 'PUT', { points: [[1, 50]] }))
+    expect(repo.putImportChunk).toHaveBeenCalledWith('alice', id, saveId, pointId, 0, expect.objectContaining({ count: 1 }))
+    await handler(request(`imports/${id}/saves/${saveId}/points/${pointId}/complete`, 'POST'))
+    expect(repo.completeImportPoint).toHaveBeenCalledWith('alice', id, saveId, pointId)
+    await handler(request(`imports/${id}/saves/${saveId}/complete`, 'POST'))
+    expect(repo.completeSave).toHaveBeenCalledWith('alice', id, saveId)
+    await handler(request(`imports/${id}/points?saveId=${saveId}&offset=2`))
+    expect(repo.readImportPoints).toHaveBeenCalledWith('alice', id, saveId, 2)
+    await handler(request(`imports/${id}/points/${pointId}/chunks/0`))
+    expect(repo.readImportChunk).toHaveBeenCalledWith('alice', id, pointId, 0)
+    await handler(request(`imports/${id}`, 'DELETE')); expect(repo.removeImport).toHaveBeenCalledWith('alice', id)
+  })
+  it('recusa contratos inválidos de conjuntos antes de acessar a persistência', async () => {
+    for (const path of ['imports?offset=-1', `imports/${id}/points?saveId=abc`, 'imports/abc']) expect((await handler(request(path))).status).toBe(400)
+    expect((await handler(request('imports', 'POST', { id, name: 'A', fileName: 'a.csv', sheetName: 'CSV', pointCount: 10, recordCount: 250001 }))).status).toBe(400)
+    expect((await handler(request(`imports/${id}/saves`, 'POST', { id, name: 'A', baseVersion: -1 }))).status).toBe(400)
+    expect((await handler(request('imports', 'POST', { big: 'x'.repeat(MAX_BODY_BYTES) }))).status).toBe(413)
+    expect((await handler(request('imports', 'GET', undefined, false))).status).toBe(401)
+    expect(repo.startImport).not.toHaveBeenCalled(); expect(repo.startSave).not.toHaveBeenCalled()
+  })
   it('bloqueia chamadas sem sessão antes de acessar o banco', async () => {
     expect((await handler(request('profile', 'GET', undefined, false))).status).toBe(401)
     expect(repo.profile).not.toHaveBeenCalled()
