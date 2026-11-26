@@ -364,3 +364,11 @@ Próxima ação:
 - Cabeçalho fixo e transições na navegação, no menu da conta, nos painéis e nos modais. A troca de tema ganhou um efeito de cortina e um brilho breve na marca. Os efeitos respeitam a preferência de movimento reduzido.
 - Validação local com 77 testes unitários e 16 cenários Chrome das suítes de interface e fluxos, incluindo cabeçalho fixo, navegação por teclado, arquivos baixados e retorno do foco. Tipagem, lint e build do frontend passaram. A integração Neon separada permaneceu pendente.
 - `AGENTS.md` registra o fluxo para consultar este arquivo, seguir `DESIGN.md` e commitar cada tarefa concluída.
+
+### 2026-11-26 — Checklist de segurança da RocketMove
+
+- Revisão estática dos 14 itens do artigo. Seis se aplicam: isolamento por UID, segredos no navegador, XSS, tratamento de arquivos, segredos no Git e consultas ao banco/RLS. O item de uploads foi adaptado para planilhas e logotipos.
+- A API usa o UID do token Firebase verificado e consultas Prisma com filtro por usuário. A consulta SQL de trava usa parâmetros. A migração versionada não define RLS. A integração existente cobre leitura, blocos e exclusão entre contas e segue pendente de reexecução no Neon separado.
+- `DATABASE_URL` fica no servidor. A configuração pública do Firebase está no cliente. A busca por padrões de chaves privadas, tokens GitHub, IDs de acesso AWS e URLs Neon com senha não encontrou correspondências nos 29 commits alcançáveis antes deste registro. Apenas `.env.example` apareceu no histórico de nomes `.env*` e `.env.local` está ignorado. Falta uma varredura dedicada no CI.
+- Planilhas originais são processadas no navegador. O logotipo é normalizado para PNG no cliente e a API verifica prefixo, assinatura inicial e tamanho, sem decodificar o PNG inteiro ou conferir suas dimensões. Nome e e-mail são renderizados como texto no React. A configuração Vercel versionada não declara CSP.
+- Antes de publicar, validar Google real, isolamento no Neon separado, permissões do usuário do banco e restrições da chave pública Firebase. A revisão não executou a aplicação ou testes ativos e não identificou vulnerabilidade crítica confirmada.
