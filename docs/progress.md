@@ -49,7 +49,7 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 Implementação e validação local das fases 9 a 14 concluídas. Reprodução com Google real e servidor dev reiniciado continua manual.
 
-Editor acessível por Criar documento dentro da análise, com títulos/subtítulos, textos, tabelas, fotos, seleção dos gráficos, legendas e trechos de uma/duas colunas. A própria folha é o editor visual; Verificar prévia abre uma página grande e limpa em um diálogo, sem prévia lateral. Documento local preservado na navegação e figuras atualizadas somente por ação explícita. Word exportado contém textos/tabelas editáveis e mídias incorporadas. A composição ainda não é salva na conta nem recuperada após recarga: exportar antes de sair. Detalhes e próximos passos na seção 27 do plano.
+Editor acessível por Criar documento dentro da análise, com títulos/subtítulos, textos, tabelas, fotos, seleção dos gráficos, legendas e trechos de uma/duas colunas. A própria folha é o editor visual; Verificar prévia abre todas as páginas grandes e limpas em um diálogo com rolagem vertical como PDF, sem prévia lateral. Editor ampliado à esquerda, ações e miniaturas à direita; edição de uma página por vez, adição/duplicação/exclusão e zoom. Documento local preservado na navegação e figuras atualizadas somente por ação explícita. Word exportado contém textos/tabelas editáveis e mídias incorporadas. A composição ainda não é salva na conta nem recuperada após recarga: exportar antes de sair. Detalhes e próximos passos na seção 27 do plano.
 
 ## Próximas tarefas
 
@@ -88,9 +88,9 @@ Editor de documento: conferir a incorporação do trecho no relatório maior usa
 
 | Verificação | Resultado |
 |-------------|-----------|
-| Vitest padrão | 94 aprovados; 4 testes de integração de banco ignorados por padrão |
+| Vitest padrão | 96 aprovados; 4 testes de integração de banco ignorados por padrão |
 | Neon real com Prisma | Migração 0002 e consulta real do histórico conferidas; integração ampliada com gravações sintéticas aguarda banco separado |
-| Chrome/Playwright | 28 cenários cobertos: regressão completa de 27 aprovada, nove pertinentes aprovados após últimos guardas (incluindo o novo cenário), e conferência final de prévia/Word aprovada |
+| Chrome/Playwright | 29 cenários cobertos; quatro cenários de documentos aprovados nesta alteração, incluindo páginas, rolagem da prévia no desktop/celular e Word com todas as páginas em ordem. Regressão anterior completa de 27 aprovada; demais verificações registradas abaixo |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
@@ -499,3 +499,12 @@ Próxima ação:
 - Renderização da prévia só é montada ao abrir a conferência. Escape e Voltar à edição fecham sem perder texto, legendas ou posição e devolvem o foco ao botão. Atalhos de desfazer no diálogo não alteram o editor ao fundo. Nenhuma mudança na exportação ou persistência.
 - Validação: três cenários Chrome do documento aprovados, cobrindo ausência de prévia lateral, folha acima de 750px no desktop, conteúdo não editável no diálogo, fechamento/foco, retorno sem perda, temas, mobile, gráficos/tabelas e Word exportado. Lint, TypeScript e build aprovados. Capturas desktop claro e mobile escuro inspecionadas.
 - DESIGN, PRODUCT, README e seção 27 do plano sincronizados com a correção. Sem dependências, API, migrações, escrita no banco, push ou deploy. Permanecem os aceites externos e o salvamento remoto de documentos pendentes.
+
+
+### 2026-11-26 — Editor amplo, páginas individuais e prévia contínua
+
+- Folha ampliada à esquerda; ações no topo da lateral direita e miniaturas clicáveis abaixo, com rolagem própria. Uma página por vez, anterior/próxima, adicionar, duplicar, excluir com confirmação e desfazer. Zoom ajustado à largura ou 100%, 125% e 150%; ferramentas recolhíveis no celular.
+- Páginas manuais reutilizam as quebras do documento, sem novo schema. Preservadas páginas em branco e a ordem do conjunto na exportação Word. Conteúdo longo pode continuar em folhas adicionais no Word; a prévia continua orientativa.
+- Verificar prévia mostra todas as páginas em sequência vertical, como PDF, a partir da página em edição. Contador acompanha a rolagem, setas deslocam entre folhas e teclado permite percorrer a região. Fechar preserva a página do editor e devolve o foco ao disparador.
+- Validação: 96 testes unitários aprovados (quatro integrações de banco ignoradas); quatro cenários Chrome de documentos aprovados, incluindo rolagem por mouse/teclado no desktop, rolagem no celular, zoom e DOCX de três páginas com duas quebras explícitas e conteúdos na ordem correta. Capturas desktop/celular inspecionadas. Lint, TypeScript/build aprovados; detector de layout sem achados e revisão visual final aprovada, sem bloqueios materiais.
+- Sem alteração de API, banco ou persistência: documento segue local à aba. Aceite no Microsoft Word, persistência futura e pendências anteriores de PostgreSQL/Google real permanecem.

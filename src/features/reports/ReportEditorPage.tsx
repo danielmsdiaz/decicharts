@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRightLeft, ArrowUp, Copy, Download, Eye, FilePlus2, Plus, Redo2, RefreshCw, Trash2, Undo2 } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRightLeft, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, Eye, FilePlus2, Plus, Redo2, RefreshCw, Trash2, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
+import { Select } from '@/components/ui/select'
 import { useConfirmation } from '@/components/ui/confirmation-context'
 import { useWorkspace } from '@/features/analyses/workspace-context'
 import { createFigureBlob } from '@/features/charts/export'
@@ -13,6 +14,9 @@ import { ChartPicker, type PickedFigure } from './ChartPicker'
 import { InsertMenu, type InsertKind } from './InsertMenu'
 import { RichTextBlock } from './RichTextBlock'
 import { ReportPreviewDialog } from './ReportPreviewDialog'
+import { PageCanvas, type PageZoom } from './PageCanvas'
+import { PageNavigator } from './PageNavigator'
+import { addReportPage, deleteReportPage, FIRST_PAGE, reportPages } from './pages'
 import './reports.css'
 
 interface Menu { target: InsertTarget; anchor: HTMLElement }
@@ -21,13 +25,36 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
   const [menu, setMenu] = useState<Menu | null>(null), [picker, setPicker] = useState<InsertTarget | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [activePageId, setActivePageId] = useState(FIRST_PAGE), [zoom, setZoom] = useState<PageZoom>('fit')
+  const [toolsOpen, setToolsOpen] = useState(() => window.matchMedia('(min-width: 901px)').matches)
   const [busy, setBusy] = useState(''), [error, setError] = useState(''), [status, setStatus] = useState('')
   const file = useRef<HTMLInputElement>(null), photoTarget = useRef<InsertTarget | null>(null)
   const mounted = useRef(true), operation = useRef(0)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 901px)')
+    const changed = () => setToolsOpen(media.matches)
+    media.addEventListener('change', changed)
+    return () => media.removeEventListener('change', changed)
+  }, [])
   const closeMenu = useCallback(() => setMenu(null), [])
   function run(action: () => void) { try { action(); setError(''); setStatus('') } catch (issue) { setError(issue instanceof Error ? issue.message : 'Não foi possível alterar o documento.') } }
   function openMenu(target: InsertTarget, anchor: HTMLElement) { setMenu({ target, anchor }); setError('') }
+  function selectPage(id: string) { setActivePageId(id); setSelected(null); setMenu(null); setStatus('') }
+  function addPage(duplicate = false) {
+    run(() => {
+      const next = addReportPage(report.document, page.id, duplicate)
+      report.change(() => next.document); selectPage(next.pageId)
+    })
+  }
+  async function removePage() {
+    if (page.rows.length && !await confirm({ title: 'Excluir esta página?', description: `O conteúdo da página ${pageIndex + 1} será removido. Você pode recuperá-lo com Desfazer.`, confirmLabel: 'Excluir página', tone: 'danger' })) return
+    run(() => {
+      const next = deleteReportPage(report.document, page.id)
+      report.change(() => next)
+      selectPage(reportPages(next)[Math.max(0, pageIndex - 1)].id)
+    })
+  }
   function insert(kind: InsertKind) {
     if (!menu) return
     const target = menu.target
@@ -39,8 +66,12 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
       return
     }
     const block = newBlock(kind)
-    run(() => report.change(doc => insertBlocks(doc, target, [block])))
-    setSelected(block.id)
+    run(() => {
+      const next = insertBlocks(report.document, target, [block])
+      report.change(() => next)
+      if (kind === 'break') selectPage(next.rows[target.index].id)
+      else setSelected(block.id)
+    })
   }
   function insertFigures(values: PickedFigure[], paired: boolean) {
     if (!picker) throw new Error('Selecione novamente o local dos gráficos.')
@@ -87,37 +118,29 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
     finally { if (mounted.current) setBusy('') }
   }
   const doc = report.document
+  const pages = reportPages(doc), pageIndex = Math.max(0, pages.findIndex(page => page.id === activePageId)), page = pages[pageIndex]
   return <main className="dashboard-shell report-shell" onKeyDownCapture={event => {
-    if (previewOpen) return
+    if (previewOpen || picker || busy) return
     if ((event.ctrlKey || event.metaKey) && !event.altKey && ['z', 'y'].includes(event.key.toLowerCase())) {
       event.preventDefault()
       if (event.key.toLowerCase() === 'y' || event.shiftKey) report.redo(); else report.undo()
     }
   }}>
     <div className="report-page-heading"><div className="report-heading-context"><Button variant="ghost" disabled={!!busy} onClick={onBack}><ArrowLeft />Voltar à análise</Button><span>{workspace.name}</span></div><div className="report-local-status"><span>Nesta aba</span><HelpTooltip label="Sobre o documento nesta aba">O documento permanece aberto ao navegar pelo Decicharts. Exporte o Word antes de fechar ou recarregar esta aba para guardar seu conteúdo.</HelpTooltip></div></div>
-    <div className="report-command-bar">
-      <label className="report-name">Nome do documento<input value={doc.name} maxLength={100} onChange={event => report.change(value => ({ ...value, name: event.target.value }), 'name')} /></label>
-      <div className="report-document-actions"><Button variant="ghost" size="icon" aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled={!report.canUndo || !!busy} onClick={report.undo}><Undo2 /></Button><Button variant="ghost" size="icon" aria-label="Refazer" title="Refazer (Ctrl+Shift+Z)" disabled={!report.canRedo || !!busy} onClick={report.redo}><Redo2 /></Button>
-        <Button variant="outline" disabled={!!busy} onClick={async () => {
-          if (doc.rows.length && !await confirm({ title: 'Iniciar outro documento?', description: 'Exporte o Word para guardar o conteúdo atual. O documento desta aba será descartado.', confirmLabel: 'Iniciar documento' })) return
-          operation.current++; report.clear(workspace.importId, workspace.name); setSelected(null); setError(''); setStatus('')
-        }}><FilePlus2 />Novo</Button>
-        <Button disabled={!doc.rows.length || !!busy || !doc.name.trim()} onClick={() => void exportWord()}><Download />{busy === 'Gerando Word…' ? busy : 'Exportar Word'}</Button>
-      </div>
-    </div>
-    {error && <p className="notice error" role="alert">{error}</p>}
-    <div className="report-view-bar"><h1>Editor de documento</h1><Button variant="outline" aria-haspopup="dialog" disabled={!!busy} onClick={() => setPreviewOpen(true)}><Eye />Verificar prévia</Button></div>
-    <div className={`report-feedback ${busy || status ? 'has-text' : ''}`} role="status" aria-live="polite">{busy || status}</div>
     <input ref={file} type="file" accept="image/png,image/jpeg" className="sr-only" aria-label="Foto para o documento" onChange={event => { const selectedFile = event.target.files?.[0]; event.target.value = ''; if (selectedFile) void photo(selectedFile) }} />
-    <section className="report-edit-pane" aria-label="Edição do documento"><div className="report-pane-heading"><span>Conteúdo</span><span>{blockCount(doc)} {blockCount(doc) === 1 ? 'elemento' : 'elementos'}</span></div><div className="report-paper-wrap"><article className="report-paper" aria-label="Página do documento">
-      {!doc.rows.length && <div className="report-blank"><h2>Monte seu documento</h2><p>Comece com um título, texto, tabela, foto ou gráfico.</p><Button variant="outline" onClick={event => openMenu({ rowId: null, column: 0, index: 0 }, event.currentTarget)}><Plus />Adicionar conteúdo</Button></div>}
-      {!!doc.rows.length && <InsertPoint label="Inserir no início" disabled={!!busy} onClick={anchor => openMenu({ rowId: null, column: 0, index: 0 }, anchor)} />}
-      {doc.rows.map((row, rowIndex) => <div className="report-row-group" key={row.id}>
-        <section className="report-row" aria-label={`Trecho ${rowIndex + 1}`}>
-          <div className="report-row-tools" aria-label={`Ações do trecho ${rowIndex + 1}`}>
+    <div className="report-workspace"><section className="report-editor-stage" aria-label="Edição do documento">
+      <div className="report-stage-heading"><div><h1>Editor de documento</h1><p role="status">Página {pageIndex + 1} de {pages.length}</p></div><div className="report-stage-navigation" aria-label="Navegar entre páginas"><Button variant="ghost" size="icon" aria-label="Página anterior" disabled={pageIndex === 0 || !!busy} onClick={() => selectPage(pages[pageIndex - 1].id)}><ChevronLeft /></Button><Button variant="ghost" size="icon" aria-label="Próxima página" disabled={pageIndex === pages.length - 1 || !!busy} onClick={() => selectPage(pages[pageIndex + 1].id)}><ChevronRight /></Button></div></div>
+      <PageCanvas pageId={page.id} zoom={zoom}><article className="report-paper" aria-label={`Página ${pageIndex + 1} em edição`}>
+      {!page.rows.length && <div className="report-blank"><h2>{pages.length === 1 ? 'Monte seu documento' : `Página ${pageIndex + 1}`}</h2><p>Comece com um título, texto, tabela, foto ou gráfico.</p><Button variant="outline" onClick={event => openMenu({ rowId: null, column: 0, index: page.start }, event.currentTarget)}><Plus />Adicionar conteúdo</Button></div>}
+      {!!page.rows.length && <InsertPoint label="Inserir no início" disabled={!!busy} onClick={anchor => openMenu({ rowId: null, column: 0, index: page.start }, anchor)} />}
+      {page.rows.map((row, localIndex) => {
+        const rowIndex = page.start + localIndex
+        return <div className="report-row-group" key={row.id}>
+        <section className="report-row" aria-label={`Trecho ${localIndex + 1}`}>
+          <div className="report-row-tools" aria-label={`Ações do trecho ${localIndex + 1}`}>
             <div className="report-column-choice" aria-label="Colunas"><button type="button" aria-pressed={row.columns.length === 1} disabled={!!busy} onClick={() => report.change(value => ({ ...value, rows: value.rows.map(item => item.id === row.id ? setColumns(item, 1) : item) }))}>1 coluna</button><button type="button" aria-pressed={row.columns.length === 2} disabled={!!busy || row.columns.flat().some(block => block.kind === 'break')} onClick={() => report.change(value => ({ ...value, rows: value.rows.map(item => item.id === row.id ? setColumns(item, 2) : item) }))}>2 colunas</button></div>
-            <button type="button" aria-label="Mover trecho para cima" title="Mover trecho para cima" disabled={rowIndex === 0 || !!busy} onClick={() => report.change(value => { const rows = [...value.rows]; [rows[rowIndex - 1], rows[rowIndex]] = [rows[rowIndex], rows[rowIndex - 1]]; return { ...value, rows } })}><ArrowUp /></button>
-            <button type="button" aria-label="Mover trecho para baixo" title="Mover trecho para baixo" disabled={rowIndex === doc.rows.length - 1 || !!busy} onClick={() => report.change(value => { const rows = [...value.rows]; [rows[rowIndex], rows[rowIndex + 1]] = [rows[rowIndex + 1], rows[rowIndex]]; return { ...value, rows } })}><ArrowDown /></button>
+            <button type="button" aria-label="Mover trecho para cima" title="Mover trecho para cima" disabled={localIndex === 0 || !!busy} onClick={() => report.change(value => { const rows = [...value.rows]; [rows[rowIndex - 1], rows[rowIndex]] = [rows[rowIndex], rows[rowIndex - 1]]; return { ...value, rows } })}><ArrowUp /></button>
+            <button type="button" aria-label="Mover trecho para baixo" title="Mover trecho para baixo" disabled={localIndex === page.rows.length - 1 || !!busy} onClick={() => report.change(value => { const rows = [...value.rows]; [rows[rowIndex], rows[rowIndex + 1]] = [rows[rowIndex + 1], rows[rowIndex]]; return { ...value, rows } })}><ArrowDown /></button>
             <button type="button" aria-label="Duplicar trecho" title="Duplicar trecho" disabled={!!busy} onClick={() => run(() => report.change(value => {
               if (blockCount(value) + row.columns.flat().length > 500) throw new Error('O documento aceita até 500 elementos.')
               return { ...value, rows: [...value.rows.slice(0, rowIndex + 1), duplicateRow(row), ...value.rows.slice(rowIndex + 1)] }
@@ -150,10 +173,26 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
             </div>)}
           </div>
         </section>
-        <InsertPoint label={`Inserir após trecho ${rowIndex + 1}`} disabled={!!busy} onClick={anchor => openMenu({ rowId: null, column: 0, index: rowIndex + 1 }, anchor)} />
-      </div>)}
-    </article></div></section>
-    {previewOpen && <ReportPreviewDialog document={doc} assets={report.assets} onClose={() => setPreviewOpen(false)} />}
+        <InsertPoint label={`Inserir após trecho ${localIndex + 1}`} disabled={!!busy} onClick={anchor => openMenu({ rowId: null, column: 0, index: rowIndex + 1 }, anchor)} />
+      </div>})}
+    </article></PageCanvas></section>
+    <aside className="report-sidebar" aria-label="Ferramentas e páginas"><Button variant="outline" className="report-mobile-tools-toggle" aria-expanded={toolsOpen} onClick={() => setToolsOpen(value => !value)}>Ferramentas e páginas<ChevronDown /></Button><div className="report-sidebar-content" hidden={!toolsOpen}>
+      <div className="report-sidebar-actions">
+        <label className="report-name">Nome do documento<input value={doc.name} maxLength={100} onChange={event => report.change(value => ({ ...value, name: event.target.value }), 'name')} /></label>
+        <div className="report-document-actions"><Button variant="ghost" size="icon" aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled={!report.canUndo || !!busy} onClick={report.undo}><Undo2 /></Button><Button variant="ghost" size="icon" aria-label="Refazer" title="Refazer (Ctrl+Shift+Z)" disabled={!report.canRedo || !!busy} onClick={report.redo}><Redo2 /></Button><Button variant="ghost" disabled={!!busy} onClick={async () => {
+          if (doc.rows.length && !await confirm({ title: 'Iniciar outro documento?', description: 'Exporte o Word para guardar o conteúdo atual. O documento desta aba será descartado.', confirmLabel: 'Iniciar documento' })) return
+          operation.current++; report.clear(workspace.importId, workspace.name); selectPage(FIRST_PAGE); setError(''); setStatus('')
+        }}><FilePlus2 />Novo</Button></div>
+        <Button variant="outline" disabled={!!busy} onClick={event => openMenu({ rowId: null, column: 0, index: page.end }, event.currentTarget)}><Plus />Inserir conteúdo</Button>
+        <Button variant="outline" aria-haspopup="dialog" disabled={!!busy} onClick={() => setPreviewOpen(true)}><Eye />Verificar prévia</Button>
+        <Button disabled={!doc.rows.length || !!busy || !doc.name.trim()} onClick={() => void exportWord()}><Download />{busy === 'Gerando Word…' ? busy : 'Exportar Word'}</Button>
+        <label className="report-zoom-label">Zoom da página<Select aria-label="Zoom da página" value={zoom} onChange={event => setZoom(event.target.value as PageZoom)}><option value="fit">Ajustar à largura</option><option value="100">100%</option><option value="125">125%</option><option value="150">150%</option></Select></label>
+        {error && <p className="notice error" role="alert">{error}</p>}
+        <div className={`report-feedback ${busy || status ? 'has-text' : ''}`} role="status" aria-live="polite">{busy || status}</div>
+      </div>
+      <PageNavigator pages={pages} activeId={page.id} assets={report.assets} busy={!!busy} onSelect={selectPage} onAdd={() => addPage()} onDuplicate={() => addPage(true)} onDelete={() => void removePage()} />
+    </div></aside></div>
+    {previewOpen && <ReportPreviewDialog document={doc} assets={report.assets} initialPageId={page.id} onClose={() => setPreviewOpen(false)} />}
     {menu && <InsertMenu anchor={menu.anchor} insideColumn={menu.target.rowId !== null} onInsert={insert} onClose={closeMenu} />}
     {picker && <ChartPicker allowPair={picker.rowId === null} onClose={() => setPicker(null)} onInsert={insertFigures} />}
   </main>

@@ -41,7 +41,10 @@ function PreviewBlock({ block, assets }: { block: ReportBlock; assets: ReadonlyM
 function PreviewRow({ row, assets }: { row: ReportRow; assets: ReadonlyMap<string, ReportAsset> }) {
   return <div className={`report-preview-row preview-columns-${row.columns.length}`} data-preview-row={row.id}>{row.columns.map((column, index) => <div key={index}>{column.map(block => <PreviewBlock key={block.id} block={block} assets={assets} />)}</div>)}</div>
 }
-export function LivePreview({ document: doc, assets }: { document: ReportDocument; assets: ReadonlyMap<string, ReportAsset> }) {
+export function PreviewPageContent({ rows, assets }: { rows: ReportRow[]; assets: ReadonlyMap<string, ReportAsset> }) {
+  return rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} />)
+}
+export function LivePreview({ document: doc, assets, singlePage = false, pageNumber = 1 }: { document: ReportDocument; assets: ReadonlyMap<string, ReportAsset>; singlePage?: boolean; pageNumber?: number }) {
   const measurement = useRef<HTMLDivElement>(null), container = useRef<HTMLDivElement>(null)
   const [layout, setLayout] = useState<{ scale: number; pages: Page[] }>({ scale: .4, pages: [] })
   useLayoutEffect(() => {
@@ -55,7 +58,7 @@ export function LivePreview({ document: doc, assets }: { document: ReportDocumen
         if (row.columns.flat().some(block => block.kind === 'break')) { if (pages.at(-1)!.rows.length) pages.push({ rows: [], height: 0 }); continue }
         const height = element.querySelector<HTMLElement>(`[data-preview-row="${row.id}"]`)?.getBoundingClientRect().height ?? 0
         let page = pages.at(-1)!
-        if (page.height + height > usableHeight && page.rows.length) { page = { rows: [], height: 0 }; pages.push(page) }
+        if (!singlePage && page.height + height > usableHeight && page.rows.length) { page = { rows: [], height: 0 }; pages.push(page) }
         page.rows.push(row); page.height += height
       }
       const scale = Math.min(1, wrapper.getBoundingClientRect().width / paperWidth)
@@ -65,7 +68,7 @@ export function LivePreview({ document: doc, assets }: { document: ReportDocumen
     const observer = new ResizeObserver(measure); observer.observe(element); observer.observe(wrapper)
     void window.document.fonts.ready.then(measure)
     return () => { active = false; observer.disconnect() }
-  }, [doc, assets])
+  }, [doc, assets, singlePage])
   return <div ref={container} className="report-live-preview" aria-label="Folhas do documento">
     <div ref={measurement} className="report-preview-measure report-print-content" aria-hidden="true">{doc.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} />)}</div>
     {(layout.pages.length ? layout.pages : [{ rows: [], height: 0 }]).map((page, index) => {
@@ -76,7 +79,7 @@ export function LivePreview({ document: doc, assets }: { document: ReportDocumen
           {page.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} />)}
           {!doc.rows.length && <p className="report-preview-empty">Documento em branco.</p>}
         </div>
-        <span className="report-preview-page-number">{continuous ? 'Trecho longo · prévia contínua' : index + 1}</span>
+        <span className="report-preview-page-number">{continuous ? `${pageNumber + index} · Trecho longo · prévia contínua` : pageNumber + index}</span>
       </div>
     })}
   </div>

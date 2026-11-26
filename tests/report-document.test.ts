@@ -3,11 +3,41 @@ import { describe, expect, it } from 'vitest'
 import JSZip from 'jszip'
 import { blankDocument, duplicateRow, insertBlocks, newBlock, replaceBlock, rowFor, setColumns, type ReportAsset, type ReportBlock } from '../src/features/reports/model'
 import { createWordDocument } from '../src/features/reports/word-export'
+import { addReportPage, deleteReportPage, FIRST_PAGE, reportPages } from '../src/features/reports/pages'
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
 const text = (value: string) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: value }] }] })
 
 describe('documento por blocos', () => {
+  it('mantém páginas vazias, duplica com IDs próprios e exclui páginas sem misturar seus conteúdos', () => {
+    const first: ReportBlock = { ...newBlock('text'), content: text('Primeira página') }
+    let doc = { ...blankDocument(), rows: [rowFor([[first]])] }
+    const second = addReportPage(doc, FIRST_PAGE); doc = second.document
+    expect(reportPages(doc).map(page => page.rows.length)).toEqual([1, 0])
+    doc = insertBlocks(doc, { rowId: null, column: 0, index: reportPages(doc)[1].end }, [{ ...newBlock('text'), content: text('Segunda página') }])
+    const third = addReportPage(doc, second.pageId, true); doc = third.document
+    const pages = reportPages(doc)
+    expect(pages).toHaveLength(3)
+    expect(pages[1].rows[0].id).not.toBe(pages[2].rows[0].id)
+    expect(pages[1].rows[0].columns[0][0].id).not.toBe(pages[2].rows[0].columns[0][0].id)
+    expect('content' in pages[2].rows[0].columns[0][0] && pages[2].rows[0].columns[0][0].content).toEqual(text('Segunda página'))
+    const middleDeleted = deleteReportPage(doc, second.pageId)
+    expect(reportPages(middleDeleted).map(page => page.id)).toEqual([FIRST_PAGE, third.pageId])
+    const firstDeleted = deleteReportPage(middleDeleted, FIRST_PAGE)
+    expect(reportPages(firstDeleted)).toHaveLength(1)
+    expect(firstDeleted.rows).toEqual(pages[2].rows)
+    expect(deleteReportPage(firstDeleted, FIRST_PAGE).rows).toEqual([])
+    expect(doc.rows).toHaveLength(5)
+  })
+  it('adiciona uma página entre as existentes e recusa expansão além do limite sem alterar a origem', () => {
+    const last = addReportPage(blankDocument(), FIRST_PAGE)
+    const middle = addReportPage(last.document, FIRST_PAGE)
+    expect(reportPages(middle.document).map(page => page.id)).toEqual([FIRST_PAGE, middle.pageId, last.pageId])
+    const full = { ...blankDocument(), rows: Array.from({ length: 500 }, () => rowFor([[newBlock('text')]])) }
+    expect(() => addReportPage(full, FIRST_PAGE)).toThrow('500')
+    expect(full.rows).toHaveLength(500)
+    expect(() => deleteReportPage(full, 'missing')).toThrow('página mudou')
+  })
   it('preserva a ordem ao reduzir colunas e permite duplicar e editar sem alterar o original', () => {
     const first: ReportBlock = { ...newBlock('text'), content: text('Esquerda') }, second: ReportBlock = { ...newBlock('text'), content: text('Direita') }
     const row = rowFor([[first], [second]]), single = setColumns(row, 1)
