@@ -3,7 +3,7 @@
 ## Estado atual
 
 - Fase atual: 15 — Editor clicável e exportação Word dentro da análise
-- Status: Primeira entrega local do editor e prévia em tempo real concluída; persistência de documentos na conta continua futura. Confirmar o ajuste legado no PostgreSQL descartável e os aceites externos anteriores.
+- Status: Editor visual na própria folha e conferência por Verificar prévia concluídos; persistência de documentos na conta continua futura. Confirmar o ajuste legado no PostgreSQL descartável e os aceites externos anteriores.
 - Última atualização: 2026-11-26
 - Exportação com proporções, prévia no modal, identificação em destaque, gráfico mais baixo, cores personalizáveis e envio de logomarca com limites explícitos implementados. Escala de 0 a 110 dB, cabeçalho fixo e transições preservados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
 
@@ -49,7 +49,7 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 Implementação e validação local das fases 9 a 14 concluídas. Reprodução com Google real e servidor dev reiniciado continua manual.
 
-Editor acessível por Criar documento dentro da análise, com títulos/subtítulos, textos, tabelas, fotos, seleção dos gráficos, legendas e trechos de uma/duas colunas. Prévia em tempo real ao lado no desktop e modo ampliado/móvel. Documento local preservado na navegação e figuras atualizadas somente por ação explícita. Word exportado contém textos/tabelas editáveis e mídias incorporadas. A composição ainda não é salva na conta nem recuperada após recarga: exportar antes de sair. Detalhes e próximos passos na seção 27 do plano.
+Editor acessível por Criar documento dentro da análise, com títulos/subtítulos, textos, tabelas, fotos, seleção dos gráficos, legendas e trechos de uma/duas colunas. A própria folha é o editor visual; Verificar prévia abre uma página grande e limpa em um diálogo, sem prévia lateral. Documento local preservado na navegação e figuras atualizadas somente por ação explícita. Word exportado contém textos/tabelas editáveis e mídias incorporadas. A composição ainda não é salva na conta nem recuperada após recarga: exportar antes de sair. Detalhes e próximos passos na seção 27 do plano.
 
 ## Próximas tarefas
 
@@ -492,3 +492,10 @@ Próxima ação:
 - Inspeção visual desktop claro/mobile escuro, prévia ampliada e DOCX renderizado pelo LibreOffice 26.8.3 em A4. Fotos e dois gráficos com legendas conferidos, texto/tabela estruturalmente editáveis. O arquivo abriu em duas páginas no LibreOffice; a prévia indicativa coube em uma, portanto precisão de paginação e aceite no Microsoft Word/incorporação no relatório maior continuam pendentes.
 - Skill Impeccable aplicada; uma rodada de detector produziu avisos consultivos de fontes/tamanhos e cores do documento. Arial e medidas em pontos do Word foram documentados como tipografia intrínseca da folha; controles seguem DM Sans e tokens existentes. Revisão especializada identificou contraste, ações após juntar colunas, sinalização de trechos longos e indicador de prévia duplicado; itens corrigidos e segunda revisão sem bloqueios. Sidecar de design sincronizado.
 - Sem API, schema ou migração novos; nenhuma escrita no banco da aplicação ou teste sintético no Neon nesta tarefa. Sem push ou deploy. Persistência remota de documentos, substituição/redimensionamento de fotos e aceites externos anteriores continuam pendentes.
+
+### 2026-11-26 — Conferência de documento por Verificar prévia
+
+- Usuário esclareceu que a própria folha editável é a visualização em tempo real. Retirada a prévia lateral permanente e centralizado o editor em largura A4. Verificar prévia abre um diálogo grande com páginas limpas e rolagem própria; cabeçalho com nome, ajuda e Voltar à edição. No celular, o diálogo ocupa a tela.
+- Renderização da prévia só é montada ao abrir a conferência. Escape e Voltar à edição fecham sem perder texto, legendas ou posição e devolvem o foco ao botão. Atalhos de desfazer no diálogo não alteram o editor ao fundo. Nenhuma mudança na exportação ou persistência.
+- Validação: três cenários Chrome do documento aprovados, cobrindo ausência de prévia lateral, folha acima de 750px no desktop, conteúdo não editável no diálogo, fechamento/foco, retorno sem perda, temas, mobile, gráficos/tabelas e Word exportado. Lint, TypeScript e build aprovados. Capturas desktop claro e mobile escuro inspecionadas.
+- DESIGN, PRODUCT, README e seção 27 do plano sincronizados com a correção. Sem dependências, API, migrações, escrita no banco, push ou deploy. Permanecem os aceites externos e o salvamento remoto de documentos pendentes.

@@ -66,7 +66,7 @@ export function LivePreview({ document: doc, assets }: { document: ReportDocumen
     void window.document.fonts.ready.then(measure)
     return () => { active = false; observer.disconnect() }
   }, [doc, assets])
-  return <div ref={container} className="report-live-preview" aria-label="Prévia em tempo real">
+  return <div ref={container} className="report-live-preview" aria-label="Folhas do documento">
     <div ref={measurement} className="report-preview-measure report-print-content" aria-hidden="true">{doc.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} />)}</div>
     {(layout.pages.length ? layout.pages : [{ rows: [], height: 0 }]).map((page, index) => {
       const continuous = page.height > usableHeight
@@ -74,7 +74,7 @@ export function LivePreview({ document: doc, assets }: { document: ReportDocumen
       return <div className="report-preview-page-wrap" key={index} style={{ height: height * layout.scale + 32 }}>
         <div className="report-preview-page report-print-content" style={{ width: paperWidth, minHeight: height, transform: `scale(${layout.scale})` }}>
           {page.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} />)}
-          {!doc.rows.length && <p className="report-preview-empty">Seu conteúdo aparece aqui enquanto você edita.</p>}
+          {!doc.rows.length && <p className="report-preview-empty">Documento em branco.</p>}
         </div>
         <span className="report-preview-page-number">{continuous ? 'Trecho longo · prévia contínua' : index + 1}</span>
       </div>

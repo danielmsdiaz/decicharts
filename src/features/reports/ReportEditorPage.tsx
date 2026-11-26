@@ -1,5 +1,5 @@
-import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRightLeft, ArrowUp, Copy, Download, Eye, FilePlus2, PencilLine, Plus, Redo2, RefreshCw, Trash2, Undo2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowDown, ArrowLeft, ArrowRightLeft, ArrowUp, Copy, Download, Eye, FilePlus2, Plus, Redo2, RefreshCw, Trash2, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { useConfirmation } from '@/components/ui/confirmation-context'
@@ -12,7 +12,7 @@ import { preparePhoto } from './photo'
 import { ChartPicker, type PickedFigure } from './ChartPicker'
 import { InsertMenu, type InsertKind } from './InsertMenu'
 import { RichTextBlock } from './RichTextBlock'
-import { LivePreview } from './LivePreview'
+import { ReportPreviewDialog } from './ReportPreviewDialog'
 import './reports.css'
 
 interface Menu { target: InsertTarget; anchor: HTMLElement }
@@ -20,7 +20,7 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
   const report = useReport(), workspace = useWorkspace(), confirm = useConfirmation()
   const [menu, setMenu] = useState<Menu | null>(null), [picker, setPicker] = useState<InsertTarget | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
-  const [previewOnly, setPreviewOnly] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const [busy, setBusy] = useState(''), [error, setError] = useState(''), [status, setStatus] = useState('')
   const file = useRef<HTMLInputElement>(null), photoTarget = useRef<InsertTarget | null>(null)
   const mounted = useRef(true), operation = useRef(0)
@@ -87,8 +87,8 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
     finally { if (mounted.current) setBusy('') }
   }
   const doc = report.document
-  const previewDocument = useDeferredValue(doc)
   return <main className="dashboard-shell report-shell" onKeyDownCapture={event => {
+    if (previewOpen) return
     if ((event.ctrlKey || event.metaKey) && !event.altKey && ['z', 'y'].includes(event.key.toLowerCase())) {
       event.preventDefault()
       if (event.key.toLowerCase() === 'y' || event.shiftKey) report.redo(); else report.undo()
@@ -106,10 +106,10 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
       </div>
     </div>
     {error && <p className="notice error" role="alert">{error}</p>}
-    <div className="report-view-bar"><div><h1>Editor de documento</h1><span>Textos, imagens e gráficos, no seu layout.</span></div><Button variant="ghost" aria-pressed={previewOnly} onClick={() => setPreviewOnly(value => !value)}>{previewOnly ? <PencilLine /> : <Eye />}{previewOnly ? 'Voltar à edição' : 'Ver prévia'}</Button></div>
+    <div className="report-view-bar"><h1>Editor de documento</h1><Button variant="outline" aria-haspopup="dialog" disabled={!!busy} onClick={() => setPreviewOpen(true)}><Eye />Verificar prévia</Button></div>
     <div className={`report-feedback ${busy || status ? 'has-text' : ''}`} role="status" aria-live="polite">{busy || status}</div>
     <input ref={file} type="file" accept="image/png,image/jpeg" className="sr-only" aria-label="Foto para o documento" onChange={event => { const selectedFile = event.target.files?.[0]; event.target.value = ''; if (selectedFile) void photo(selectedFile) }} />
-    <div className={`report-composer ${previewOnly ? 'is-preview' : ''}`}><section className="report-edit-pane" aria-label="Edição do documento"><div className="report-pane-heading"><span>Conteúdo</span><span>{blockCount(doc)} {blockCount(doc) === 1 ? 'elemento' : 'elementos'}</span></div><div className="report-paper-wrap"><article className="report-paper" aria-label="Página do documento">
+    <section className="report-edit-pane" aria-label="Edição do documento"><div className="report-pane-heading"><span>Conteúdo</span><span>{blockCount(doc)} {blockCount(doc) === 1 ? 'elemento' : 'elementos'}</span></div><div className="report-paper-wrap"><article className="report-paper" aria-label="Página do documento">
       {!doc.rows.length && <div className="report-blank"><h2>Monte seu documento</h2><p>Comece com um título, texto, tabela, foto ou gráfico.</p><Button variant="outline" onClick={event => openMenu({ rowId: null, column: 0, index: 0 }, event.currentTarget)}><Plus />Adicionar conteúdo</Button></div>}
       {!!doc.rows.length && <InsertPoint label="Inserir no início" disabled={!!busy} onClick={anchor => openMenu({ rowId: null, column: 0, index: 0 }, anchor)} />}
       {doc.rows.map((row, rowIndex) => <div className="report-row-group" key={row.id}>
@@ -152,7 +152,8 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
         </section>
         <InsertPoint label={`Inserir após trecho ${rowIndex + 1}`} disabled={!!busy} onClick={anchor => openMenu({ rowId: null, column: 0, index: rowIndex + 1 }, anchor)} />
       </div>)}
-    </article></div></section><aside className="report-preview-pane"><div className="report-pane-heading"><span>Prévia</span><div className="report-preview-indicator"><span>Em tempo real</span><HelpTooltip label="Sobre a prévia do documento">Prévia A4 com suas alterações. A distribuição de linhas e páginas pode variar ao abrir no Word. Textos e tabelas são editáveis no arquivo exportado.</HelpTooltip></div></div><LivePreview document={previewDocument} assets={report.assets} /></aside></div>
+    </article></div></section>
+    {previewOpen && <ReportPreviewDialog document={doc} assets={report.assets} onClose={() => setPreviewOpen(false)} />}
     {menu && <InsertMenu anchor={menu.anchor} insideColumn={menu.target.rowId !== null} onInsert={insert} onClose={closeMenu} />}
     {picker && <ChartPicker allowPair={picker.rowId === null} onClose={() => setPicker(null)} onInsert={insertFigures} />}
   </main>

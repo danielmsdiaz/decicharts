@@ -61,7 +61,7 @@ As setas ao lado do seletor avançam/voltam entre pontos e param nas extremidade
 
 Com uma análise aberta, use **Criar documento**. Clique nos pontos de inserção para adicionar título, subtítulo, texto, tabela, foto ou gráfico. Os gráficos são escolhidos entre os pontos dessa análise, na ordem desejada, com opção de dois lado a lado. Legendas acompanham as figuras; cada trecho pode ter uma ou duas colunas. As ações de mover, excluir e desfazer permitem reorganizar o conteúdo.
 
-A **prévia em tempo real** aparece ao lado da edição em telas largas. **Ver prévia** amplia a folha e permite conferi-la também no celular. As folhas usam proporção A4 e margens de 20 mm; trechos maiores que uma página recebem indicação de prévia contínua. O motor do Word pode distribuir linhas e páginas de outra maneira.
+A própria folha é o editor visual. **Verificar prévia** abre uma janela com a página grande e limpa, sem controles de edição. Use **Voltar à edição** ou Escape para fechar e continuar de onde parou. No celular, a prévia ocupa a tela. As folhas usam proporção A4 e margens de 20 mm; trechos maiores que uma página recebem indicação de prévia contínua. O motor do Word pode distribuir linhas e páginas de outra maneira.
 
 **Exportar Word** gera `.docx` com textos, listas e tabelas editáveis e imagens incorporadas. As figuras preservam os dados e os ajustes capturados ao inserir; editar a análise não altera a cópia existente. Use **Atualizar gráfico** para substituí-la, mantendo legenda e posição. **Voltar à análise** e **Editar documento** alternam entre os dois trabalhos.
 
