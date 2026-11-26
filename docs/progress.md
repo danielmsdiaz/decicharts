@@ -439,3 +439,9 @@ Próxima ação:
 - Conferências antes/depois: zero registros em analyses e analysis_chunks em ambos os momentos, fingerprints idênticos e nenhuma análise antiga a converter neste banco. Nenhum conteúdo de usuário foi exportado; os arquivos temporários de verificação contêm somente contagens e fingerprints.
 - Migração concluída com sucesso, consulta Prisma dos campos do histórico funcional e migrate diff contra o schema atual sem diferenças. Nenhum novo registro de teste gravado, reset, push ou deploy. Não foram repetidos testes de aplicação porque o ajuste foi exclusivamente a aplicação da migração já validada.
 - README e plano atualizados para refletir o estado real. Fluxo completo com conta Google real e integrações sintéticas em Neon separado continuam pendentes.
+
+### 2026-11-26 — Alinhamento vertical dos selects
+
+- Corrigido o texto no topo dos selects personalizados do Chrome: o seletor compartilhado para appearance: base-select agora usa flex com alinhamento vertical central, mantendo a altura de 44px e a seta no mesmo eixo. O menu de opções e o fallback nativo permanecem com seus próprios layouts.
+- Verificação pertinente: cenário existente de telas responsivas aprovado no Chrome, cobrindo desktop claro/celular escuro, abertura/fechamento do select por teclado e ausência de overflow. Capturas da prévia de importação inspecionadas nos dois tamanhos, confirmando texto centralizado. git diff --check aprovado; sem novos testes ou dependências para esta correção de CSS.
+- DESIGN.md atualizado. Nenhuma alteração funcional de importação/salvamento, banco, push ou deploy. Aceites externos anteriores preservados.

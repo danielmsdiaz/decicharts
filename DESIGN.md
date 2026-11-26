@@ -198,6 +198,8 @@ Ações legíveis, altura padrão de (44px), ícones de (16px) e distância de (
 
 Campos e selects compartilham altura, borda, fundo e cantos. Cada campo tem rótulo visível e gap de (8px); a seta do select é um SVG separado. Estado inválido recebe mensagem contextual; ações assíncronas apresentam progresso ou erro em português. Não esconder diagnósticos em tooltip.
 
+Nos selects personalizados com `appearance: base-select` e ponteiro preciso, centralizar o conteúdo verticalmente com flex e `align-items: center`, mantendo os 44px de altura. A seta continua centralizada no wrapper; não compensar o texto com deslocamentos ou alterar o layout das opções do menu.
+
 ### Navigation
 
 Links de navegação mantêm cor discreta. A rota ativa recebe teal e um traço inferior de (3px). O menu da conta é um disclosure ancorado no avatar, com nome, e-mail, configurações e sair. Fecha ao clicar fora, sair do grupo ou pressionar Escape. Escape devolve o foco ao disparador. Fotos indisponíveis recebem fallback de inicial.
