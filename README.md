@@ -161,7 +161,7 @@ Para preparar o ambiente separado:
 3. Se o branch copiar o esquema atual, confira-o; em banco vazio, aplique migrações com uma configuração explícita dedicada ao branch de desenvolvimento.
 4. Execute `npm run test:neon`. Nunca use `db:migrate:dev` ou reset no banco com dados reais. Para desenvolvimento cotidiano, use configuração/arquivo de ambiente próprio do branch dev; mantenha as variáveis de produção na hospedagem correspondente.
 
-**Atualização para salvamento por importação:** aplicar a migração revisada `0002_import_collections` antes de disponibilizar o novo backend/frontend. Ela foi ensaiada no banco local descartável, mas não aplicada ao banco Neon da aplicação nesta entrega. Os endpoints antigos continuam atendendo conjuntos unitários. Não realizar rollback para o backend antigo sem uma estratégia de retorno compatível com as novas relações; não excluir tabelas para reverter.
+**Atualização para salvamento por importação:** aplicar a migração revisada `0002_import_collections` antes de disponibilizar o novo backend/frontend. Ela foi ensaiada no banco local descartável e aplicada ao Neon configurado, mediante autorização, em 26/11/2026. A consulta do histórico e a estrutura foram conferidas; não havia análises salvas antes da migração. Os endpoints antigos continuam atendendo conjuntos unitários. Não realizar rollback para o backend antigo sem uma estratégia de retorno compatível com as novas relações; não excluir tabelas para reverter.
 
 Nenhum branch é provisionado automaticamente pelo aplicativo. Na entrega de 25/11/2026, a integração de escrita não foi repetida porque não havia TEST_DATABASE_URL separado.
 

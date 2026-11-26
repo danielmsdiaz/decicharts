@@ -3,11 +3,11 @@
 ## Estado atual
 
 - Fase atual: 14 — Salvamento da importação inteira
-- Status: Implementação e verificações locais concluídas; migração 0002 no banco da aplicação e aceites externos pendentes.
+- Status: Implementação e verificações locais concluídas; migração 0002 aplicada ao banco da aplicação. Aceites Google real e integração em Neon separado pendentes.
 - Última atualização: 2026-11-26
 - Exportação com proporções, prévia no modal, identificação em destaque, gráfico mais baixo, cores personalizáveis e envio de logomarca com limites explícitos implementados. Escala de 0 a 110 dB, cabeçalho fixo e transições preservados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
 
-Salvar/reabrir/atualizar/excluir agora opera sobre a importação inteira da aba escolhida, com ajustes individuais, tentativas idempotentes e publicação atômica. Migração ensaiada somente em PostgreSQL descartável local.
+Salvar/reabrir/atualizar/excluir agora opera sobre a importação inteira da aba escolhida, com ajustes individuais, tentativas idempotentes e publicação atômica. Migração ensaiada em PostgreSQL descartável e aplicada ao Neon configurado após autorização em 26/11/2026; consulta real do histórico e schema conferidos.
 
 ## Resumo das fases
 
@@ -26,7 +26,7 @@ Salvar/reabrir/atualizar/excluir agora opera sobre a importação inteira da aba
 | 11. Redesenho e confirmações próprias | Concluído |
 | 12. Skeletons de carregamento | Concluído |
 | 13. Exportação de figuras e transições de interface | Concluído |
-| 14. Salvamento da importação inteira | Implementação local concluída; aplicação da migração e aceites Neon pendentes |
+| 14. Salvamento da importação inteira | Implementação e migração concluídas; aceites externos pendentes |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -49,7 +49,7 @@ Implementação e validação local das fases 9 a 14 concluídas. Reprodução c
 ## Próximas tarefas
 
 1. Criar manualmente um branch/banco Neon separado e configurar TEST_DATABASE_URL; aplicar as migrações nesse destino explícito e repetir as duas integrações. PostgreSQL descartável local já validou a migração, o legado e o conjunto completo.
-2. Aplicar a migração 0002 no banco da aplicação mediante autorização antes de disponibilizar o novo backend/frontend. Validar Google real → importar → salvar conjunto → recarregar → reabrir todos os pontos; conferir ajustes, logout e reinício do Vite.
+2. Validar Google real → importar → salvar conjunto → recarregar → reabrir todos os pontos; conferir ajustes, logout e reinício do Vite. Migração 0002 aplicada ao Neon configurado e schema conferido em 26/11/2026.
 3. Conferir outros layouts reais e a ponderação efetiva do equipamento; o arquivo recebido não comprova ponderação A nem integração energética.
 4. Adicionar busca e filtros paginados ao histórico em entrega futura.
 5. Publicar somente após autorização explícita.
@@ -82,12 +82,12 @@ Implementação e validação local das fases 9 a 14 concluídas. Reprodução c
 | Verificação | Resultado |
 |-------------|-----------|
 | Vitest padrão | 86 aprovados; 2 integrações de banco ignoradas por padrão |
-| Neon real com Prisma | Aprovação histórica da fase 7; fase 9 preparada, não reexecutada sem banco separado |
+| Neon real com Prisma | Migração 0002 e consulta real do histórico conferidas; integração ampliada com gravações sintéticas aguarda banco separado |
 | Chrome/Playwright | 24 cenários cobertos; regressão de 23 aprovada e reexecução final da confirmação aprovada |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
-| Migração Prisma | Baseline histórica preservada; 0002 ensaiada localmente, sem drift e com fingerprints preservados; aplicação no Neon pendente |
+| Migração Prisma | Baseline preservada; 0002 aplicada ao Neon configurado, schema sem drift e contagens/fingerprints anteriores e posteriores idênticos |
 | PostgreSQL descartável | Duas integrações aprovadas: legado e conjunto de dez pontos, versões, falhas, paginação e isolamento |
 | Isolamento/exclusão | Outro UID não lê/altera/exclui dados; cascata verificada |
 | Bundle frontend | Conexão Neon, Prisma Client, adaptador/driver e fixtures ausentes |
@@ -431,3 +431,11 @@ Próxima ação:
 - Chrome: 24 cenários cobertos; 23 aprovados na regressão completa e a confirmação restante aprovada em reexecução após corrigir expectativa do teste. Novos cenários exercitam falha no décimo ponto, edição durante envio, retomada sem duplicação, atualização sem blocos, ordem dos dez pontos, reabertura, nomes iguais, exclusão, ponto vazio e conflito com cancelamento seguro. As regressões existentes de exportação, logos, cores, carregamento e capacidade de 250 mil leituras foram preservadas.
 - Lint, TypeScript e build aprovados. Capturas desktop claro e celular escuro inspecionadas; detector dos componentes sem achados. README, PRODUCT, DESIGN e plano atualizados. Adaptador PostgreSQL acrescentado apenas ao desenvolvimento; bundle da aplicação continua usando Neon somente no servidor.
 - Persistência/API registrada no commit 779762a. Nenhuma migração ou escrita no Neon da aplicação, push ou deploy. A migração 0002 precisa ser aplicada antes de disponibilizar esta versão; integração em Neon separado e aceite Google real continuam pendentes.
+
+### 2026-11-26 — Correção do erro no histórico após a atualização
+
+- Imagem enviada pelo usuário mostrava o erro genérico de conexão/migrações em Minhas análises. Diagnóstico em transação somente leitura confirmou análises legadas presentes como tabela, mas ausência de measurement_imports/import_saves/import_save_points. Prisma informou somente 0002_import_collections pendente.
+- Conferido que as conexões da aplicação e migração apontam para o mesmo banco, normalizando hosts pooled/direto sem expor credenciais. Após autorização específica do comando, aplicado migrate deploy com a migração 0002 já revisada e ensaiada localmente.
+- Conferências antes/depois: zero registros em analyses e analysis_chunks em ambos os momentos, fingerprints idênticos e nenhuma análise antiga a converter neste banco. Nenhum conteúdo de usuário foi exportado; os arquivos temporários de verificação contêm somente contagens e fingerprints.
+- Migração concluída com sucesso, consulta Prisma dos campos do histórico funcional e migrate diff contra o schema atual sem diferenças. Nenhum novo registro de teste gravado, reset, push ou deploy. Não foram repetidos testes de aplicação porque o ajuste foi exclusivamente a aplicação da migração já validada.
+- README e plano atualizados para refletir o estado real. Fluxo completo com conta Google real e integrações sintéticas em Neon separado continuam pendentes.

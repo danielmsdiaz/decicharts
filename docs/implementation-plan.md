@@ -865,7 +865,7 @@ Decisões confirmadas no planejamento: salvar manualmente todos os pontos da aba
 - [x] Ensaiar baseline e migração em PostgreSQL 17 descartável local, comparar fingerprints dos dados legados e schema final, executar integrações do legado e dos dez pontos. Nunca usar a conexão da aplicação como destino de teste.
 - [x] Testes unitários/API, concorrência global, fotografia após falha, edição durante envio e perda da confirmação; Chrome com dez pontos, ponto vazio, conflito, reabertura, nomes iguais e exclusão. Lint, tipagem e build aprovados.
 - [ ] Provisionar/configurar TEST_DATABASE_URL de um Neon separado e repetir as integrações com seu adaptador.
-- [ ] Aplicar a migração revisada no banco da aplicação mediante autorização antes de disponibilizar o novo backend/frontend; não executada nesta entrega.
+- [x] Aplicar a migração revisada no banco da aplicação mediante autorização: 0002 aplicada em 26/11/2026 após erro no histórico. Contagens/fingerprints antes e depois idênticos, zero registros antigos neste banco, consulta real do histórico funcional e schema sem drift.
 - [ ] Aceite manual completo com Google real e Neon; sem push ou deploy nesta tarefa.
 
 Não há substituição de medições de uma análise existente, inclusão/exclusão individual de pontos, histórico de versões na interface ou recuperação automática após recarga. Rascunhos e fotografias inativas expiram após 24 horas; a fotografia publicada é preservada.
