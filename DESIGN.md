@@ -28,6 +28,10 @@ colors:
   dark-danger: "#ffb4aa"
   dark-danger-soft: "#432b2b"
   dark-soft-primary: "#203b35"
+  document-muted: "#66736e"
+  document-table-border: "#a9b8b1"
+  document-selection: "#0b594c"
+  document-backdrop: "#091b16a6"
 typography:
   headline:
     fontFamily: '"DM Sans Variable", sans-serif'
@@ -54,6 +58,40 @@ typography:
     fontSize: "24px"
     fontWeight: 600
     letterSpacing: "-.03em"
+  supporting:
+    fontFamily: '"DM Sans Variable", sans-serif'
+    fontSize: "13px"
+    lineHeight: 1.5
+  compact:
+    fontFamily: '"DM Sans Variable", sans-serif'
+    fontSize: "12px"
+    lineHeight: 1.5
+  document-body:
+    fontFamily: 'Arial, sans-serif'
+    fontSize: "14.67px"
+    lineHeight: 1.25
+  document-title:
+    fontFamily: 'Arial, sans-serif'
+    fontSize: "21.33px"
+    fontWeight: 700
+    lineHeight: 1.25
+  document-subtitle:
+    fontFamily: 'Arial, sans-serif'
+    fontSize: "17.33px"
+    fontWeight: 700
+    lineHeight: 1.25
+  document-caption:
+    fontFamily: 'Arial, sans-serif'
+    fontSize: "12px"
+    lineHeight: 1.4
+  editor-title:
+    fontFamily: '"DM Sans Variable", sans-serif'
+    fontSize: "22px"
+    fontWeight: 600
+    letterSpacing: "-.03em"
+  preview-page-number:
+    fontFamily: '"DM Sans Variable", sans-serif'
+    fontSize: "11px"
 rounded:
   tag: "4px"
   compact: "6px"
@@ -160,6 +198,8 @@ A hierarquia normativa está no frontmatter. O título de página reduz para (25
 
 Aplicar números tabulares a indicadores, períodos e contagens. Rótulos em caixa normal, pesos intermediários e tracking negativo nos títulos criam a hierarquia sem caixa alta ornamental.
 
+A folha editável e sua prévia usam Arial para aproximar a tipografia do Word, com corpo de 11 pt, título de 16 pt, subtítulo de 13 pt e legenda de 9 pt. A conversão para px consta nos papéis document-* acima. Essa tipografia pertence ao conteúdo exportável; controles continuam em DM Sans. Os números de folha da prévia usam o papel preview-page-number. Não aplicar a tipografia de documento ao restante do aplicativo.
+
 ## Layout
 
 Header e conteúdo compartilham largura máxima de (1440px). O header permanece no topo durante a rolagem. No desktop, tem altura mínima de (76px), gutter de (40px) e reúne marca, navegação, tema e conta numa única faixa. O conteúdo usa padding (36px 40px 64px) e intervalo vertical de (24px).
@@ -229,6 +269,16 @@ O envio de logomarca aparece no modal e nas informações da figura como botão 
 Tooltips abrem por cursor, foco ou toque e fecham por Escape/toque fora. Renderizam em portal para escapar do recorte de painéis, com largura máxima de (320px), texto de (13px) e contraste invertido. Instruções de controles ficam aqui ou em disclosures; erros, progresso e alterações não salvas continuam visíveis.
 
 Dentro de um diálogo, o portal permanece associado a ele e usa popover manual para aparecer acima da camada modal sem recorte. Escape fecha primeiro a ajuda, preservando o diálogo aberto.
+
+### Editor de documento da análise
+
+A entrada é Criar documento dentro da análise aberta; Editar documento retoma a composição da mesma análise. A edição ocupa a área principal com Voltar à análise, nome, desfazer/refazer, Novo e Exportar Word. O menu principal mantém seus destinos existentes. Botões de inserção entre elementos abrem um popover com ícones da biblioteca e nomes dos conteúdos; teclado usa setas, Enter e Escape, com retorno do foco. Controles habilitados mantêm contraste normal, inclusive quando o trecho está sem foco.
+
+A folha branca de cantos retos representa o documento nos dois temas. Fundo e texto usam os papéis claros card/foreground, com foco ring claro; rótulos auxiliares e bordas de tabela usam document-muted/document-table-border. O contraste da seleção de texto usa document-selection. Modais de figuras usam document-backdrop, preservando os demais controles do tema ativo.
+
+Em telas largas, o conteúdo editável e a prévia limpa aparecem lado a lado, com a prévia acompanhando a rolagem. Ver prévia amplia a folha; Voltar à edição recupera os controles. Abaixo de 1100px, alternar os dois modos conserva espaço para o conteúdo. No celular, as colunas de edição podem aparecer em sequência, mantendo as duas colunas na prévia e no Word. A prévia mede trechos em proporção A4; trechos maiores que uma folha são identificados como prévia contínua, sem corte ou redução do texto para caber. A ajuda informa a variação possível da paginação no Word.
+
+Legendas pertencem às figuras. Alternar duas colunas para uma preserva ordem, inserção intermediária e ações individuais. Gráficos mostram sua cópia inserida até a atualização explícita. O estado Nesta aba e sua ajuda identificam a guarda local desta primeira entrega; não apresentar status Salvo nem oferecer ação de salvamento remoto enquanto não houver essa persistência. Fechar, substituir ou excluir a análise com um documento local exige confirmação que inclua esse conteúdo.
 
 ### Confirmations
 

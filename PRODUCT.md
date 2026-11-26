@@ -46,3 +46,7 @@ Preferência adicional de interface: setas para alternar pontos, explicações e
 ## Redesenho autorizado — 2026-11-25
 
 Modernizar todas as telas e o header, retirar slogans/rodapés explicativos e manter orientações nos ícones de ajuda. Navegação integrada, dados da conta em menu e gráfico como área principal de trabalho. Popups próprios para confirmações internas; por escolha expressa do usuário, manter o aviso nativo somente ao fechar/recarregar a aba quando houver trabalho não salvo. Fonte local, temas claro/escuro e navegação por teclado e toque.
+
+## Documento da análise — 2026-11-26
+
+Criar documento é uma ação dentro da análise aberta, sem destino separado no menu. O usuário monta do zero o trecho de medições para depois incorporar ao relatório maior no Word: títulos, subtítulos, textos, tabelas, fotos e gráficos escolhidos da análise, com legendas e trechos de uma/duas colunas. Pede aparência moderna e prévia em tempo real. Gráficos inseridos mantêm uma cópia; atualizar exige ação explícita. A primeira prova funcional mantém o documento na aba e exporta Word editável; salvar/reabrir documentos na conta é uma próxima entrega.

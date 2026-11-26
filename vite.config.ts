@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   // Workers load these after the page. Prebundle them before the first upload so
   // Vite does not reload the page to discover a new dependency mid-import.
-  optimizeDeps: { include: ['papaparse', 'xlsx'] },
+  optimizeDeps: { include: ['papaparse', 'xlsx', '@tiptap/react', '@tiptap/core', '@tiptap/starter-kit', '@tiptap/extension-table', '@tiptap/extension-text-align', 'docx'] },
   worker: { format: 'es' },
   build: { rollupOptions: { output: { manualChunks(id) {
     if (id.includes('/node_modules/zrender/')) return 'zrender'

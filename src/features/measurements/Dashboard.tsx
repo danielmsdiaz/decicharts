@@ -1,6 +1,6 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useOutletContext } from 'react-router'
-import { Check, ChevronLeft, ChevronRight, Save } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, FilePlus2, Save } from 'lucide-react'
 import { FileImport } from '@/features/file-import/FileImport'
 import { useAuth } from '@/features/auth/auth-context'
 import type { MeasurementDataset } from './types'
@@ -11,29 +11,42 @@ import { Input } from '@/components/ui/input'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { useConfirmation } from '@/components/ui/confirmation-context'
 import { ChartSkeleton } from '@/components/layout/LoadingStates'
+import { useReport } from '@/features/reports/report-context'
 
 const ChartWorkspace = lazy(() => import('@/features/charts/ChartWorkspace'))
+const ReportEditorPage = lazy(() => import('@/features/reports/ReportEditorPage'))
 export function Dashboard() {
   const workspace = useWorkspace()
+  const report = useReport()
+  const [editingDocument, setEditingDocument] = useState(false)
   const confirm = useConfirmation()
   const { dataset, revision } = workspace
   const { theme } = useOutletContext<{ theme: string }>()
   const { error } = useAuth()
   const activeIndex = workspace.points.findIndex(point => point.key === workspace.activeKey)
+  const hasDocument = report.document.rows.length > 0
   function stepPoint(direction: number) {
     const point = workspace.points[activeIndex + direction]
     if (point) workspace.selectPoint(point.key)
   }
   async function accept(next: MeasurementDataset, all?: MeasurementDataset[]) {
-    if (workspace.anyDirty && !await confirm({ title: 'Substituir o arquivo?', description: 'Os pontos e alterações não salvos do arquivo atual serão descartados.', confirmLabel: 'Substituir arquivo' })) return false
-    workspace.acceptMany(all?.length ? all : [next], next); return true
+    if ((workspace.anyDirty || hasDocument) && !await confirm({ title: 'Substituir o arquivo?', description: hasDocument ? 'Os pontos, alterações e o documento desta aba serão descartados. Exporte o Word antes de substituir o arquivo.' : 'Os pontos e alterações não salvos do arquivo atual serão descartados.', confirmLabel: 'Substituir arquivo' })) return false
+    workspace.acceptMany(all?.length ? all : [next], next); report.clear(); return true
   }
   async function remove() {
-    if (workspace.anyDirty && !await confirm({ title: 'Fechar este arquivo?', description: 'Os pontos e alterações não salvos serão descartados. As análises já salvas não serão excluídas.', confirmLabel: 'Fechar arquivo' })) return false
-    workspace.clear(); return true
+    if ((workspace.anyDirty || hasDocument) && !await confirm({ title: 'Fechar este arquivo?', description: hasDocument ? 'Os pontos, alterações e o documento desta aba serão descartados. Exporte o Word antes de fechar. A análise salva continua na sua conta.' : 'Os pontos e alterações não salvos serão descartados. As análises já salvas não serão excluídas.', confirmLabel: 'Fechar arquivo' })) return false
+    workspace.clear(); report.clear(); return true
   }
+  async function openDocument() {
+    if (report.document.analysisId !== workspace.importId) {
+      if (report.document.rows.length && !await confirm({ title: 'Criar documento desta análise?', description: 'Há um documento de outra análise nesta aba. Exporte-o antes de continuar para guardar seu conteúdo.', confirmLabel: 'Criar documento' })) return
+      report.clear(workspace.importId, workspace.name || 'Medições de ruído')
+    }
+    setEditingDocument(true)
+  }
+  if (editingDocument && dataset) return <Suspense fallback={<ChartSkeleton />}><ReportEditorPage onBack={() => setEditingDocument(false)} /></Suspense>
   return <main className="dashboard-shell">
-    <div className="dashboard-heading"><div className="page-title"><h1 className="text-3xl font-semibold tracking-tight">Análise de ruído</h1><HelpTooltip label="Sobre o processamento local">O arquivo é lido neste navegador. Salvar análise envia todos os pontos da aba importada à sua conta.</HelpTooltip></div></div>
+    <div className="dashboard-heading"><div className="page-title"><h1 className="text-3xl font-semibold tracking-tight">Análise de ruído</h1><HelpTooltip label="Sobre o processamento local">O arquivo é lido neste navegador. Salvar análise envia todos os pontos da aba importada à sua conta.</HelpTooltip></div>{dataset && <Button variant="outline" onClick={() => void openDocument()}><FilePlus2 />{report.document.analysisId === workspace.importId && report.document.rows.length ? 'Editar documento' : 'Criar documento'}</Button>}</div>
     {error && <p className="notice error" role="alert">{error}</p>}
     <FileImport dataset={dataset} saved={Boolean(workspace.saved)} onImport={accept} onRemove={remove}
       pointCount={workspace.points.length} recordCount={workspace.points.reduce((sum, point) => sum + point.count, 0)}

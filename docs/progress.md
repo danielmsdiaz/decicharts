@@ -2,8 +2,8 @@
 
 ## Estado atual
 
-- Fase atual: 14 — Salvamento da importação inteira
-- Status: Salvamento em lote implementado; migração 0002 já aplicada ao banco da aplicação. Confirmar no PostgreSQL descartável o último ajuste da conclusão concorrente legada; aceites Google real e integração em Neon separado pendentes.
+- Fase atual: 15 — Editor clicável e exportação Word dentro da análise
+- Status: Primeira entrega local do editor e prévia em tempo real concluída; persistência de documentos na conta continua futura. Confirmar o ajuste legado no PostgreSQL descartável e os aceites externos anteriores.
 - Última atualização: 2026-11-26
 - Exportação com proporções, prévia no modal, identificação em destaque, gráfico mais baixo, cores personalizáveis e envio de logomarca com limites explícitos implementados. Escala de 0 a 110 dB, cabeçalho fixo e transições preservados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
 
@@ -29,7 +29,7 @@ O salvamento de dez pontos pequenos agora usa três chamadas à API, e a atualiz
 | 12. Skeletons de carregamento | Concluído |
 | 13. Exportação de figuras e transições de interface | Concluído |
 | 14. Salvamento da importação inteira | Implementação e migração concluídas; aceites externos pendentes |
-| 15. Editor clicável e exportação Word | Planejado na seção 27; implementação não iniciada |
+| 15. Editor clicável e exportação Word | Primeira entrega local concluída; persistência e aceite no Microsoft Word pendentes |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -49,10 +49,11 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 Implementação e validação local das fases 9 a 14 concluídas. Reprodução com Google real e servidor dev reiniciado continua manual.
 
-Próxima funcionalidade planejada: editor clicável para compor o trecho de medições do relatório, com textos, tabelas, fotos e gráficos, e exportação Word. Escopo, proposta técnica e aceites estão na seção 27 de docs/implementation-plan.md. Nenhuma funcionalidade de documentos foi implementada.
+Editor acessível por Criar documento dentro da análise, com títulos/subtítulos, textos, tabelas, fotos, seleção dos gráficos, legendas e trechos de uma/duas colunas. Prévia em tempo real ao lado no desktop e modo ampliado/móvel. Documento local preservado na navegação e figuras atualizadas somente por ação explícita. Word exportado contém textos/tabelas editáveis e mídias incorporadas. A composição ainda não é salva na conta nem recuperada após recarga: exportar antes de sair. Detalhes e próximos passos na seção 27 do plano.
 
 ## Próximas tarefas
 
+Editor de documento: conferir a incorporação do trecho no relatório maior usando Microsoft Word. LibreOffice e estrutura OOXML já conferidos; paginação da prévia é orientativa. Entregar persistência explícita associada à análise, substituição/redimensionamento de fotos e refinamento da paginação de trechos longos. A entrega atual não envia documentos ou fotos ao servidor.
 1. Confirmar o último ajuste de idempotência na conclusão concorrente legada com `test:postgres:local`, quando a execução for autorizada. A suíte passou inicialmente; uma repetição revelou falha intermitente nesse cenário e a nova execução foi recusada.
 2. Criar manualmente um branch/banco Neon separado e configurar TEST_DATABASE_URL; aplicar as migrações nesse destino explícito e repetir as integrações. PostgreSQL descartável local já validou a migração, o legado e o conjunto completo antes do último ajuste de concorrência.
 3. Validar Google real → importar → salvar conjunto → recarregar → reabrir todos os pontos; conferir ajustes, logout e reinício do Vite. Migração 0002 aplicada ao Neon configurado e schema conferido em 26/11/2026.
@@ -87,9 +88,9 @@ Próxima funcionalidade planejada: editor clicável para compor o trecho de medi
 
 | Verificação | Resultado |
 |-------------|-----------|
-| Vitest padrão | 90 aprovados; 4 testes de integração de banco ignorados por padrão |
+| Vitest padrão | 94 aprovados; 4 testes de integração de banco ignorados por padrão |
 | Neon real com Prisma | Migração 0002 e consulta real do histórico conferidas; integração ampliada com gravações sintéticas aguarda banco separado |
-| Chrome/Playwright | 25 cenários cobertos; sete pertinentes aprovados nesta otimização; regressão anterior de 24 registrada abaixo |
+| Chrome/Playwright | 28 cenários cobertos: regressão completa de 27 aprovada, nove pertinentes aprovados após últimos guardas (incluindo o novo cenário), e conferência final de prévia/Word aprovada |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
@@ -476,3 +477,18 @@ Próxima ação:
 - Revisados rotas, contexto/provider de análises, geração PNG/SVG, guardas de logout, API/limites e schema. Reuso de createFigureBlob é viável; o contexto atual precisa expor cópias dos pontos além do ativo. O guarda único de logout precisa ser coordenado para proteger análise e documento simultaneamente. Imagens exigem persistência separada do manifesto para respeitar 512 KiB por requisição.
 - Seção 27 do plano registra interação, proposta de documentos independentes e revisões, mídias em blocos, isolamento, falhas/repetição, biblioteca candidata, paginação e Word editável. Primeira etapa será uma prova vertical com duas colunas e .docx real para validar biblioteca, legibilidade, armazenamento e cotas antes de consolidar a infraestrutura. Cotas de documento são propostas de engenharia; limites existentes de importação permanecem próprios.
 - Skill Impeccable aplicada em modo de planejamento, herdando DESIGN.md. Verificação pertinente: revisão documental e git diff --check; sem testes de aplicação, pois não houve alteração de código. Nenhuma dependência instalada, migração, acesso de escrita ao banco, push ou deploy. Aceites externos e confirmação do ajuste legado de concorrência continuam pendentes.
+
+### 2026-11-26 — Primeira entrega do editor dentro da análise
+
+- Usuário corrigiu a entrada durante o desenvolvimento: Criar documento na própria análise, sem módulo Documentos no menu. Editar documento retoma a composição da análise; Voltar à análise mantém ambos os trabalhos. Plano, PRODUCT, README e DESIGN foram atualizados para esse fluxo.
+- Editor de blocos com inserção por clique de título, subtítulo, texto formatado/listas, tabela, foto e gráfico, além de trechos de duas colunas e quebra manual. Edição em linha, legendas vinculadas, ordem, duplicação de trechos, ações individuais e desfazer/refazer com digitação agrupada. Reduzir duas colunas para uma preserva conteúdo, inserção entre elementos e ações individuais.
+- Prévia limpa em tempo real, separada dos controles, com folhas A4 indicativas e modo ampliado. Desktop mostra edição e prévia ao lado; mobile alterna os modos e mantém as colunas no documento exportado. Trechos maiores que uma folha são identificados como prévia contínua; a prévia não promete paginação idêntica ao Word.
+- Seletor lê cópias dos pontos da análise aberta sem alternar o ponto ativo. Prévia em grupos de seis e geração PNG sequencial apenas dos selecionados. Figuras incorporadas mantêm título, intervalo, identificação, cores, logo, indicadores e notas. Atualização explícita substitui a imagem preservando legenda/posição; falhas ou origem indisponível conservam a figura anterior.
+- Tiptap/ProseMirror 3.35 e docx 9.16 adicionados com licença MIT e suporte React 19; editor/exportador em bundles sob demanda (~157/58 KiB gzip). JSZip direto somente nos testes. Dependências pré-otimizadas no Vite evitam recarga de desenvolvimento e perda do workspace ao gerar o primeiro Word. Instalação reportou zero vulnerabilidades.
+- Modelo próprio para linhas/colunas/texto/figuras, estado vinculado ao UUID da análise e mídias separadas do JSON. Histórico retém/reutiliza blobs e libera URLs ao expirar ou sair. Limites locais: 500 elementos/trechos, 50 imagens distintas e 20 MiB de mídia incluindo histórico. Foto PNG/JPEG até 10 MiB, conteúdo validado, até 12 mil pixels por dimensão, normalizada para JPEG de até 2 mil pixels. O limite da importação de 250 mil medições permanece próprio e inalterado.
+- AuthProvider ganhou registro de guardas adicionais, sem apagar o guarda da análise. Logout, substituição/fechamento de arquivo, nova análise e exclusão avisam sobre documento local, inclusive quando a análise está salva. Cancelar preserva conteúdo; falha ao carregar outra análise não limpa o documento. Providers por UID evitam compartilhar estado entre contas. Fechar/recarregar usa aviso nativo; não há recuperação do documento após recarga.
+- Exportação .docx real: textos, títulos, listas, tabelas e legendas editáveis; PNG/JPEG internos; colunas representadas por tabela sem bordas e medidas proporcionais. Arquivo sintético com texto, tabela, foto e dois gráficos mede ~562 KiB, com XML de documento ~12 KiB e mídias ~655 KiB antes de compressão; PNGs preservados em 1920×2160. Isso confirma a necessidade futura de separar mídia do manifesto na API de 512 KiB. Nenhuma imagem original do usuário foi incluída em fixtures.
+- Validação: 94 testes unitários/API aprovados e quatro integrações de banco ignoradas por padrão. Novos testes verificam ordem/colunas/limites e OOXML com dez figuras, legenda, tabela nativa, negrito, quebra e recusa de mídia ausente. Regressão completa Chrome de 27 cenários aprovada; após ampliar guardas, nove cenários pertinentes aprovados, incluindo o novo terceiro cenário do editor. Conferência final de prévia/Word em desktop/mobile e movimento reduzido aprovada. Total atual: 28 cenários cobertos. Lint, tipagem e build aprovados, sem avisos de bundle.
+- Inspeção visual desktop claro/mobile escuro, prévia ampliada e DOCX renderizado pelo LibreOffice 26.8.3 em A4. Fotos e dois gráficos com legendas conferidos, texto/tabela estruturalmente editáveis. O arquivo abriu em duas páginas no LibreOffice; a prévia indicativa coube em uma, portanto precisão de paginação e aceite no Microsoft Word/incorporação no relatório maior continuam pendentes.
+- Skill Impeccable aplicada; uma rodada de detector produziu avisos consultivos de fontes/tamanhos e cores do documento. Arial e medidas em pontos do Word foram documentados como tipografia intrínseca da folha; controles seguem DM Sans e tokens existentes. Revisão especializada identificou contraste, ações após juntar colunas, sinalização de trechos longos e indicador de prévia duplicado; itens corrigidos e segunda revisão sem bloqueios. Sidecar de design sincronizado.
+- Sem API, schema ou migração novos; nenhuma escrita no banco da aplicação ou teste sintético no Neon nesta tarefa. Sem push ou deploy. Persistência remota de documentos, substituição/redimensionamento de fotos e aceites externos anteriores continuam pendentes.

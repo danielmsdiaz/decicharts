@@ -9,10 +9,12 @@ import { loadImport } from './import-service'
 import { useWorkspace } from './workspace-context'
 import { useConfirmation } from '@/components/ui/confirmation-context'
 import { AnalysisListSkeleton } from '@/components/layout/LoadingStates'
+import { useReport } from '@/features/reports/report-context'
 
 export default function AnalysesPage() {
   const { user } = useAuth()
   const workspace = useWorkspace()
+  const report = useReport()
   const confirm = useConfirmation()
   const navigate = useNavigate()
   const [items, setItems] = useState<ImportSummary[]>([])
@@ -42,7 +44,8 @@ export default function AnalysesPage() {
   }
   async function open(item: ImportSummary) {
     if (!user || busy) return
-    if (workspace.anyDirty && !await confirm({ title: 'Abrir esta análise?', description: 'Os pontos e alterações não salvos nesta sessão serão substituídos.', confirmLabel: 'Abrir análise' })) return
+    const discardDocument = report.document.rows.length > 0 && report.document.analysisId !== item.id
+    if ((workspace.anyDirty || discardDocument) && !await confirm({ title: 'Abrir esta análise?', description: discardDocument ? 'Os pontos e o documento atual serão substituídos. Exporte o Word antes de abrir outra análise.' : 'Os pontos e alterações não salvos nesta sessão serão substituídos.', confirmLabel: 'Abrir análise' })) return
     setBusy(item.id); setError('')
     const operation = new AbortController()
     controller.current = operation
@@ -50,24 +53,28 @@ export default function AnalysesPage() {
       const result = await loadImport(user, item.id, operation.signal)
       operation.signal.throwIfAborted()
       workspace.acceptImport(result)
+      if (discardDocument) report.clear()
       navigate('/')
     } catch (issue) { if (!operation.signal.aborted) setError(issue instanceof Error ? issue.message : 'Não foi possível abrir a análise.') }
     finally { if (!operation.signal.aborted) setBusy(null) }
   }
   async function remove(item: ImportSummary) {
-    if (!user || busy || !await confirm({ title: 'Excluir análise?', description: `“${item.name}” e seus ${item.pointCount} pontos serão excluídos definitivamente.`, confirmLabel: 'Excluir análise', tone: 'danger' })) return
+    const discardDocument = report.document.rows.length > 0 && report.document.analysisId === item.id
+    if (!user || busy || !await confirm({ title: 'Excluir análise?', description: `“${item.name}” e seus ${item.pointCount} pontos serão excluídos definitivamente.${discardDocument ? ' O documento desta análise aberto na aba também será descartado; exporte o Word antes de excluir.' : ''}`, confirmLabel: 'Excluir análise', tone: 'danger' })) return
     setBusy(item.id); setError(''); setFeedback('')
     try {
       await api(user, `imports/${item.id}`, { method: 'DELETE', signal: controller.current?.signal })
       workspace.detach(item.id)
+      if (discardDocument) report.clear()
       setItems(current => current.filter(value => value.id !== item.id))
       setFeedback('Análise excluída da sua conta.')
     } catch (issue) { setError(issue instanceof Error ? issue.message : 'Não foi possível excluir a análise.') }
     finally { setBusy(null) }
   }
   async function startNew() {
-    if (workspace.anyDirty && !await confirm({ title: 'Começar outra análise?', description: 'Os pontos e alterações não salvos serão descartados.', confirmLabel: 'Nova análise' })) return
-    workspace.clear()
+    const hasDocument = report.document.rows.length > 0
+    if ((workspace.anyDirty || hasDocument) && !await confirm({ title: 'Começar outra análise?', description: hasDocument ? 'Os pontos e o documento desta aba serão descartados. Exporte o Word antes de começar outra análise.' : 'Os pontos e alterações não salvos serão descartados.', confirmLabel: 'Nova análise' })) return
+    workspace.clear(); report.clear()
     navigate('/')
   }
   return <main className="dashboard-shell"><div className="dashboard-heading"><div><h1 className="text-3xl font-semibold tracking-tight">Minhas análises</h1></div><Button variant="outline" onClick={startNew}>Nova análise</Button></div>

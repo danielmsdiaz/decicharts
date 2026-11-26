@@ -20,8 +20,13 @@ function authMessage(error: unknown) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutGuard = useRef<(() => boolean | Promise<boolean>) | null>(null)
+  const extraGuards = useRef(new Map<symbol, () => boolean | Promise<boolean>>())
   const logoutPending = useRef(false)
   const setLogoutGuard = useCallback((guard: (() => boolean | Promise<boolean>) | null) => { logoutGuard.current = guard }, [])
+  const registerLogoutGuard = useCallback((guard: () => boolean | Promise<boolean>) => {
+    const key = Symbol(); extraGuards.current.set(key, guard)
+    return () => { extraGuards.current.delete(key) }
+  }, [])
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(Boolean(firebaseAuth))
   const [busy, setBusy] = useState(false)
@@ -47,11 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logoutPending.current = true
     try {
       if (logoutGuard.current && !await logoutGuard.current()) return
+      for (const guard of extraGuards.current.values()) if (!await guard()) return
       setBusy(true); setError('')
       await signOut(firebaseAuth); setUser(null)
     }
     catch (issue) { setError(authMessage(issue)) }
     finally { logoutPending.current = false; setBusy(false) }
   }
-  return <AuthContext.Provider value={{ user, loading, busy, error, configured: Boolean(firebaseAuth), login, logout, setLogoutGuard }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, loading, busy, error, configured: Boolean(firebaseAuth), login, logout, setLogoutGuard, registerLogoutGuard }}>{children}</AuthContext.Provider>
 }

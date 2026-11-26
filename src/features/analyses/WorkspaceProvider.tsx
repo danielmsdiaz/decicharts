@@ -104,12 +104,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
   const active = state.entries.find(entry => entry.key === state.active)
   return <WorkspaceContext.Provider value={{
+    importId: state.importId,
     dataset: active?.dataset ?? null, view: active?.view ?? null, saved: state.saved,
     name: state.name, setName: name => update({ name }), saving: state.saving, progress: state.progress, saveError: state.saveError,
     saveConflict: state.conflict, reopenSaved, dirty: anyDirty, anyDirty, revision: state.revision, activeKey: state.active,
     points: state.entries.map(entry => ({ key: entry.key, id: entry.dataset.point?.id ?? entry.dataset.fileName,
       count: entry.dataset.validRecords, saved: !!entry.savedChart, dirty: dirty(entry), saving: state.saving })),
     selectPoint: key => { if (current.current.entries.some(entry => entry.key === key)) update({ active: key, revision: current.current.revision + 1 }) },
+    capturePoints: keys => keys.flatMap(key => {
+      const entry = current.current.entries.find(value => value.key === key)
+      return entry ? [{ key: entry.key, dataset: entry.dataset, view: structuredClone(entry.view), importId: current.current.importId, version: current.current.saved?.version ?? null }] : []
+    }),
     setView: view => { if (active) update({ entries: current.current.entries.map(entry => entry.key === active.key ? { ...entry, view } : entry) }) },
     acceptImport, acceptMany, clear, save,
     detach: id => {

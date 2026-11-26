@@ -57,6 +57,18 @@ As setas ao lado do seletor avançam/voltam entre pontos e param nas extremidade
 - **Fechar arquivo/análise:** remove apenas a cópia do workspace; a versão salva continua no histórico. Reimportar, mesmo com o mesmo nome, cria outra análise. Salvar é sempre uma ação explícita; outras abas do Excel e o arquivo original não são incluídos.
 - O arquivo original Excel/CSV e as células originais dos diagnósticos não são enviados ao Neon. Guardamos somente os dados necessários para reabrir a análise, incluindo razões e números de linhas inválidas. Um logotipo opcional é normalizado localmente para PNG de até 512 px/128 KiB e enviado somente ao salvar.
 
+## Criar documento dentro da análise
+
+Com uma análise aberta, use **Criar documento**. Clique nos pontos de inserção para adicionar título, subtítulo, texto, tabela, foto ou gráfico. Os gráficos são escolhidos entre os pontos dessa análise, na ordem desejada, com opção de dois lado a lado. Legendas acompanham as figuras; cada trecho pode ter uma ou duas colunas. As ações de mover, excluir e desfazer permitem reorganizar o conteúdo.
+
+A **prévia em tempo real** aparece ao lado da edição em telas largas. **Ver prévia** amplia a folha e permite conferi-la também no celular. As folhas usam proporção A4 e margens de 20 mm; trechos maiores que uma página recebem indicação de prévia contínua. O motor do Word pode distribuir linhas e páginas de outra maneira.
+
+**Exportar Word** gera `.docx` com textos, listas e tabelas editáveis e imagens incorporadas. As figuras preservam os dados e os ajustes capturados ao inserir; editar a análise não altera a cópia existente. Use **Atualizar gráfico** para substituí-la, mantendo legenda e posição. **Voltar à análise** e **Editar documento** alternam entre os dois trabalhos.
+
+Esta primeira entrega mantém o documento **somente na sessão da aba**, inclusive ao navegar para perfil/histórico; salvar a análise ainda não salva o documento. Exporte o Word antes de fechar/recarregar a aba ou sair da conta. Substituir, fechar ou excluir a análise pede confirmação e descarta o documento local após consentimento. O salvamento remoto de documentos é uma etapa futura, ainda sem API ou migração. Também não há importação de um `.docx` existente.
+
+Fotos PNG/JPEG de até 10 MiB e 12 mil pixels por dimensão são normalizadas localmente para JPEG de até 2 mil pixels, preservando orientação/proporção e removendo metadados. Até 500 elementos/trechos, 50 imagens distintas e 20 MiB de mídia mantida em memória, incluindo o histórico de desfazer. Tiptap 3.35 e docx 9.16 são carregados sob demanda, com licença MIT; JSZip é usado nos testes para verificar o conteúdo OOXML. Nenhuma foto ou documento é enviada ao servidor nesta entrega.
+
 ## Neon, Prisma e criação das tabelas
 
 1. Crie o projeto no Neon. Ele normalmente já contém um banco padrão; use a conexão mostrada em **Connect**.
