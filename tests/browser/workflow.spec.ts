@@ -358,8 +358,8 @@ test('pontos variáveis: alterna, mantém escala, salva separadamente e reabre f
   await page.getByLabel('Endereço', { exact: true }).fill('Endereço revisado do ponto A')
   await page.getByLabel('Data e hora inicial, se conhecida').fill('2026-11-25T09:42')
   const logo = await page.evaluate(() => { const canvas = document.createElement('canvas'); canvas.width = 80; canvas.height = 40; const context = canvas.getContext('2d')!; context.fillStyle = 'rgb(12,112,99)'; context.fillRect(0, 0, 80, 40); return canvas.toDataURL('image/png').split(',')[1] })
-  await page.getByLabel('Logotipo opcional').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: Buffer.from(logo, 'base64') })
-  await expect(page.getByAltText('Logotipo da figura')).toBeVisible()
+  await page.locator('.report-settings').getByLabel('Logomarca opcional').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: Buffer.from(logo, 'base64') })
+  await expect(page.locator('.report-settings').getByAltText('Logomarca da figura')).toBeVisible()
   await page.getByRole('button', { name: 'Salvar análise', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
   await selector.selectOption({ index: 1 })
@@ -422,8 +422,57 @@ test('pontos variáveis: alterna, mantém escala, salva separadamente e reabre f
   await expect(selector).toHaveCount(0)
   await page.getByText('Informações da figura', { exact: true }).click()
   await expect(page.getByLabel('Endereço', { exact: true })).toHaveValue('Endereço revisado do ponto A')
-  await expect(page.getByAltText('Logotipo da figura')).toBeVisible()
+  await expect(page.locator('.report-settings').getByAltText('Logomarca da figura')).toBeVisible()
   expect(errors).toEqual([])
+})
+
+test('logomarca no modal valida limites, atualiza a figura e permite remoção', async ({ page }) => {
+  await page.goto('/tests/browser/fixture.html')
+  await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'campo.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(multipointWorkbook()) })
+  await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
+  await page.getByRole('button', { name: 'Exportar figura', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Exportar figura' })
+  const input = dialog.getByLabel('Logomarca opcional')
+  await expect(input).toHaveAccessibleDescription(/5 MiB.*4096.*1:1 a 4:1/)
+  await dialog.getByText('SVG', { exact: true }).click()
+  const preview = dialog.getByAltText('Prévia da figura a baixar')
+  async function source() {
+    await expect(dialog.getByRole('button', { name: 'Baixar SVG' })).toBeEnabled()
+    return preview.evaluate(async node => (await fetch((node as HTMLImageElement).src)).text())
+  }
+  const original = await source()
+  expect(original).not.toContain('data:image/png;base64,')
+  const fixtures = await page.evaluate(() => {
+    return [[100, 100], [400, 100], [100, 200], [500, 100], [4097, 2]].map(([width, height]) => {
+      const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height
+      const context = canvas.getContext('2d')!; context.fillStyle = '#0c7063'; context.fillRect(0, 0, width, height)
+      return canvas.toDataURL('image/png').split(',')[1]
+    })
+  })
+  for (const index of [0, 1]) {
+    await input.setInputFiles({ name: 'marca.png', mimeType: 'image/png', buffer: Buffer.from(fixtures[index], 'base64') })
+    await expect(dialog.getByAltText('Logomarca da figura')).toBeVisible()
+    expect(await source()).toContain('data:image/png;base64,')
+  }
+  const valid = await source()
+  for (const [index, message] of [[2, 'entre 1:1 e 4:1'], [3, 'entre 1:1 e 4:1'], [4, 'no máximo 4096 px']] as const) {
+    await input.setInputFiles({ name: 'invalida.png', mimeType: 'image/png', buffer: Buffer.from(fixtures[index], 'base64') })
+    await expect(dialog.getByRole('alert')).toContainText(message)
+    expect(await source()).toBe(valid)
+  }
+  await input.setInputFiles({ name: 'grande.png', mimeType: 'image/png', buffer: Buffer.alloc(5 * 1024 * 1024 + 1) })
+  await expect(dialog.getByRole('alert')).toContainText('até 5 MiB')
+  await input.setInputFiles({ name: 'quebrada.png', mimeType: 'image/png', buffer: Buffer.from('PNG inválido') })
+  await expect(dialog.getByRole('alert')).toContainText('PNG ou JPEG válido')
+  await input.setInputFiles({ name: 'marca.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') })
+  await expect(dialog.getByRole('alert')).toContainText('PNG ou JPEG')
+  await dialog.getByRole('button', { name: 'Remover logomarca' }).click()
+  await expect(dialog.getByAltText('Logomarca da figura')).toHaveCount(0)
+  // ECharts assigns new internal class and clip IDs each time a figure is rendered.
+  const withoutIds = (svg: string) => svg.replace(/zr\d+-(?:cls-\d+|c\d+)/g, 'generated-id')
+  expect(withoutIds(await source())).toBe(withoutIds(original))
+  await dialog.getByRole('button', { name: 'Cancelar' }).click()
+  await expect(page.getByRole('button', { name: 'Exportar figura', exact: true })).toBeFocused()
 })
 
 test('falha temporária do perfil permite repetir sem sair da conta ou perder o gráfico', async ({ page }) => {

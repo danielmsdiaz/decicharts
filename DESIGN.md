@@ -214,6 +214,10 @@ O gráfico é a superfície principal. Arquivo, ponto e período permanecem veri
 
 A figura PNG/SVG usa fundo claro e reúne identificação, quatro indicadores e nota técnica. O diálogo de exportação usa cartões de seleção única para o tipo de arquivo e a proporção e mostra a figura que será baixada. O foco começa no tipo selecionado e retorna ao botão de exportação ao fechar.
 
+A identificação da figura ocupa uma superfície clara com rótulos alinhados e valores em seminegrito (24–26px no arquivo vetorial), separada dos indicadores. O gráfico cede altura para essa leitura; as três proporções de exportação permanecem disponíveis. Campos excepcionalmente longos recebem reticências e aviso de identificação abreviada, mantendo todos os rótulos presentes. Os valores completos continuam nos ajustes da figura.
+
+O envio de logomarca aparece no modal e nas informações da figura, com as mesmas regras: PNG/JPEG até 5 MiB e 4096px por dimensão; proporção entre 1:1 e 4:1, recomendação 2:1. A marca cabe em até 136×72 unidades no cabeçalho, com espaço transparente para preservar a proporção. A prévia da marca no controle tem fundo branco, 112×56px e cantos de 6px; instruções de limite usam 12px. Seleção inválida mostra erro e preserva a marca anterior; preparar a imagem desabilita o download até sua conclusão.
+
 ### Contextual help
 
 Tooltips abrem por cursor, foco ou toque e fecham por Escape/toque fora. Renderizam em portal para escapar do recorte de painéis, com largura máxima de (320px), texto de (13px) e contraste invertido. Instruções de controles ficam aqui ou em disclosures; erros, progresso e alterações não salvas continuam visíveis.

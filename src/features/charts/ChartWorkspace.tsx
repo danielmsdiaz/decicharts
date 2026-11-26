@@ -46,7 +46,7 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
       <p className="mt-1 text-sm text-muted-foreground"><span data-testid="measurement-count">{visible.length.toLocaleString('pt-BR')}</span> medições no período{!relative && ` · ${dataset.timezone}`}</p>
     </div><div className="chart-actions">
       <Button disabled={workspace.saving || !workspace.dirty} onClick={() => void workspace.save()}>{workspace.saved && !workspace.dirty ? <Check /> : <Save />}{workspace.saving ? 'Salvando…' : workspace.saved && !workspace.dirty ? 'Análise salva' : workspace.saved ? 'Salvar alterações' : 'Salvar análise'}</Button>
-      <FigureExport dataset={dataset} view={view} disabled={!stats} onStatus={setFeedback} />
+      <FigureExport dataset={dataset} view={view} disabled={!stats} onStatus={setFeedback} onChange={workspace.setView} />
     </div></div>
     <div className="chart-body">
       <div className="chart-tools">

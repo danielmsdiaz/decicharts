@@ -5,6 +5,7 @@ import type { MeasurementDataset } from '@/features/measurements/types'
 import type { ChartView } from '../../../shared/persistence'
 import { createFigureBlob, downloadFigure } from './export'
 import { defaultReportFormat, reportFormats, reportPixelRatio, type ReportFormat } from './report'
+import { LogoInput } from './LogoInput'
 
 const reportFormatKey = 'decicharts-report-format'
 const fileTypes = [
@@ -24,11 +25,12 @@ function initialAspect(): ReportFormat {
   return defaultReportFormat
 }
 
-export function FigureExport({ dataset, view, disabled, onStatus }: {
+export function FigureExport({ dataset, view, disabled, onStatus, onChange }: {
   dataset: MeasurementDataset
   view: ChartView
   disabled: boolean
   onStatus: (message: string) => void
+  onChange: (view: ChartView) => void
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const titleId = useId(), sizeId = useId()
@@ -37,6 +39,9 @@ export function FigureExport({ dataset, view, disabled, onStatus }: {
   const [isOpen, setIsOpen] = useState(false)
   const [preview, setPreview] = useState<FigurePreview | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const [logoBusy, setLogoBusy] = useState(false)
+  const latestView = useRef(view)
+  useEffect(() => { latestView.current = view }, [view])
   const { width, height } = reportFormats[aspect]
   const current = preview?.dataset === dataset && preview.view === view && preview.format === format && preview.aspect === aspect ? preview : null
 
@@ -76,7 +81,7 @@ export function FigureExport({ dataset, view, disabled, onStatus }: {
   }
 
   function download() {
-    if (!current?.blob || disabled) return
+    if (!current?.blob || disabled || logoBusy) return
     downloadFigure(dataset, current.blob, format)
     dialog.current?.close()
     onStatus(`Download do ${format.toUpperCase()} iniciado.`)
@@ -112,6 +117,10 @@ export function FigureExport({ dataset, view, disabled, onStatus }: {
               </div>
               {format === 'png' && <p id={sizeId} className="export-file-size">{width * reportPixelRatio} × {height * reportPixelRatio} px</p>}
             </fieldset>
+            <LogoInput value={view.report?.logo} onBusyChange={setLogoBusy} onChange={logo => {
+              const currentView = latestView.current
+              onChange({ ...currentView, report: { ...currentView.report, logo } })
+            }} />
           </div>
           <section className="export-preview">
             <h3>Prévia da figura</h3>
@@ -126,7 +135,7 @@ export function FigureExport({ dataset, view, disabled, onStatus }: {
 
         <div className="export-dialog-actions">
           <Button variant="ghost" onClick={() => dialog.current?.close()}>Cancelar</Button>
-          <Button type="submit" disabled={!current?.blob || disabled}><Download />Baixar {format.toUpperCase()}</Button>
+          <Button type="submit" disabled={!current?.blob || disabled || logoBusy}><Download />Baixar {format.toUpperCase()}</Button>
         </div>
       </form>
     </dialog>

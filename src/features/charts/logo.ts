@@ -4,7 +4,11 @@ export async function normalizeLogo(file: File): Promise<string> {
   try {
     const image = new Image()
     image.src = url
-    await image.decode()
+    try { await image.decode() }
+    catch { throw new Error('Não foi possível ler a imagem. Escolha um PNG ou JPEG válido.') }
+    if (image.naturalWidth > 4096 || image.naturalHeight > 4096) throw new Error('A logomarca deve ter no máximo 4096 px de largura e de altura.')
+    const aspect = image.naturalWidth / image.naturalHeight
+    if (aspect < 1 || aspect > 4) throw new Error('Use uma logomarca quadrada ou horizontal, com proporção entre 1:1 e 4:1 (largura:altura).')
     const canvas = document.createElement('canvas')
     for (let width = 512; width >= 64; width = Math.floor(width * 0.75)) {
       canvas.width = width; canvas.height = Math.round(width * 72 / 136)

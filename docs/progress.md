@@ -5,7 +5,7 @@
 - Fase atual: 13 — Exportação de figuras e transições de interface
 - Status: Implementação e validação local concluídas. Aceites externos pendentes.
 - Última atualização: 2026-11-26
-- Exportação com proporções, prévia no modal, escala de 0 a 110 dB, cabeçalho fixo e transições implementados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
+- Exportação com proporções, prévia no modal, identificação em destaque, gráfico mais baixo e envio de logomarca com limites explícitos implementados. Escala de 0 a 110 dB, cabeçalho fixo e transições preservados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
 
 ## Resumo das fases
 
@@ -78,9 +78,9 @@ Implementação e validação local das fases 9 a 13 concluídas. Reprodução c
 
 | Verificação | Resultado |
 |-------------|-----------|
-| Vitest padrão | 75 aprovados; 1 integração externa ignorada por padrão |
+| Vitest padrão | 77 aprovados; 1 integração externa ignorada por padrão |
 | Neon real com Prisma | Aprovação histórica da fase 7; fase 9 preparada, não reexecutada sem banco separado |
-| Chrome/Playwright | 18 cenários aprovados; inclui respostas lentas, erro/nova tentativa, paginação e movimento reduzido |
+| Chrome/Playwright | Fluxos/interface: 17 cenários cobertos nesta tarefa, com 4 reexecutados após os ajustes; skeletons/rede mantêm a validação anterior |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
@@ -372,3 +372,13 @@ Próxima ação:
 - `DATABASE_URL` fica no servidor. A configuração pública do Firebase está no cliente. A busca por padrões de chaves privadas, tokens GitHub, IDs de acesso AWS e URLs Neon com senha não encontrou correspondências nos 29 commits alcançáveis antes deste registro. Apenas `.env.example` apareceu no histórico de nomes `.env*` e `.env.local` está ignorado. Falta uma varredura dedicada no CI.
 - Planilhas originais são processadas no navegador. O logotipo é normalizado para PNG no cliente e a API verifica prefixo, assinatura inicial e tamanho, sem decodificar o PNG inteiro ou conferir suas dimensões. Nome e e-mail são renderizados como texto no React. A configuração Vercel versionada não declara CSP.
 - Antes de publicar, validar Google real, isolamento no Neon separado, permissões do usuário do banco e restrições da chave pública Firebase. A revisão não executou a aplicação ou testes ativos e não identificou vulnerabilidade crítica confirmada.
+
+### 2026-11-26 — Textos da figura e envio de logomarca
+
+- Identificação reorganizada em uma área própria, com rótulos alinhados, linhas discretas e valores em seminegrito de 24–26px. Indicadores e título ampliados; o gráfico cede altura para os textos sem alterar os dados, a escala ou as três proporções disponíveis.
+- Removida a redução extrema da fonte nos metadados longos. Em casos excepcionais, reticências e um aviso identificam a abreviação; todos os rótulos continuam presentes, inclusive coordenadas e período. Textos completos permanecem nos ajustes.
+- Campo de logomarca diretamente no modal de exportação e componente compartilhado com Informações da figura. PNG/JPEG até 5 MiB, até 4096px por dimensão e proporção entre 1:1 e 4:1; recomendação 2:1 visível junto ao campo. Área limitada no cabeçalho, sem cortes ou distorção e compatível com marcas já salvas.
+- Validação rejeita formato, arquivo corrompido, dimensões, proporção ou peso inválidos e conserva a marca anterior. Download bloqueado enquanto a imagem é preparada; adicionar/remover atualiza a mesma prévia usada no download. Salvamento remoto continua explícito por ponto.
+- Validação: 77 testes unitários aprovados e uma integração externa ignorada. Regressão de 17 cenários Chrome de fluxos/interface, com ajuste do teste de comparação de SVG (IDs internos variam na regeneração) e reexecução focada de quatro cenários aprovada. Teste de PNG confirma pixels reais da logomarca; testes cobrem os dois extremos de proporção aceitos, limites inválidos, remoção e reabertura da análise salva. Caso de textos longos revalidado após o último ajuste de espaço.
+- Lint, TypeScript e build aprovados. Capturas desktop claro e celular escuro conferidas em duas rodadas. Detector executado uma vez, com avisos consultivos de tokens existentes no CSS e tamanhos contextuais de 12px já usados no projeto; as regras específicas da figura e do controle foram documentadas em DESIGN.md.
+- Alteração preexistente em ProfilePage.tsx preservada fora desta tarefa e do commit. Sem novas dependências, escrita no banco, push ou deploy. Aceites externos anteriores continuam pendentes.

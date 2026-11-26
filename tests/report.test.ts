@@ -75,6 +75,9 @@ describe('figura e escalas temporais', () => {
       expect(width).toBe(expected.width)
       expect(height).toBe(expected.height)
       expect(height - grid.top - grid.bottom).toBeGreaterThan(230)
+      const svg = reportSvg(data, view, aspect)
+      expect(svg).toContain('Identificação abreviada para caber na figura.')
+      for (const label of ['Empreendimento', 'Endereço', 'Coordenadas', 'Período']) expect(svg).toContain(label)
     }
   })
 })
