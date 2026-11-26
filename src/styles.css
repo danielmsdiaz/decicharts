@@ -1072,6 +1072,70 @@ a {
   margin-top: 8px;
   font-variant-numeric: tabular-nums;
 }
+.figure-colors {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.figure-colors legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.figure-color-list {
+  display: grid;
+  gap: 8px;
+}
+.figure-color-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 10px 6px 12px;
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  background: var(--background);
+  font-size: 13px;
+  cursor: pointer;
+}
+.figure-color-control:hover {
+  border-color: var(--primary);
+}
+.figure-color-control:has(:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.figure-color-value {
+  margin-left: auto;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.figure-color-control input {
+  width: 38px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+}
+.figure-color-control input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.figure-color-control input::-webkit-color-swatch {
+  border: 0;
+  border-radius: 3px;
+}
+.figure-color-control input::-moz-color-swatch {
+  border: 0;
+  border-radius: 3px;
+}
 .logo-input {
   display: grid;
   align-content: start;

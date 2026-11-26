@@ -5,6 +5,7 @@ import { indicators, ESTIMATE_NOTE } from '@/features/measurements/indicators'
 import { selectMeasurements } from '@/features/measurements/statistics'
 import { chartOption, scaleLimitNote } from './options'
 import { format, type EChartsCoreOption } from 'echarts/core'
+import { figureColors, mixColor, readableText } from './colors'
 
 export const reportFormats = {
   portrait: { label: 'Retrato', ratio: '8:9', width: 960, height: 1080 },
@@ -60,6 +61,10 @@ export function reportOption(dataset: MeasurementDataset, view: ChartView, aspec
   const contentWidth = width - 2 * margin
   const foreground = '#1e2d2b', muted = '#50615f', border = '#dce6e2'
   const info: ReportInfo = view.report ?? { ...dataset.point }
+  const colors = figureColors(info)
+  const headerText = readableText(colors.headerColor)
+  const plotText = readableText(colors.chartBackgroundColor)
+  const customPlot = info.chartBackgroundColor !== undefined || info.lineColor !== undefined
   const title = view.title.trim() || 'Monitoramento do nível de ruído'
   const titleSize = 38, titleLineHeight = 46, titleTop = 26
   const titleLines = wrap(title, contentWidth - (info.logo ? 170 : 0), titleSize, 700)
@@ -122,11 +127,11 @@ export function reportOption(dataset: MeasurementDataset, view: ChartView, aspec
     type: 'text', left: x, top: y, style: { text: value, fontSize, fontFamily, fontWeight, lineHeight, fill },
   })
   const graphics: object[] = [
-    rect(0, 0, width, headerHeight, '#173c38'),
-    rect(0, headerHeight - 4, width, 4, '#369e89'),
-    text(titleLines.join('\n'), margin, Math.max(titleTop, (headerHeight - titleLines.length * titleLineHeight) / 2), titleSize, '#ffffff', 700, titleLineHeight),
+    rect(0, 0, width, headerHeight, colors.headerColor),
+    rect(0, headerHeight - 4, width, 4, info.headerColor ? mixColor(colors.headerColor, headerText, 0.24) : '#369e89'),
+    text(titleLines.join('\n'), margin, Math.max(titleTop, (headerHeight - titleLines.length * titleLineHeight) / 2), titleSize, headerText, 700, titleLineHeight),
     rect(margin, metaTop, contentWidth, metaHeight, '#f2f6f4', 12, border),
-    rect(margin, graphFrameTop, contentWidth, graphFrameBottom - graphFrameTop, '#f8fbfa', 12, border),
+    rect(margin, graphFrameTop, contentWidth, graphFrameBottom - graphFrameTop, colors.chartBackgroundColor, 12, customPlot ? mixColor(colors.chartBackgroundColor, plotText, 0.18) : border),
     text(noteLines.join('\n'), margin, footerTop, noteSize, muted, 400, noteLineHeight),
   ]
   let rowTop = metaTop + metaPadding
@@ -136,7 +141,7 @@ export function reportOption(dataset: MeasurementDataset, view: ChartView, aspec
     rowTop += lines.length * copy.lineHeight + rowGap
     if (index < rows.length - 1) graphics.push(rect(margin + metaPadding, rowTop - rowGap / 2, contentWidth - 2 * metaPadding, 1, border))
   })
-  if (abbreviated) graphics.push(text('Identificação abreviada para caber na figura.', margin, graphFrameTop + 12, 15, muted))
+  if (abbreviated) graphics.push(text('Identificação abreviada para caber na figura.', margin + 16, graphFrameTop + 12, 15, customPlot ? plotText : muted))
   const tileGap = 12, tileWidth = (contentWidth - 3 * tileGap) / 4
   indicatorItems(dataset, stats).forEach(([label, value], index) => {
     const left = margin + index * (tileWidth + tileGap)
@@ -151,7 +156,7 @@ export function reportOption(dataset: MeasurementDataset, view: ChartView, aspec
     graphics.push({ type: 'image', right: margin + 5, top: 22, style: { image: logoImage ?? info.logo, width: 136, height: 72 } })
   }
   const option: EChartsCoreOption = {
-    ...chartOption({ ...dataset, measurements: selected }, view.range, title, false, true, dataset), title: undefined,
+    ...chartOption({ ...dataset, measurements: selected }, view.range, title, false, true, dataset, customPlot ? { background: colors.chartBackgroundColor, line: colors.lineColor } : undefined), title: undefined,
     graphic: graphics, grid: { top: graphFrameTop + (abbreviated ? 78 : 54), left: margin + 60, right: margin + 26, bottom: height - graphFrameBottom + 82 }, tooltip: { show: false },
   }
   return { option, width, height }

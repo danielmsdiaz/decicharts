@@ -5,8 +5,25 @@ import { reportFormats, reportOption, type ReportFormat } from '../src/features/
 import { reportSvg } from '../src/features/charts/export'
 import { dataset } from './helpers'
 import { chartDetails } from '../src/features/charts/details'
+import { contrastRatio, readableText } from '../src/features/charts/colors'
 
 describe('figura e escalas temporais', () => {
+  it('aplica as cores à figura e mantém contraste dos textos e dados originais', () => {
+    const data = dataset()
+    const range = { start: data.measurements[0].timestamp, end: data.measurements.at(-1)!.timestamp }
+    for (const background of ['#ffffff', '#111827', '#ff0000', '#777777', '#0000ff', '#00ff00']) {
+      expect(contrastRatio(background, readableText(background))).toBeGreaterThanOrEqual(4.5)
+      const view = { title: 'Figura personalizada', range, report: { headerColor: background, chartBackgroundColor: background, lineColor: '#f97316' } }
+      const { option } = reportOption(data, view)
+      const series = option.series as { data: number[][]; lineStyle: { color: string } }[]
+      expect(series[0].lineStyle.color).toBe('#f97316')
+      expect(series[0].data).toEqual(data.measurements.map(point => [point.timestamp, point.value]))
+      const svg = reportSvg(data, view)
+      expect(svg).toContain(`fill="${background}"`)
+      expect(svg).toContain('stroke="#f97316"')
+      expect(svg).toContain(`fill="${readableText(background)}">Figura personalizada</text>`)
+    }
+  })
   it('posiciona referências nas leituras reais e recalcula Leq ao filtrar', () => {
     const data = dataset()
     data.measurements = [50, 60, 70].map((value, index) => ({ timestamp: (index + 1) * 1000, value }))

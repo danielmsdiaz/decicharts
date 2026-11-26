@@ -3,13 +3,16 @@ import type { MeasurementDataset, TimeRange } from '@/features/measurements/type
 import { indicators } from '@/features/measurements/indicators'
 import { selectMeasurements } from '@/features/measurements/statistics'
 import { levelUnit } from '@/features/measurements/temporal'
+import { contrastRatio, readableText, type PlotColors } from './colors'
 
-export function chartDetails(dataset: MeasurementDataset, range: TimeRange, dark: boolean, exporting: boolean): Pick<LineSeriesOption, 'showSymbol' | 'symbolSize' | 'markPoint' | 'markLine'> {
+export function chartDetails(dataset: MeasurementDataset, range: TimeRange, dark: boolean, exporting: boolean, colors?: PlotColors): Pick<LineSeriesOption, 'showSymbol' | 'symbolSize' | 'markPoint' | 'markLine'> {
   const selected = selectMeasurements(dataset.measurements, range)
   const stats = indicators(dataset, selected)
-  const accent = dark ? '#68d9c1' : '#0b7566'
-  const surface = dark ? '#1a2024' : '#ffffff'
-  const foreground = dark ? '#edf1f3' : '#20282e'
+  const accent = colors?.line ?? (dark ? '#68d9c1' : '#0b7566')
+  const surface = colors?.background ?? (dark ? '#1a2024' : '#ffffff')
+  const foreground = colors ? readableText(surface) : dark ? '#edf1f3' : '#20282e'
+  const reference = dark ? '#e5bb72' : '#83571f'
+  const referenceText = colors && contrastRatio(surface, reference) < 4.5 ? foreground : reference
   const unit = levelUnit(dataset)
   const number = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
   function pointLabel(timestamp: number, position: 'top' | 'bottom'): { position: 'top' | 'bottom'; align: 'left' | 'right' | 'center'; offset: [number, number] } {
@@ -33,8 +36,8 @@ export function chartDetails(dataset: MeasurementDataset, range: TimeRange, dark
     },
     markLine: {
       silent: true, symbol: ['none', 'none'], animation: false,
-      lineStyle: { color: dark ? '#e5bb72' : '#926223', width: 1.25, type: 'dashed' },
-      label: { show: true, position: 'insideEndTop', fontSize: exporting ? 14 : 11, color: dark ? '#e5bb72' : '#83571f', backgroundColor: surface, padding: [3, 5], borderRadius: 3,
+      lineStyle: { color: colors ? referenceText : dark ? '#e5bb72' : '#926223', width: 1.25, type: 'dashed' },
+      label: { show: true, position: 'insideEndTop', fontSize: exporting ? 14 : 11, color: referenceText, backgroundColor: surface, padding: [3, 5], borderRadius: 3,
         formatter: () => stats?.leq == null ? '' : `Leq est. ${number(stats.leq)} ${unit}` },
       data: stats?.leq != null && stats.max !== stats.min ? [{ yAxis: stats.leq }] : [],
     },

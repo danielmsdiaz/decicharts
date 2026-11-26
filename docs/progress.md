@@ -5,7 +5,7 @@
 - Fase atual: 13 — Exportação de figuras e transições de interface
 - Status: Implementação e validação local concluídas. Aceites externos pendentes.
 - Última atualização: 2026-11-26
-- Exportação com proporções, prévia no modal, identificação em destaque, gráfico mais baixo e envio de logomarca com limites explícitos implementados. Escala de 0 a 110 dB, cabeçalho fixo e transições preservados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
+- Exportação com proporções, prévia no modal, identificação em destaque, gráfico mais baixo, cores personalizáveis e envio de logomarca com limites explícitos implementados. Escala de 0 a 110 dB, cabeçalho fixo e transições preservados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
 
 ## Resumo das fases
 
@@ -78,9 +78,9 @@ Implementação e validação local das fases 9 a 13 concluídas. Reprodução c
 
 | Verificação | Resultado |
 |-------------|-----------|
-| Vitest padrão | 77 aprovados; 1 integração externa ignorada por padrão |
+| Vitest padrão | 79 aprovados; 1 integração externa ignorada por padrão |
 | Neon real com Prisma | Aprovação histórica da fase 7; fase 9 preparada, não reexecutada sem banco separado |
-| Chrome/Playwright | Fluxos/interface: 17 cenários cobertos nesta tarefa, com 4 reexecutados após os ajustes; skeletons/rede mantêm a validação anterior |
+| Chrome/Playwright | Última tarefa: 4 cenários aprovados; regressões anteriores de fluxos/interface e skeletons/rede preservadas no histórico |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
@@ -389,3 +389,12 @@ Próxima ação:
 - Formatos, tamanho e proporção movidos para o “?” ao lado do rótulo. Erros e processamento continuam junto ao controle. Tooltips em diálogos usam portal associado ao modal e popover manual para permanecer acima da camada modal, sem recorte ou bloqueio de interação; Escape fecha a ajuda antes do diálogo.
 - Validação: 77 testes unitários aprovados, uma integração externa ignorada, lint e TypeScript aprovados. Quatro cenários Chrome aprovados: telas/temas, fluxo por ponto com PNG/SVG, seleção/validação/remoção da logomarca e ajuda por toque. Conferidos acionamento do seletor de arquivos pelo novo botão, tooltip visível acima do modal, descrição acessível, Escape, limites do celular e fechamento ao tocar fora.
 - Capturas desktop e celular inspecionadas; detector dos componentes alterados sem achados. DESIGN.md atualizado. Nenhuma dependência nova, alteração de banco, push ou deploy; modificação anterior em ProfilePage.tsx mantida fora do commit. Pendências externas preservadas.
+
+### 2026-11-26 — Cores da figura
+
+- Três seletores no modal de exportação: cabeçalho, fundo do gráfico e linha. Controles com rótulo, código hexadecimal, amostra de cor, ajuda “?” e ação Restaurar cores. Prévia e arquivos PNG/SVG recebem a mesma personalização; o tema do aplicativo continua independente.
+- Contraste calculado para o título e os eixos, com texto preto/branco; grade, bordas e anotações acompanham o fundo. A cor da linha é preservada conforme a escolha do usuário, com orientação de contraste na ajuda. Sem alterações nos valores, escala, cálculos ou amostragem.
+- Cores opcionais nos metadados da figura, preservadas por ponto ao salvar/reabrir. API aceita somente #RRGGBB e normaliza para minúsculas; análises anteriores continuam usando os padrões. Restaurar remove as preferências e recupera a aparência original. Sem mudança de schema ou migração.
+- Validação: 79 testes unitários aprovados e uma integração externa ignorada. Novos testes verificam contraste mínimo de 4,5:1 para os textos calculados, cores no SVG, pontos originais preservados e rejeição de cores inválidas pela API. Lint, TypeScript e build aprovados.
+- Quatro cenários Chrome cobertos: telas/temas, cores, logomarca e ajuda por toque. Cenário de cores reexecutado com sucesso após explicitar os nomes acessíveis dos seletores; verifica atualização da prévia, SVG, pixels reais do PNG, restauração, independência entre pontos e reabertura com cores salvas. Capturas desktop claro, celular escuro e figura com cabeçalho claro/fundo escuro inspecionadas. Detector dos componentes sem achados.
+- DESIGN.md atualizado. Nenhuma dependência nova, escrita no banco, push ou deploy. Alteração preexistente de ProfilePage.tsx preservada fora da tarefa e do commit. Aceites externos anteriores continuam pendentes.

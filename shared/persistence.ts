@@ -8,6 +8,7 @@ export interface UserProfile { uid: string; name: string | null; email: string |
 export interface ReportInfo {
   enterprise?: string; address?: string; east?: string; north?: string
   datum?: string; zone?: string; hemisphere?: string; startedAt?: string; logo?: string
+  headerColor?: string; chartBackgroundColor?: string; lineColor?: string
 }
 export interface ChartView { title: string; range: TimeRange; report?: ReportInfo }
 export interface DatasetMetadata {

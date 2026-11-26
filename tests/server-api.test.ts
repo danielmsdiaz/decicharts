@@ -44,6 +44,19 @@ describe('contrato e autorização da API', () => {
     expect(repo.preferences).toHaveBeenCalledWith(identity, { timezone: 'UTC', unit: 'dB(A)' })
     expect((await handler(request('profile', 'PUT', { timezone: 'inválido', unit: '' }))).status).toBe(400)
   })
+  it('preserva cores da figura ao salvar e recusa valores fora de #RRGGBB', async () => {
+    const report = { headerColor: '#A1B2C3', chartBackgroundColor: '#101820', lineColor: '#FFA500' }
+    const chart = { title: 'Cores da figura', range: { start: 0, end: 1000 }, report }
+    expect((await handler(request(`analyses/${id}`, 'PATCH', { name: 'Teste', chart }))).status).toBe(200)
+    expect(repo.update).toHaveBeenCalledWith('alice', id, 'Teste', { ...chart, report: { headerColor: '#a1b2c3', chartBackgroundColor: '#101820', lineColor: '#ffa500' } })
+    vi.mocked(repo.update).mockClear()
+    for (const key of Object.keys(report)) {
+      for (const value of ['#fff', '#1234567', 'red', 'url(https://example.invalid)', null, 123]) {
+        expect((await handler(request(`analyses/${id}`, 'PATCH', { name: 'Teste', chart: { ...chart, report: { [key]: value } } }))).status).toBe(400)
+      }
+    }
+    expect(repo.update).not.toHaveBeenCalled()
+  })
   it('rejeita páginas, identificadores, índices, dados e tamanhos inválidos', async () => {
     for (const path of ['analyses?offset=-1', 'analyses/abc', `analyses/${id}/chunks/999`]) expect((await handler(request(path))).status).toBe(400)
     expect((await handler(request(`analyses/${id}/chunks/0`, 'PUT', { points: [[2, 50], [1, 60]] }))).status).toBe(400)

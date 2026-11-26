@@ -426,6 +426,64 @@ test('pontos variáveis: alterna, mantém escala, salva separadamente e reabre f
   expect(errors).toEqual([])
 })
 
+test('cores da figura atualizam SVG/PNG, restauram o padrão e persistem por ponto', async ({ page }) => {
+  await page.goto('/tests/browser/fixture.html')
+  await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'campo.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(multipointWorkbook()) })
+  await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
+  const open = page.getByRole('button', { name: 'Exportar figura', exact: true })
+  await open.click()
+  const dialog = page.getByRole('dialog', { name: 'Exportar figura' })
+  const colors = [['Cabeçalho', '#f5deb3'], ['Fundo do gráfico', '#111827'], ['Linha do gráfico', '#f97316']] as const
+  async function customize() {
+    for (const [label, color] of colors) {
+      await expect(dialog.getByLabel(label, { exact: true })).toBeVisible()
+      await dialog.getByLabel(label, { exact: true }).evaluate((node, value) => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(node, value)
+        node.dispatchEvent(new Event('input', { bubbles: true }))
+        node.dispatchEvent(new Event('change', { bubbles: true }))
+      }, color)
+      await expect(dialog.getByLabel(label, { exact: true })).toHaveValue(color)
+    }
+  }
+  await customize()
+  await dialog.getByText('SVG', { exact: true }).click()
+  await expect(dialog.getByRole('button', { name: 'Baixar SVG' })).toBeEnabled()
+  const source = await dialog.getByAltText('Prévia da figura a baixar').evaluate(async node => (await fetch((node as HTMLImageElement).src)).text())
+  for (const [, color] of colors) expect(source).toContain(color)
+  expect(source).toContain('fill="#000000">MONITORAMENTO DE RUÍDO</text>')
+  await page.screenshot({ path: '/tmp/decicharts-colors-desktop.png', animations: 'disabled' })
+  await dialog.getByRole('button', { name: 'Restaurar cores', exact: true }).click()
+  for (const [label, color] of [['Cabeçalho', '#173c38'], ['Fundo do gráfico', '#f8fbfa'], ['Linha do gráfico', '#116b5c']]) {
+    await expect(dialog.getByLabel(label, { exact: true })).toHaveValue(color)
+  }
+  await expect(dialog.getByRole('button', { name: 'Restaurar cores', exact: true })).toHaveCount(0)
+  await customize()
+  await dialog.getByText('PNG', { exact: true }).click()
+  await expect(dialog.getByRole('button', { name: 'Baixar PNG' })).toBeEnabled()
+  const downloadPromise = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Baixar PNG' }).click()
+  const png = await readFile((await (await downloadPromise).path())!)
+  const pixels = await page.evaluate(async base64 => {
+    const image = new Image(); image.src = `data:image/png;base64,${base64}`; await image.decode()
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height
+    const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0)
+    return [[10, 10], [100, 1800]].map(([x, y]) => [...context.getImageData(x, y, 1, 1).data])
+  }, png.toString('base64'))
+  expect(pixels).toEqual([[245, 222, 179, 255], [17, 24, 39, 255]])
+  await page.getByRole('button', { name: 'Salvar análise', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: 'Próximo ponto', exact: true }).click()
+  await open.click()
+  await expect(dialog.getByLabel('Cabeçalho', { exact: true })).toHaveValue('#173c38')
+  await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click()
+  page.once('dialog', event => event.accept())
+  await page.reload()
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await page.getByRole('button', { name: 'Abrir', exact: true }).click()
+  await open.click()
+  for (const [label, color] of colors) await expect(dialog.getByLabel(label, { exact: true })).toHaveValue(color)
+})
+
 test('logomarca no modal valida limites, atualiza a figura e permite remoção', async ({ page }) => {
   await page.goto('/tests/browser/fixture.html')
   await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'campo.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(multipointWorkbook()) })

@@ -37,6 +37,11 @@ function reportInfo(value: unknown): ReportInfo {
     if (raw[key] !== undefined && raw[key] !== '') result[key] = text(raw[key], key === 'address' ? 500 : 200)
   }
   if (result.startedAt && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(result.startedAt) || !DateTime.fromISO(result.startedAt).isValid)) throw new HttpError(400, 'Data inicial do relatório inválida.')
+  for (const key of ['headerColor', 'chartBackgroundColor', 'lineColor'] as const) {
+    if (raw[key] === undefined) continue
+    if (typeof raw[key] !== 'string' || !/^#[0-9a-f]{6}$/i.test(raw[key])) throw new HttpError(400, 'Escolha uma cor hexadecimal válida (#RRGGBB).')
+    result[key] = raw[key].toLowerCase()
+  }
   if (raw.logo) {
     const logo = text(raw.logo, 175000)
     if (!/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(logo) || Buffer.from(logo.split(',')[1], 'base64').byteLength > 131072) throw new HttpError(400, 'Use um logotipo PNG normalizado com até 128 KiB.')

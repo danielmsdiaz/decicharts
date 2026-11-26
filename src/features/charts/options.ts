@@ -2,6 +2,7 @@ import type { EChartsCoreOption } from 'echarts/core'
 import { datasetTime, levelUnit, secondsText } from '@/features/measurements/temporal'
 import type { MeasurementDataset, TimeRange } from '@/features/measurements/types'
 import { chartDetails } from './details'
+import { mixColor, readableText, type PlotColors } from './colors'
 
 const decibelAxis = { min: 0, max: 110, interval: 20 }
 const usesDecibelScale = (dataset: MeasurementDataset) => /^db(?:\([acz]\))?$/i.test(levelUnit(dataset))
@@ -13,15 +14,15 @@ export function scaleLimitNote(dataset: MeasurementDataset, stats: { min: number
   return ''
 }
 
-export function chartOption(dataset: MeasurementDataset, range: TimeRange, title: string, dark = false, exporting = false, sourceDataset = dataset): EChartsCoreOption {
+export function chartOption(dataset: MeasurementDataset, range: TimeRange, title: string, dark = false, exporting = false, sourceDataset = dataset, colors?: PlotColors): EChartsCoreOption {
   const relative = dataset.timeBasis === 'elapsed'
   const unit = levelUnit(dataset)
-  const foreground = dark ? '#edf1f3' : '#20282e'
-  const muted = dark ? '#a7b4bd' : '#5c6972'
-  const grid = dark ? '#34413b' : '#e0e7e3'
-  const minorGrid = dark ? '#27362f' : '#f0f4f1'
-  const accent = dark ? '#68d9c1' : '#116b5c'
-  const surface = dark ? '#192420' : '#ffffff'
+  const foreground = colors ? readableText(colors.background) : dark ? '#edf1f3' : '#20282e'
+  const muted = colors ? foreground : dark ? '#a7b4bd' : '#5c6972'
+  const grid = colors ? mixColor(colors.background, foreground, 0.18) : dark ? '#34413b' : '#e0e7e3'
+  const minorGrid = colors ? mixColor(colors.background, foreground, 0.07) : dark ? '#27362f' : '#f0f4f1'
+  const accent = colors?.line ?? (dark ? '#68d9c1' : '#116b5c')
+  const surface = colors?.background ?? (dark ? '#192420' : '#ffffff')
   const singleInstant = exporting && range.start === range.end
   const axisFontSize = exporting ? 18 : 14
   const decibels = usesDecibelScale(dataset)
@@ -86,7 +87,7 @@ export function chartOption(dataset: MeasurementDataset, range: TimeRange, title
       { type: 'slider', startValue: range.start, endValue: range.end, filterMode: 'filter', bottom: 12, height: 28, showDetail: true, showDataShadow: true, borderColor: grid, fillerColor: dark ? '#294a45' : '#cce6e0', handleStyle: { color: accent }, textStyle: { color: muted },
         labelFormatter: (value: number) => datasetTime(dataset, value), dataBackground: { lineStyle: { color: accent, opacity: 0.4 }, areaStyle: { color: accent, opacity: 0.06 } } },
     ],
-    series: [{ id: 'measurements', name: `Nível sonoro (${unit})`, type: 'line', data: dataset.measurements.map(point => [point.timestamp, point.value]), smooth: false, ...chartDetails(sourceDataset, range, dark, exporting), connectNulls: false, clip: true,
+    series: [{ id: 'measurements', name: `Nível sonoro (${unit})`, type: 'line', data: dataset.measurements.map(point => [point.timestamp, point.value]), smooth: false, ...chartDetails(sourceDataset, range, dark, exporting, colors), connectNulls: false, clip: true,
       lineStyle: { width: exporting ? 2 : 1.8, color: accent, cap: 'round', join: 'round' }, itemStyle: { color: surface, borderColor: accent, borderWidth: 1.5 },
       emphasis: { disabled: false, itemStyle: { color: accent, borderColor: surface, borderWidth: 2 } } }],
   }

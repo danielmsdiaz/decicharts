@@ -6,6 +6,8 @@ import type { ChartView } from '../../../shared/persistence'
 import { createFigureBlob, downloadFigure } from './export'
 import { defaultReportFormat, reportFormats, reportPixelRatio, type ReportFormat } from './report'
 import { LogoInput } from './LogoInput'
+import { FigureColors } from './FigureColors'
+import { defaultFigureColors, type FigureColors as ColorValues } from './colors'
 
 const reportFormatKey = 'decicharts-report-format'
 const fileTypes = [
@@ -117,6 +119,14 @@ export function FigureExport({ dataset, view, disabled, onStatus, onChange }: {
               </div>
               {format === 'png' && <p id={sizeId} className="export-file-size">{width * reportPixelRatio} × {height * reportPixelRatio} px</p>}
             </fieldset>
+            <FigureColors report={view.report} onChange={colors => {
+              const currentView = latestView.current
+              const report = { ...currentView.report, ...colors }
+              for (const key of Object.keys(defaultFigureColors) as (keyof ColorValues)[]) {
+                if (report[key] === defaultFigureColors[key]) delete report[key]
+              }
+              onChange({ ...currentView, report })
+            }} />
             <LogoInput value={view.report?.logo} onBusyChange={setLogoBusy} onChange={logo => {
               const currentView = latestView.current
               onChange({ ...currentView, report: { ...currentView.report, logo } })
