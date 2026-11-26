@@ -12,7 +12,7 @@ export function usePagination(doc: ReportDocument, assets: ReadonlyMap<string, R
     return () => { active = false }
   }, [])
   useLayoutEffect(() => {
-    const root = document.createElement('div'); root.className = 'report-paper report-pagination-measure'
+    const root = document.createElement('div'); root.className = 'report-print-content report-pagination-measure'
     document.body.append(root)
     try { setLayout({ pages: paginateReport(doc, assets, root), error: '' }) }
     catch (issue) { setLayout(previous => ({ ...previous, error: issue instanceof Error ? issue.message : 'Não foi possível distribuir as páginas.' })) }

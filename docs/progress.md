@@ -90,7 +90,7 @@ Editor de documento: conferir a incorporação do trecho no relatório maior usa
 |-------------|-----------|
 | Vitest padrão | 101 aprovados; 4 testes de integração de banco ignorados por padrão |
 | Neon real com Prisma | Migração 0002 e consulta real do histórico conferidas; integração ampliada com gravações sintéticas aguarda banco separado |
-| Chrome/Playwright | 34 cenários cobertos; nove cenários de documentos aprovados, incluindo continuação automática de texto/tabela/legenda, páginas, rolagem da prévia e Word com todas as páginas em ordem. Regressão anterior completa de 27 aprovada; demais verificações registradas abaixo |
+| Chrome/Playwright | 35 cenários cobertos; dez cenários de documentos aprovados, incluindo continuação automática de texto/tabela/legenda, páginas, rolagem da prévia e Word com todas as páginas em ordem. Regressão anterior completa de 27 aprovada; demais verificações registradas abaixo |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
@@ -517,3 +517,12 @@ Próxima ação:
 - Editor e prévia mantêm folhas de altura fixa; miniaturas e Word compartilham a distribuição. Word usa uma fotografia com quebras explícitas. Página ativa preservada ao voltar da análise. Controles de formatação e figura fora do conteúdo medido, no painel lateral; legendas crescem com o texto.
 - Nove cenários Chrome de documentos aprovados: texto de 1.500 palavras em várias folhas, preservação integral e redução de páginas ao apagar, tabela de 70 linhas com edição no meio, legenda de 100 linhas com apenas uma imagem no Word, além dos fluxos anteriores. 101 testes unitários aprovados, com fragmentos, marcas, tabelas, inserção/exclusão e numeração de listas. Regressões cobrem digitação no limite com foco e desfazer/refazer, mover/juntar colunas sem perder trechos ocultos e inserir em coluna vazia de continuação respeitando a ordem. Lint, TypeScript/build aprovados e detector de layout sem achados. Capturas desktop/celular conferidas; revisão especializada final aprovada após corrigir palavras partidas e os dois casos de colunas. Limite de altura das imagens compartilhado com a exportação.
 - Sem API, migração, escrita no banco, push ou deploy. Documento segue local à aba. Aceite visual no Microsoft Word e pendências anteriores permanecem.
+
+
+### 2026-11-26 — Aproveitamento da área útil da folha
+
+- Corrigida quebra prematura reportada em capturas com apenas um par de gráficos e grande área vazia: o cálculo ainda reservava 54px por folha e 96px por trecho/elemento para controles que não aparecem no documento.
+- Medição agora usa apenas conteúdo imprimível com os mesmos estilos da prévia: 640×969px úteis, colunas de 309px com intervalo de 22px e 8px entre trechos. Fonte e tamanho das imagens preservados; não há limite fixo de gráficos por página.
+- Ações de trecho/elemento e seletor de colunas movidos para a lateral; pontos de inserção na margem, sem ocupar altura. Editor alinhado à prévia em espaçamento, títulos, tabelas e legendas. O fluxo automático, as quebras manuais e os intervalos do documento fonte permanecem preservados.
+- Regressão Chrome reproduz título, texto e dois pares de gráficos na primeira folha; terceiro par segue à segunda. Prévia desktop/celular conferida e Word contém seis imagens e uma quebra de página. Revisão especializada final aprovada, sem bloqueios. Validação final: dez cenários Chrome e 101 testes unitários aprovados (quatro integrações de banco ignoradas); lint, TypeScript/build e diff sem erros. Detector de layout sem achados.
+- Sem API, dependências, migração, escrita no banco, push ou deploy. Aceite no Microsoft Word e persistência de documentos continuam pendentes.

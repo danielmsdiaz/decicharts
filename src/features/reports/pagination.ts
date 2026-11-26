@@ -6,10 +6,10 @@ import { deleteReportPage, FIRST_PAGE, reportPages, type ReportPage } from './pa
 import { MAX_REPORT_FIGURE_HEIGHT, checkDocumentSize, duplicateRow, insertBlocks, newBlock, rowFor, type InsertTarget, type ReportAsset, type ReportBlock, type ReportDocument, type ReportRow } from './model'
 
 export const PAGE_WIDTH = 794, PAGE_HEIGHT = 1123, PAGE_MARGIN = 76
-// Editing controls occupy their own space; reserve it in the shared layout.
-const PAGE_CONTENT_HEIGHT = PAGE_HEIGHT - PAGE_MARGIN * 2 - 54
+// Only document content occupies the printable area; controls live outside it.
+const PAGE_CONTENT_HEIGHT = PAGE_HEIGHT - PAGE_MARGIN * 2 - 2
 const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2 - 2
-const ROW_SPACE = 96, BLOCK_SPACE = 96
+const ROW_SPACE = 8
 export interface RichFragment { type: 'rich'; from: number; to: number; openStart: number; openEnd: number }
 export interface FigureFragment { type: 'figure'; from: number; to: number; image: boolean; imageHeight: number }
 export type BlockFragment = RichFragment | FigureFragment
@@ -55,15 +55,15 @@ export function paginateReport(doc: ReportDocument, assets: ReadonlyMap<string, 
   function measure(piece: Piece, width: number) {
     const key = JSON.stringify([piece, width])
     const cached = cache.get(key); if (cached !== undefined) return cached
-    const outer = document.createElement('div'); outer.className = `report-richtext report-${piece.block.kind}`; outer.style.width = `${width}px`
-    const element = document.createElement('div'); element.className = 'tiptap'; outer.append(element)
+    const outer = document.createElement('div'); outer.style.width = `${width}px`; outer.style.display = 'flow-root'
+    const element = document.createElement(piece.block.kind === 'title' ? 'h1' : piece.block.kind === 'subtitle' ? 'h2' : 'div'); outer.append(element)
     if ('content' in piece.block) element.append(serializer.serializeFragment(reportSchema.nodeFromJSON(piece.block.content).content))
     else if (piece.block.kind === 'figure' && piece.fragment.type === 'figure') {
-      const figure = document.createElement('figure'); figure.className = 'report-figure'
+      const figure = document.createElement('figure')
       const { image, imageHeight } = piece.fragment
       if (image) { const box = document.createElement('div'); box.style.height = `${imageHeight}px`; figure.append(box) }
-      const caption = document.createElement('div'); caption.className = 'report-caption-content'; caption.textContent = piece.block.caption || '\u00a0'; figure.append(caption)
-      element.className = ''; element.append(figure)
+      if (piece.block.caption.trim()) { const caption = document.createElement('figcaption'); caption.textContent = piece.block.caption; figure.append(caption) }
+      element.append(figure)
     }
     root.replaceChildren(outer)
     const height = Math.ceil(outer.getBoundingClientRect().height)
@@ -89,7 +89,7 @@ export function paginateReport(doc: ReportDocument, assets: ReadonlyMap<string, 
       })
       const fits = (end: number) => measure(richPiece(original, source, from, end), width) <= available
       let end = binaryFit([...new Set(boundaries)].sort((a, b) => a - b), fits)
-      if (!(original.kind === 'table' || source.firstChild?.type.name === 'table') || (end < 0 && available >= PAGE_CONTENT_HEIGHT - ROW_SPACE - BLOCK_SPACE - 52)) end = Math.max(end, binaryFit(characters, fits))
+      if (!(original.kind === 'table' || source.firstChild?.type.name === 'table') || (end < 0 && available >= PAGE_CONTENT_HEIGHT - ROW_SPACE)) end = Math.max(end, binaryFit(characters, fits))
       const wordEnd = words.filter(position => position <= end).at(-1)
       if (wordEnd !== undefined) end = Math.max(boundaries.filter(position => position <= end).sort((a, b) => a - b).at(-1) ?? -1, wordEnd)
       if (end <= from) return null
@@ -117,7 +117,7 @@ export function paginateReport(doc: ReportDocument, assets: ReadonlyMap<string, 
     }
     nextPage()
     manual.rows.forEach((row, localIndex) => {
-      const sourceIndex = manual.start + localIndex, width = row.columns.length === 2 ? (CONTENT_WIDTH - 20) / 2 : CONTENT_WIDTH
+      const sourceIndex = manual.start + localIndex, width = row.columns.length === 2 ? (CONTENT_WIDTH - 22) / 2 : CONTENT_WIDTH
       let remaining: Piece[][] = row.columns.map(column => column.filter(block => block.kind !== 'break').map(block => {
         if ('content' in block) { const source = reportSchema.nodeFromJSON(block.content); return richPiece(block, source, 0, source.content.size) }
         if (block.kind === 'figure') {
@@ -126,21 +126,21 @@ export function paginateReport(doc: ReportDocument, assets: ReadonlyMap<string, 
         }
         throw new Error('Elemento de documento inválido.')
       }))
-      if (!remaining.some(column => column.length) && used && used + ROW_SPACE + 140 > PAGE_CONTENT_HEIGHT) nextPage()
+      if (!remaining.some(column => column.length) && used && used + ROW_SPACE > PAGE_CONTENT_HEIGHT) nextPage()
       let first = true
       while (first || remaining.some(column => column.length)) {
         first = false
         const available = PAGE_CONTENT_HEIGHT - used - ROW_SPACE
         const taken: Piece[][] = [], rest: Piece[][] = []; let rowHeight = 0
         for (const column of remaining) {
-          const values: Piece[] = []; let height = row.columns.length === 2 && column.length ? 52 : 0, i = 0
+          const values: Piece[] = []; let height = 0, i = 0
           for (; i < column.length; i++) {
-            const piece = column[i], controls = row.columns.length === 2 || column.length > 1 ? BLOCK_SPACE : 0
-            const room = available - height - controls, blockHeight = measure(piece, width)
-            if (blockHeight <= room) { values.push(piece); height += blockHeight + controls; continue }
-            const keepFigure = piece.block.kind === 'figure' && used > 0 && blockHeight <= PAGE_CONTENT_HEIGHT - ROW_SPACE - controls - (row.columns.length === 2 ? 52 : 0)
+            const piece = column[i]
+            const room = available - height, blockHeight = measure(piece, width)
+            if (blockHeight <= room) { values.push(piece); height += blockHeight; continue }
+            const keepFigure = piece.block.kind === 'figure' && used > 0 && blockHeight <= PAGE_CONTENT_HEIGHT - ROW_SPACE
             const parts = !keepFigure && room >= 50 ? split(piece, width, room) : null
-            if (parts) { values.push(parts[0]); height += measure(parts[0], width) + controls; rest.push([parts[1], ...column.slice(i + 1)]); break }
+            if (parts) { values.push(parts[0]); height += measure(parts[0], width); rest.push([parts[1], ...column.slice(i + 1)]); break }
             rest.push(column.slice(i)); break
           }
           if (i === column.length) rest.push([])
@@ -150,7 +150,6 @@ export function paginateReport(doc: ReportDocument, assets: ReadonlyMap<string, 
           if (used) { nextPage(); continue }
           throw new Error('Um elemento não cabe na folha A4. Use Desfazer e divida a linha da tabela ou o conteúdo deste elemento.')
         }
-        if (!remaining.some(column => column.length)) rowHeight = Math.max(rowHeight, 140)
         const visible: ReportRow = { ...row, columns: taken.map(column => column.map(piece => piece.block)) }
         page!.columnOffsets![row.id] = remaining.map((column, ci) => column.length ? row.columns[ci].findIndex(block => block.id === column[0].block.id) : row.columns[ci].length)
         page!.rows.push(visible); page!.start = Math.min(page!.rows.length === 1 ? sourceIndex : page!.start, sourceIndex); page!.end = sourceIndex + 1
