@@ -465,6 +465,11 @@ a {
   overflow-wrap: anywhere;
   box-shadow: 0 4px 14px rgb(0 0 0 / 12%);
 }
+.help-tooltip[popover] {
+  inset: auto;
+  margin: 0;
+  border: 0;
+}
 .preview-caption {
   display: flex;
   align-items: center;
@@ -1073,14 +1078,12 @@ a {
   gap: 10px;
   min-width: 0;
 }
-.logo-input input[type='file'] {
-  max-width: 100%;
-  font-size: 12px;
-}
-.logo-input-help {
-  color: var(--muted-foreground);
-  font-size: 12px;
-  line-height: 1.6;
+.logo-input-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
 }
 .logo-input-preview {
   display: flex;
