@@ -45,16 +45,16 @@ Validação real: entrar com Google, conferir nome/foto/e-mail, recarregar e ver
 
 A escolha de aba só aparece para planilhas com várias abas. Quando uma coluna não é reconhecida, a tela pede somente essa escolha. Os demais campos ficam em **Ajustar leitura do arquivo**; a data de referência aparece apenas para arquivos com horários sem data.
 
-No gráfico, escolha **Ponto de medição** quando houver vários pontos. Cada um mantém título, período e informações da figura ao alternar. O período e o título podem ser alterados em **Ajustar período e título**; dados de localização, data inicial e logotipo ficam em **Informações da figura**. **Exportar figura**, ao lado de **Salvar análise**, abre as opções de download.
+No gráfico, escolha **Ponto de medição** quando houver vários pontos. Cada um mantém título, período e informações da figura ao alternar. O período e o título podem ser alterados em **Ajustar período e título**; dados de localização, data inicial e logotipo ficam em **Informações da figura**. **Exportar figura**, no painel do gráfico, abre as opções de download. **Salvar análise** fica na faixa do arquivo e abrange todos os pontos.
 
 As setas ao lado do seletor avançam/voltam entre pontos e param nas extremidades. Explicações ficam nos ícones de ajuda: passe o cursor, use foco pelo teclado ou toque no celular; Escape ou toque fora fecha a ajuda.
 
 ## Perfil e análises salvas
 
 - **Meu perfil:** nome/foto/e-mail do Google e preferências de fuso/unidade para novas importações. Alterar preferências não reinterpreta medições já abertas ou salvas.
-- **Salvar análise:** salva somente o ponto selecionado, suas medições, metadados e configuração da figura. **Salvar alterações** atualiza título, período, informações da figura e logotipo. Os demais pontos continuam apenas na sessão até serem salvos individualmente; reabrir pelo histórico recupera somente o ponto salvo.
-- **Minhas análises:** histórico paginado de sua conta, com Abrir e Excluir. Excluir remove os metadados e blocos de medições por cascata no banco.
-- **Fechar análise:** remove apenas a cópia do workspace; a versão salva continua no histórico.
+- **Salvar análise:** salva todos os pontos da aba importada como um conjunto. Cada ponto preserva medições completas, título, intervalo, identificação, cores e logomarca. **Nome da análise** identifica o conjunto no histórico e é independente dos títulos dos gráficos. **Salvar alterações** atualiza os ajustes de todos os pontos, sem reenviar medições.
+- **Minhas análises:** uma entrada por importação, com arquivo, aba e contagem de pontos/medições. Abrir recupera todos os pontos na ordem original. Excluir remove o conjunto inteiro, incluindo blocos e tentativas, após confirmação. Análises antigas continuam disponíveis como conjuntos unitários; arquivos de mesmo nome não são agrupados.
+- **Fechar arquivo/análise:** remove apenas a cópia do workspace; a versão salva continua no histórico. Reimportar, mesmo com o mesmo nome, cria outra análise. Salvar é sempre uma ação explícita; outras abas do Excel e o arquivo original não são incluídos.
 - O arquivo original Excel/CSV e as células originais dos diagnósticos não são enviados ao Neon. Guardamos somente os dados necessários para reabrir a análise, incluindo razões e números de linhas inválidas. Um logotipo opcional é normalizado localmente para PNG de até 512 px/128 KiB e enviado somente ao salvar.
 
 ## Neon, Prisma e criação das tabelas
@@ -66,7 +66,7 @@ As setas ao lado do seletor avançam/voltam entre pontos e param nas extremidade
 
 O projeto usa **Prisma ORM 7** com adaptador Neon. Os modelos estão em `prisma/schema.prisma`, as migrações SQL versionadas em `prisma/migrations/` e a configuração da CLI em `prisma.config.ts`. O comando `db:migrate` chama `prisma migrate deploy`: aplica somente migrações pendentes e pode ser repetido. A migração inicial cria o schema **decicharts**, com `profiles`, `analyses`, `analysis_chunks` e o histórico legado `schema_migrations`. O histórico atual é controlado por `_prisma_migrations` no mesmo schema.
 
-**Banco da versão anterior, com tabelas/dados existentes:** execute `npm run db:baseline` uma vez, antes de `db:migrate`. Esse comando compara os modelos ao banco, registra a migração inicial como já aplicada e confere contagens e fingerprints antes/depois, sem recriar tabelas. Isso **já foi realizado no Neon configurado durante esta implementação**; os dados existentes foram preservados. A baseline exige um banco compatível e não serve para inicializar um banco vazio.
+**Banco da versão anterior, com tabelas/dados existentes:** execute `npm run db:baseline` uma vez, antes de `db:migrate`. Esse comando compara a estrutura histórica de `prisma/baseline.prisma` ao banco, registra a migração inicial como já aplicada e confere contagens e fingerprints antes/depois, sem recriar tabelas. Isso **já foi realizado no Neon configurado durante esta implementação**; os dados existentes foram preservados. A baseline exige um banco compatível e não serve para inicializar um banco vazio.
 
 Comandos disponíveis:
 
@@ -82,13 +82,15 @@ O Client é gerado automaticamente na instalação e no build, em `server/genera
 
 Para futuras alterações de estrutura, use um **banco ou branch Neon de desenvolvimento**: altere `prisma/schema.prisma`, execute `npm run db:migrate:dev -- --name nome_da_alteracao`, revise e versione o SQL gerado. O comando de desenvolvimento pode pedir reset ao detectar divergências; não o execute no banco que contém os dados do usuário. Em produção, aplique o SQL revisado com `npm run db:migrate`. Restrições PostgreSQL `CHECK` são mantidas no SQL das migrações, pois não são representadas pelos modelos Prisma.
 
-O repositório usa consultas tipadas do Prisma e transações para salvar/publicar blocos. A única consulta SQL da aplicação é uma trava de linha parametrizada (`SELECT ... FOR UPDATE`) para proteger gravações simultâneas. As verificações administrativas da baseline também usam SQL parametrizado.
+O repositório usa consultas tipadas do Prisma e transações para salvar/publicar blocos. A consulta SQL da aplicação é uma trava de linha parametrizada (`SELECT ... FOR UPDATE`) para proteger gravações simultâneas. As verificações administrativas da baseline também usam SQL parametrizado.
 
 A API valida a assinatura RS256, emissor, audiência, expiração e provedor Google dos tokens Firebase usando as chaves públicas do Google. `FIREBASE_PROJECT_ID` é opcional; quando vazio, o servidor usa `VITE_FIREBASE_PROJECT_ID`. Não é necessário baixar uma chave privada de service account. O UID é extraído do token verificado e filtra todas as consultas.
 
-Séries são transferidas em blocos de até 5.000 pontos, com até três requisições simultâneas, evitando ultrapassar o limite de corpo das funções da Vercel. A API aceita até 512 KiB por requisição. Uma análise só aparece no histórico depois de conferir todos os blocos, sua ordem, duplicados e contagens. Repetir o salvamento após falha na mesma sessão usa o mesmo ID; não cria outra análise. Rascunhos incompletos com mais de 24 horas são removidos na próxima tentativa de salvar do mesmo usuário.
+Séries são transferidas em blocos de até 5.000 pontos, com até três requisições simultâneas, evitando ultrapassar o limite de corpo das funções da Vercel. A API aceita até 512 KiB por requisição. Uma análise só aparece no histórico depois de conferir todos os pontos, blocos, ordem, duplicados e contagens. O limite de três requisições é global, não por ponto. Repetir o salvamento após falha na mesma sessão usa os mesmos IDs e a mesma fotografia dos ajustes, sem duplicação. Edições feitas durante o envio ficam pendentes para o próximo salvamento. Atualizações publicam uma nova fotografia inteira; a versão anterior permanece disponível até a conclusão. Conflitos entre sessões não sobrescrevem dados e permitem reabrir a versão salva mediante confirmação. Rascunhos e fotografias inativas com mais de 24 horas são removidos na próxima criação de importação do mesmo usuário; a fotografia publicada nunca é removida por essa limpeza. Não há recuperação automática de trabalho local após recarga.
 
-Rotas da API: `GET/PUT /api/profile`, `GET/POST /api/analyses`, `GET/PATCH/DELETE /api/analyses/:id`, `GET/PUT /api/analyses/:id/chunks/:index`, `POST /api/analyses/:id/complete`. Campos de identidade enviados pelo cliente não determinam propriedade.
+API do conjunto: `GET/POST /api/imports`, `GET/DELETE /api/imports/:id`, `POST /api/imports/:id/saves`, envio de pontos/blocos em `/api/imports/:id/saves/:saveId/points/:pointId`, conclusão de ponto e tentativa com `/complete`, leitura paginada por versão em `/api/imports/:id/points?saveId=...` e blocos em `/api/imports/:id/points/:pointId/chunks/:index`. Metadados paginam por quantidade e bytes, para acomodar logomarcas sem exceder 512 KiB.
+
+Rotas legadas para conjuntos unitários: `GET/PUT /api/profile`, `GET/POST /api/analyses`, `GET/PATCH/DELETE /api/analyses/:id`, `GET/PUT /api/analyses/:id/chunks/:index`, `POST /api/analyses/:id/complete`. Campos de identidade enviados pelo cliente não determinam propriedade.
 
 ## Importação e precisão
 
@@ -98,6 +100,7 @@ Rotas da API: `GET/PUT /api/profile`, `GET/POST /api/analyses`, `GET/PATCH/DELET
 - Tempo decorrido usa segundos, inclusive frações com precisão máxima de 1 ms. Não é convertido em datas Excel nem ganha uma data fictícia. Data/hora inicial opcional aparece somente como informação da figura.
 - Arquivos HTML/XML renomeados como `.xls` devem ser salvos novamente como XLSX ou CSV.
 - CSV: delimitador detectado automaticamente, UTF-8/BOM e alternativa Windows-1252. Valores com vírgula decimal em arquivos delimitados por vírgulas devem estar entre aspas.
+- Pontos sem nenhuma leitura válida bloqueiam a conclusão da importação e permanecem identificados na prévia; corrija o arquivo ou o mapeamento. CSV com coluna de identificação por linha não ganha agrupamento automático nesta entrega.
 - Confira aba, cabeçalho, colunas, formato de data, decimal, unidade e fuso antes de confirmar. Colunas ambíguas permanecem sem seleção automática.
 - Datas brasileiras, ISO, segundos/milissegundos e datas seriais Excel 1900/1904. Horários separados aceitam `HH:mm[:ss[.SSS]]` ou fração numérica Excel.
 - Para arquivos só com horários, informe uma data de referência. Todas as linhas usam essa data; não se deduz mudança de dia. Para vários dias, forneça datas nas linhas.
@@ -142,11 +145,14 @@ npm run build
 npm run preview
 npm run test:e2e
 npm run test:neon  # Exige TEST_DATABASE_URL exclusivo e diferente da aplicação
+npm run test:postgres:local  # PostgreSQL descartável local; requer pg_virtualenv (Linux/Debian)
 ```
 
 `npm run dev` serve frontend e API local. `npm run preview` serve apenas o frontend estático e não substitui o servidor da API.
 
-O teste Neon é separado dos testes comuns: cria dois usuários sintéticos e 5.001 medições, testa persistência/isolamento/exclusão e remove seus registros ao final. Requer migração aplicada e conexão de rede. **TEST_DATABASE_URL é obrigatório**; não há alternativa automática para DATABASE_URL. O teste bloqueia o mesmo host/banco da aplicação, incluindo URLs pooled/diretas.
+Os testes de banco são separados dos testes comuns: cobrem o fluxo legado de 5.001 medições e conjuntos de dez pontos, falha no último, repetição, atualização atômica, versões concorrentes, paginação de logomarcas, isolamento e exclusão; removem seus usuários sintéticos ao final. Requer migração aplicada e conexão de rede. **TEST_DATABASE_URL é obrigatório**; não há alternativa automática para DATABASE_URL. O teste bloqueia o mesmo host/banco da aplicação, incluindo URLs pooled/diretas.
+
+`test:postgres:local` cria e destrói um PostgreSQL 17 local com `pg_virtualenv`, aplica as migrações somente nesse destino, compara fingerprints de dados/configurações/datas legados e confere os schemas anterior e atual contra Prisma. O adaptador `@prisma/adapter-pg` é usado apenas nos testes de loopback; a aplicação continua com o adaptador Neon. O comando exige o marcador do cluster descartável e não usa a conexão da aplicação como destino.
 
 Para preparar o ambiente separado:
 
@@ -154,6 +160,8 @@ Para preparar o ambiente separado:
 2. Copie a conexão desse branch para `TEST_DATABASE_URL` em `.env.local`; mantenha as URLs da aplicação apontando para seu ambiente atual enquanto roda a integração.
 3. Se o branch copiar o esquema atual, confira-o; em banco vazio, aplique migrações com uma configuração explícita dedicada ao branch de desenvolvimento.
 4. Execute `npm run test:neon`. Nunca use `db:migrate:dev` ou reset no banco com dados reais. Para desenvolvimento cotidiano, use configuração/arquivo de ambiente próprio do branch dev; mantenha as variáveis de produção na hospedagem correspondente.
+
+**Atualização para salvamento por importação:** aplicar a migração revisada `0002_import_collections` antes de disponibilizar o novo backend/frontend. Ela foi ensaiada no banco local descartável, mas não aplicada ao banco Neon da aplicação nesta entrega. Os endpoints antigos continuam atendendo conjuntos unitários. Não realizar rollback para o backend antigo sem uma estratégia de retorno compatível com as novas relações; não excluir tabelas para reverter.
 
 Nenhum branch é provisionado automaticamente pelo aplicativo. Na entrega de 25/11/2026, a integração de escrita não foi repetida porque não havia TEST_DATABASE_URL separado.
 

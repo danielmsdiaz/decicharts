@@ -14,7 +14,7 @@ for (const mode of ['desktop', 'mobile'] as const) {
     await mockAccountApi(page)
     const profile = gate(), history = gate(), chart = gate()
     await page.route('**/api/profile', async route => { await profile.pending; await route.fallback() })
-    await page.route('**/api/analyses', async route => { await history.pending; await route.fallback() })
+    await page.route('**/api/imports', async route => { await history.pending; await route.fallback() })
     await page.route('**/src/features/charts/ChartWorkspace.tsx*', async route => { await chart.pending; await route.fallback() })
     await page.goto('/tests/browser/fixture.html')
     if (mode === 'mobile') await page.getByRole('button', { name: 'Ativar tema escuro' }).click()
@@ -58,13 +58,13 @@ test('skeleton encerra em erro, reaparece na tentativa e pagina sem ocultar resu
   await mockAccountApi(page)
   const retry = gate(), more = gate()
   let request = 0
-  const item = (id: string) => ({ id, name: `Ponto ${id}`, fileName: 'sintetico.csv', count: 2, unit: 'dB', start: 1795431600000, end: 1795431601000, timezone: 'America/Recife' })
-  await page.route('**/api/analyses*', async route => {
+  const item = (id: string) => ({ id, name: `Ponto ${id}`, fileName: 'sintetico.csv', recordCount: 2, pointCount: 1, sheetName: 'CSV', version: 1, saveId: id, updatedAt: '2026-11-26T12:00:00Z' })
+  await page.route('**/api/imports*', async route => {
     request++
     if (request === 1) return route.fulfill({ status: 503, json: { error: 'Serviço indisponível para o teste.' } })
-    if (request === 2) { await retry.pending; return route.fulfill({ json: { analyses: [item('A')], hasMore: true } }) }
+    if (request === 2) { await retry.pending; return route.fulfill({ json: { imports: [item('A')], hasMore: true } }) }
     await more.pending
-    return route.fulfill({ json: { analyses: [item('B')], hasMore: false } })
+    return route.fulfill({ json: { imports: [item('B')], hasMore: false } })
   })
   await page.goto('/tests/browser/fixture.html')
   await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()

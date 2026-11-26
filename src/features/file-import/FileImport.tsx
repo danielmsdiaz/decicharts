@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent } from 'react'
+import { useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { ArrowRight, Check, CheckCheck, FileSpreadsheet, FolderOpen, SlidersHorizontal, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,9 +18,12 @@ interface FileImportProps {
   saved?: boolean
   onImport: (dataset: MeasurementDataset, all?: MeasurementDataset[]) => boolean | Promise<boolean>
   onRemove: () => boolean | Promise<boolean>
+  actions?: ReactNode
+  pointCount?: number
+  recordCount?: number
 }
 
-export function FileImport({ dataset, saved = false, onImport, onRemove }: FileImportProps) {
+export function FileImport({ dataset, saved = false, onImport, onRemove, actions, pointCount = 1, recordCount }: FileImportProps) {
   const { profile, loading: profileLoading, error: profileError } = useAccount()
   const form = useFileImport(profile?.preferences ?? DEFAULT_PREFERENCES)
   const input = useRef<HTMLInputElement>(null)
@@ -28,6 +31,7 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
   const [accepting, setAccepting] = useState(false)
   const { file, source, mapping, candidate, busy, settingsOpen } = form
   const sheet = source?.sheets[form.sheetIndex]
+  const invalidPoints = form.datasets.filter(data => !data.validRecords)
   const headers = sheet?.rows[mapping?.headerRow ?? 0] ?? []
   const columnOptions = headers.map((header, index) => (
     <option key={index} value={index}>{String(header ?? '').trim().slice(0, 80) || `Coluna ${index + 1}`}</option>
@@ -60,9 +64,10 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2 text-sm text-primary"><CheckCheck className="size-4" aria-hidden="true" />Arquivo em análise</div>
             <p className="truncate font-semibold" title={dataset.fileName}>{dataset.fileName}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{count(dataset.validRecords)} medições · {dataset.sheetName}{saved ? (dataset.point ? ' · Ponto salvo na sua conta' : ' · Salva na sua conta') : ' · Ainda não salva'}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{pointCount} {pointCount === 1 ? 'ponto' : 'pontos'} · {count(recordCount ?? dataset.validRecords)} medições · {dataset.sheetName}{saved ? ' · Salva na sua conta' : ' · Ainda não salva'}</p>
           </div>
           <div className="file-actions">
+            {actions}
             <Button variant="outline" disabled={profileLoading} onClick={() => input.current?.click()}><FolderOpen />Trocar arquivo</Button>
             <Button variant="outline" onClick={async () => { if (await onRemove()) form.removed() }}><X />{saved ? (dataset.point ? 'Fechar arquivo' : 'Fechar análise') : 'Remover arquivo'}</Button>
           </div>
@@ -192,8 +197,9 @@ export function FileImport({ dataset, saved = false, onImport, onRemove }: FileI
         )}
       </div>
       <div className="import-footer">
+        {invalidPoints.length > 0 && <p role="alert" className="notice error w-full">Corrija os pontos sem medições válidas antes de continuar: {invalidPoints.map(data => data.point?.id ?? data.fileName).join(', ')}.</p>}
         {(busy || !candidate?.validRecords) && <p className="mr-auto text-sm text-muted-foreground">{busy ? 'Preparando seus dados…' : 'Confira a leitura para continuar.'}</p>}
-        <Button disabled={busy || accepting || !candidate?.validRecords} onClick={async () => {
+        <Button disabled={busy || accepting || !candidate?.validRecords || invalidPoints.length > 0} onClick={async () => {
           if (!candidate || accepting) return
           setAccepting(true)
           try { if (await onImport(candidate, form.datasets)) form.finish() }

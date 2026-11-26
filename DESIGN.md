@@ -166,7 +166,7 @@ Header e conteúdo compartilham largura máxima de (1440px). O header permanece 
 
 Até (900px), o gutter passa a (24px). Até (640px), o conteúdo usa (26px 18px 48px) e gap de (20px); a navegação ocupa uma faixa de (52px) abaixo da marca e dos controles. A página suporta largura mínima de (320px). As larguras de verificação desta entrega foram (1440px) e (390px).
 
-O arquivo ativo ocupa uma faixa própria, seguida do seletor de ponto quando há vários e do painel de gráfico em toda a largura. Os quatro indicadores ficam numa linha no desktop e em duas colunas no celular. Salvar e exportar ocupam a mesma faixa e podem quebrar linha quando o espaço é limitado. Os rótulos do eixo Y compartilham a margem dos indicadores. Tabelas usam rolagem no seu contêiner, sem alargar a página.
+O arquivo ativo ocupa uma faixa própria, seguida do seletor de ponto quando há vários e do painel de gráfico em toda a largura. Os quatro indicadores ficam numa linha no desktop e em duas colunas no celular. Salvar análise ocupa a faixa do arquivo e abrange o conjunto; Exportar figura fica no painel do ponto ativo. As ações podem quebrar linha quando o espaço é limitado. Os rótulos do eixo Y compartilham a margem dos indicadores. Tabelas usam rolagem no seu contêiner, sem alargar a página.
 
 Login centralizado, com conteúdo de até (400px), sem cartão elevado. Histórico usa linhas separadas; perfil separa identidade e preferências por bordas. Preferências e ajustes aparecem em duas colunas quando há espaço e uma coluna no celular.
 
@@ -206,6 +206,8 @@ Menu, navegação, disclosures e modais usam transições curtas de (150ms) a (2
 
 ### Cards / Containers
 
+O nome editável da análise aparece após a faixa do arquivo; títulos dos gráficos continuam individuais. Progresso e erros de salvamento são globais, junto desse nome. O histórico apresenta uma linha por importação com arquivo, aba, pontos, medições e data de atualização; confirmar exclusão informa quantos pontos serão removidos.
+
 O painel organiza gráfico e importação conferida; a faixa do arquivo preserva nome, formato/contexto e situação de salvamento. O estado vazio oferece uma ação de importação, sem gráfico fictício. Etiquetas indicam formatos; não são filtros nem botões. A prévia mantém até cinco linhas, campos condicionais e ajustes recolhidos. Cancelar uma importação pendente conserva o arquivo anterior.
 
 ### Chart workspace
@@ -216,7 +218,7 @@ A figura PNG/SVG usa fundo claro e reúne identificação, quatro indicadores e 
 
 A identificação da figura ocupa uma superfície clara com rótulos alinhados e valores em seminegrito (24–26px no arquivo vetorial), separada dos indicadores. O gráfico cede altura para essa leitura; as três proporções de exportação permanecem disponíveis. Campos excepcionalmente longos recebem reticências e aviso de identificação abreviada, mantendo todos os rótulos presentes. Os valores completos continuam nos ajustes da figura.
 
-O grupo Cores da figura reúne cabeçalho, fundo do gráfico e linha no modal. Cada linha de 44px tem rótulo, código hexadecimal e amostra que abre o seletor nativo de cores, com foco visível nos dois temas. O “?” explica o alcance da alteração; Restaurar cores retorna aos padrões originais. A escolha personaliza a figura PNG/SVG e é preservada ao salvar o ponto. Título e eixos alternam entre preto e branco pelo contraste calculado; grade e separadores acompanham o fundo escolhido. A cor da curva permanece a escolhida pelo usuário, com orientação de contraste na ajuda. Identificação, indicadores e restante do aplicativo mantêm suas superfícies próprias.
+O grupo Cores da figura reúne cabeçalho, fundo do gráfico e linha no modal. Cada linha de 44px tem rótulo, código hexadecimal e amostra que abre o seletor nativo de cores, com foco visível nos dois temas. O “?” explica o alcance da alteração; Restaurar cores retorna aos padrões originais. A escolha personaliza a figura PNG/SVG e é preservada ao salvar a análise. Título e eixos alternam entre preto e branco pelo contraste calculado; grade e separadores acompanham o fundo escolhido. A cor da curva permanece a escolhida pelo usuário, com orientação de contraste na ajuda. Identificação, indicadores e restante do aplicativo mantêm suas superfícies próprias.
 
 O envio de logomarca aparece no modal e nas informações da figura como botão outline de 44px, com ícone de upload e ações Selecionar/Trocar logomarca. O input nativo fica oculto. O rótulo de 14px tem um “?” para formatos, limites e proporção: PNG/JPEG até 5 MiB e 4096px por dimensão; proporção entre 1:1 e 4:1, recomendação 2:1. A marca cabe em até 136×72 unidades no cabeçalho, com espaço transparente para preservar a proporção. A prévia da marca no controle tem fundo branco, 112×56px e cantos de 6px. Seleção inválida mostra erro e preserva a marca anterior; preparar a imagem desabilita o download até sua conclusão.
 

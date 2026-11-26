@@ -1,0 +1,113 @@
+import { expect, test } from '@playwright/test'
+import { mockAccountApi } from './mock-api'
+import { multipointWorkbook } from '../multipoint-fixture'
+
+test.beforeEach(async ({ page }) => { await mockAccountApi(page) })
+const mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+const ids = Array.from({ length: 10 }, (_, index) => `P${index + 1}`)
+
+test('dez pontos: falha no último, edição durante envio, repetição, reabertura e exclusão do conjunto', async ({ page }) => {
+  await page.goto('/tests/browser/fixture.html')
+  const file = { name: 'campo.xlsx', mimeType, buffer: Buffer.from(multipointWorkbook(ids, ids.map(() => 3))) }
+  await page.getByLabel('Arquivo de medições').setInputFiles(file)
+  await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
+  const selector = page.getByLabel('Ponto de medição', { exact: true })
+  await expect(selector.locator('option')).toHaveCount(10)
+  let lastId = '', fail = true, release!: () => void, blocked!: () => void, chunks = 0
+  const gate = new Promise<void>(done => { release = done })
+  const started = new Promise<void>(done => { blocked = done })
+  const imports = new Set<string>(), attempts = new Set<string>()
+  await page.route('**/api/imports/**', async route => {
+    const request = route.request(), url = new URL(request.url())
+    const config = url.pathname.match(/\/saves\/[^/]+\/points\/([^/]+)$/)
+    if (request.method() === 'PUT' && config && request.postDataJSON().ordinal === 9) lastId = config[1]
+    if (request.method() === 'POST' && url.pathname.endsWith('/saves')) attempts.add(request.postDataJSON().id)
+    if (request.method() === 'PUT' && url.pathname.includes('/chunks/')) {
+      chunks++
+      if (fail && url.pathname.includes(`/points/${lastId}/`)) { fail = false; blocked(); await gate; return route.abort() }
+    }
+    return route.fallback()
+  })
+  await page.route('**/api/imports', async route => {
+    if (route.request().method() === 'POST') imports.add(route.request().postDataJSON().id)
+    return route.fallback()
+  })
+  await page.getByRole('button', { name: 'Salvar análise', exact: true }).click()
+  await started
+  await page.getByLabel('Nome da análise', { exact: true }).fill('Dez pontos revisados')
+  await page.getByText('Ajustar período e título', { exact: true }).click()
+  await page.getByLabel('Título do gráfico').fill('Título editado durante o envio')
+  release()
+  await expect(page.getByRole('alert')).toContainText('conectar ao servidor')
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Nenhuma análise salva' })).toBeVisible()
+  await page.getByRole('link', { name: 'Análise', exact: true }).click()
+  await page.getByRole('button', { name: 'Tentar salvar novamente', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Salvar alterações', exact: true })).toBeEnabled()
+  expect(imports.size).toBe(1); expect(attempts.size).toBe(1)
+  await expect(page.getByText('Alterações não salvas.', { exact: true })).toBeVisible()
+  const uploaded = chunks
+  await page.getByRole('button', { name: 'Salvar alterações', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+  expect(chunks).toBe(uploaded)
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await expect(page.getByRole('listitem')).toHaveCount(1)
+  await expect(page.getByRole('listitem')).toContainText('10 pontos · 30 medições')
+  await page.screenshot({ path: '/tmp/decicharts-import-history.png', fullPage: true, animations: 'disabled' })
+  await page.reload()
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await page.getByRole('button', { name: 'Abrir', exact: true }).click()
+  await expect(selector.locator('option')).toHaveCount(10)
+  expect(await selector.locator('option').allTextContents()).toEqual(ids.map(id => `${id} · 3 medições · salvo`))
+  await page.getByText('Ajustar período e título', { exact: true }).click()
+  await expect(page.getByLabel('Título do gráfico')).toHaveValue('Título editado durante o envio')
+  await selector.selectOption({ index: 9 })
+  await expect(page.getByTestId('measurement-count')).toHaveText('3')
+  await page.getByText('Informações da figura', { exact: true }).click()
+  await expect(page.getByLabel('Endereço', { exact: true })).toHaveValue('Rua sintética do P10')
+  await page.getByRole('button', { name: 'Ativar tema escuro' }).click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: '/tmp/decicharts-import-mobile.png', fullPage: true, animations: 'disabled' })
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.getByLabel('Arquivo de medições').setInputFiles(file)
+  await page.getByRole('button', { name: 'Substituir e gerar gráfico', exact: true }).click()
+  await page.getByRole('button', { name: 'Salvar análise', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+  expect(imports.size).toBe(2)
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await expect(page.getByRole('listitem')).toHaveCount(2)
+  await page.getByRole('listitem').filter({ hasText: 'Dez pontos revisados' }).getByRole('button', { name: /Excluir análise/ }).click()
+  await expect(page.getByRole('alertdialog')).toContainText('10 pontos')
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Excluir análise', exact: true }).click()
+  await expect(page.getByRole('listitem')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Abrir', exact: true }).click()
+  await expect(selector.locator('option')).toHaveCount(10)
+})
+
+test('um ponto vazio impede concluir a importação, sem descartar os demais silenciosamente', async ({ page }) => {
+  await page.goto('/tests/browser/fixture.html')
+  await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'vazio.xlsx', mimeType, buffer: Buffer.from(multipointWorkbook(['Bom', 'Vazio'], [3, 0])) })
+  await expect(page.getByRole('alert')).toContainText('Vazio')
+  await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeDisabled()
+  await expect(page.getByLabel('Conferir ponto').locator('option')).toHaveCount(2)
+})
+
+test('conflito preserva ajustes e cancelar a reabertura permite tentar novamente', async ({ page }) => {
+  await page.goto('/tests/browser/fixture.html')
+  await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'um.csv', mimeType: 'text/csv', buffer: Buffer.from('Data;Nível\n23/11/2026 12:00:00;50\n23/11/2026 12:00:01;60\n') })
+  await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
+  await page.getByRole('button', { name: 'Salvar análise', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+  await page.getByLabel('Nome da análise', { exact: true }).fill('Ajuste local')
+  await page.route('**/api/imports/*/saves', route => route.fulfill({ status: 409, json: { error: 'A análise foi alterada em outra sessão. Reabra a versão salva.' } }))
+  await page.getByRole('button', { name: 'Salvar alterações', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('outra sessão')
+  await page.getByRole('button', { name: 'Reabrir versão salva', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Cancelar', exact: true }).click()
+  await expect(page.getByLabel('Nome da análise', { exact: true })).toHaveValue('Ajuste local')
+  await page.getByRole('button', { name: 'Reabrir versão salva', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Reabrir análise', exact: true }).click()
+  await expect(page.getByLabel('Nome da análise', { exact: true })).toHaveValue('um')
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+})

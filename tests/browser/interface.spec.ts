@@ -97,7 +97,7 @@ test('telas responsivas, temas e confirmações com a estrutura real do app', as
     await page.keyboard.press('Escape')
     await page.getByRole('link', { name: 'Análise', exact: true }).click()
     await page.getByRole('button', { name: 'Fechar arquivo', exact: true }).click()
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Fechar arquivo', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeVisible()
 
     async function capture(surface: string) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)

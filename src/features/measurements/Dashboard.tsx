@@ -1,12 +1,13 @@
 import { lazy, Suspense } from 'react'
 import { useOutletContext } from 'react-router'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Save } from 'lucide-react'
 import { FileImport } from '@/features/file-import/FileImport'
 import { useAuth } from '@/features/auth/auth-context'
 import type { MeasurementDataset } from './types'
 import { useWorkspace } from '@/features/analyses/workspace-context'
 import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { useConfirmation } from '@/components/ui/confirmation-context'
 import { ChartSkeleton } from '@/components/layout/LoadingStates'
@@ -32,11 +33,21 @@ export function Dashboard() {
     workspace.clear(); return true
   }
   return <main className="dashboard-shell">
-    <div className="dashboard-heading"><div className="page-title"><h1 className="text-3xl font-semibold tracking-tight">Análise de ruído</h1><HelpTooltip label="Sobre o processamento local">O arquivo é lido neste navegador. Somente os pontos que você salvar são enviados à sua conta.</HelpTooltip></div></div>
+    <div className="dashboard-heading"><div className="page-title"><h1 className="text-3xl font-semibold tracking-tight">Análise de ruído</h1><HelpTooltip label="Sobre o processamento local">O arquivo é lido neste navegador. Salvar análise envia todos os pontos da aba importada à sua conta.</HelpTooltip></div></div>
     {error && <p className="notice error" role="alert">{error}</p>}
-    <FileImport dataset={dataset} saved={Boolean(workspace.saved)} onImport={accept} onRemove={remove} />
+    <FileImport dataset={dataset} saved={Boolean(workspace.saved)} onImport={accept} onRemove={remove}
+      pointCount={workspace.points.length} recordCount={workspace.points.reduce((sum, point) => sum + point.count, 0)}
+      actions={<Button disabled={workspace.saving || !workspace.dirty || !workspace.name.trim() || workspace.saveConflict} onClick={() => void workspace.save()}>
+        {workspace.saved && !workspace.dirty ? <Check /> : <Save />}{workspace.saving ? 'Salvando…' : workspace.saved && !workspace.dirty ? 'Análise salva' : workspace.saveError ? 'Tentar salvar novamente' : workspace.saved ? 'Salvar alterações' : 'Salvar análise'}
+      </Button>} />
+    {dataset && <section className="import-workspace-settings" aria-label="Ajustes da análise">
+      <label className="field max-w-lg">Nome da análise<Input maxLength={100} value={workspace.name} onChange={event => workspace.setName(event.target.value)} /></label>
+      {workspace.saveError && <div className="notice error" role="alert"><p>{workspace.saveError}</p>{workspace.saveConflict && <Button variant="outline" className="mt-3" disabled={workspace.saving} onClick={() => void workspace.reopenSaved()}>Reabrir versão salva</Button>}</div>}
+      {workspace.saving && <p role="status" className="text-sm">{workspace.progress ? workspace.progress.publishing ? 'Concluindo o salvamento de todos os pontos…' : `${workspace.progress.points} de ${workspace.progress.totalPoints} pontos prontos · ${workspace.progress.records.toLocaleString('pt-BR')} de ${workspace.progress.totalRecords.toLocaleString('pt-BR')} medições` : 'Preparando a análise…'}</p>}
+      {workspace.saved && workspace.dirty && !workspace.saving && <p role="status" className="text-sm text-primary">Alterações não salvas.</p>}
+    </section>}
     {workspace.points.length > 1 && <section className="point-switcher" aria-label="Pontos do arquivo">
-      <div className="point-control"><div className="field-label"><label htmlFor="monitoring-point">Ponto de medição</label><HelpTooltip label="Sobre os pontos de medição">Cada ponto é salvo separadamente. Seus ajustes permanecem ao alternar nesta sessão.</HelpTooltip></div>
+      <div className="point-control"><div className="field-label"><label htmlFor="monitoring-point">Ponto de medição</label><HelpTooltip label="Sobre os pontos de medição">Todos os pontos são salvos juntos na análise. Cada ponto conserva seus próprios ajustes ao alternar e reabrir.</HelpTooltip></div>
         <div className="point-navigation"><Button variant="outline" size="icon" aria-label="Ponto anterior" disabled={activeIndex <= 0} onClick={() => stepPoint(-1)}><ChevronLeft /></Button>
           <Select id="monitoring-point" aria-label="Ponto de medição" value={workspace.activeKey ?? ''} onChange={event => workspace.selectPoint(event.target.value)}>{workspace.points.map(point => <option key={point.key} value={point.key}>{point.id} · {point.count.toLocaleString('pt-BR')} medições · {point.saving ? 'salvando' : point.dirty ? 'não salvo' : 'salvo'}</option>)}</Select>
           <Button variant="outline" size="icon" aria-label="Próximo ponto" disabled={activeIndex >= workspace.points.length - 1} onClick={() => stepPoint(1)}><ChevronRight /></Button>

@@ -6,11 +6,12 @@ import { AuthContext } from '../src/features/auth/auth-context'
 import { ConfirmationProvider } from '../src/components/ui/ConfirmationProvider'
 import { WorkspaceProvider } from '../src/features/analyses/WorkspaceProvider'
 import { useWorkspace } from '../src/features/analyses/workspace-context'
-import { saveAnalysis } from '../src/features/analyses/service'
-import { metadataFromDataset, type StoredAnalysis } from '../shared/persistence'
+import { saveImport } from '../src/features/analyses/import-service'
+import type { SaveSnapshot } from '../src/features/analyses/import-service'
+import type { ImportSummary } from '../shared/persistence'
 import { dataset } from './helpers'
 
-vi.mock('../src/features/analyses/service', () => ({ saveAnalysis: vi.fn() }))
+vi.mock('../src/features/analyses/import-service', () => ({ saveImport: vi.fn(), loadImport: vi.fn() }))
 afterEach(() => { cleanup(); vi.clearAllMocks() })
 const a = { ...dataset(), point: { id: 'A' } }, b = { ...dataset(), point: { id: 'B' } }
 function Probe() {
@@ -49,16 +50,49 @@ it('preserva ajustes por ponto, avisa saída e respeita o cancelamento do logout
   const clean = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(clean)
   expect(clean.defaultPrevented).toBe(false)
 })
-it('conclui o salvamento no ponto de origem mesmo após alternar para outro', async () => {
-  let resolve!: (value: StoredAnalysis) => void
-  vi.mocked(saveAnalysis).mockImplementation(() => new Promise(done => { resolve = done }))
+it('salva todos os pontos mesmo após alternar para outro', async () => {
+  let resolve!: (value: ImportSummary) => void
+  vi.mocked(saveImport).mockImplementation(() => new Promise(done => { resolve = done }))
   mount()
   await userEvent.click(screen.getByText('Importar'))
   await userEvent.click(screen.getByText('Salvar'))
-  const [, data, view, id] = vi.mocked(saveAnalysis).mock.calls[0]
+  const snapshot = vi.mocked(saveImport).mock.calls[0][1]
   await userEvent.click(screen.getByText('Ponto B'))
-  await act(async () => resolve({ analysis: { id, name: 'A', fileName: data.fileName, count: data.validRecords, start: view.range.start, end: view.range.end, unit: data.unit, timezone: data.timezone, chart: view, updatedAt: new Date().toISOString() }, metadata: metadataFromDataset(data), chunkCount: 1 }))
-  await waitFor(() => expect(screen.getByLabelText('Salvos').textContent).toBe('A'))
+  await act(async () => resolve(savedSnapshot(snapshot)))
+  await waitFor(() => expect(screen.getByLabelText('Salvos').textContent).toBe('A,B'))
   expect(screen.getByLabelText('Ponto').textContent).toBe('B')
+  expect(screen.getByLabelText('Alterações').textContent).toBe('false')
+})
+
+function savedSnapshot(snapshot: SaveSnapshot): ImportSummary {
+  return { id: snapshot.id, name: snapshot.name, fileName: a.fileName, sheetName: a.sheetName, pointCount: snapshot.points.length,
+    recordCount: snapshot.points.reduce((sum, point) => sum + point.dataset.validRecords, 0), version: snapshot.baseVersion + 1, saveId: snapshot.saveId, updatedAt: new Date().toISOString() }
+}
+it('mantém edições posteriores ao clique pendentes e inclui todos os ajustes no salvamento seguinte', async () => {
+  let resolve!: (value: ImportSummary) => void
+  vi.mocked(saveImport).mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  mount()
+  await userEvent.click(screen.getByText('Importar'))
+  await userEvent.click(screen.getByText('Salvar'))
+  const first = vi.mocked(saveImport).mock.calls[0][1]
+  await userEvent.click(screen.getByText('Editar'))
+  await act(async () => resolve(savedSnapshot(first)))
+  expect(screen.getByLabelText('Alterações').textContent).toBe('true')
+  vi.mocked(saveImport).mockImplementationOnce(async (_, snapshot) => savedSnapshot(snapshot))
+  await userEvent.click(screen.getByText('Salvar'))
+  await waitFor(() => expect(screen.getByLabelText('Alterações').textContent).toBe('false'))
+  expect(vi.mocked(saveImport).mock.calls[1][1].points[0].view.title).toBe('Título A')
+})
+it('retoma a mesma fotografia após falha, sem duplicar IDs ou absorver edições feitas depois', async () => {
+  vi.mocked(saveImport).mockRejectedValueOnce(new Error('Falha no último ponto'))
+  mount()
+  await userEvent.click(screen.getByText('Importar'))
+  await userEvent.click(screen.getByText('Salvar'))
+  const first = vi.mocked(saveImport).mock.calls[0][1]
+  await userEvent.click(screen.getByText('Editar'))
+  vi.mocked(saveImport).mockImplementationOnce(async (_, snapshot) => savedSnapshot(snapshot))
+  await userEvent.click(screen.getByText('Salvar'))
+  await waitFor(() => expect(screen.getByLabelText('Salvos').textContent).toBe('A,B'))
+  expect(vi.mocked(saveImport).mock.calls[1][1]).toBe(first)
   expect(screen.getByLabelText('Alterações').textContent).toBe('true')
 })

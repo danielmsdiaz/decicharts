@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { RotateCcw, SlidersHorizontal, Save, Check } from 'lucide-react'
+import { RotateCcw, SlidersHorizontal } from 'lucide-react'
 import { DateTime } from 'luxon'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,7 +45,6 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
       <p className="mt-2 text-sm text-muted-foreground tabular-nums">{dataset.point && <strong>{dataset.point.id} · </strong>}{datasetTime(dataset, range.start)} — {datasetTime(dataset, range.end)}</p>
       <p className="mt-1 text-sm text-muted-foreground"><span data-testid="measurement-count">{visible.length.toLocaleString('pt-BR')}</span> medições no período{!relative && ` · ${dataset.timezone}`}</p>
     </div><div className="chart-actions">
-      <Button disabled={workspace.saving || !workspace.dirty} onClick={() => void workspace.save()}>{workspace.saved && !workspace.dirty ? <Check /> : <Save />}{workspace.saving ? 'Salvando…' : workspace.saved && !workspace.dirty ? 'Análise salva' : workspace.saved ? 'Salvar alterações' : 'Salvar análise'}</Button>
       <FigureExport dataset={dataset} view={view} disabled={!stats} onStatus={setFeedback} onChange={workspace.setView} />
     </div></div>
     <div className="chart-body">
@@ -61,9 +60,6 @@ export default function ChartWorkspace({ dataset, dark }: { dataset: Measurement
       <ReportSettings view={view} onChange={workspace.setView} />
       </div>
       {error && <p role="alert" className="notice error mt-4">{error}</p>}
-      {workspace.saveError && <p role="alert" className="notice error mt-4">{workspace.saveError}</p>}
-      {workspace.saving && <p role="status" className="mt-4 text-sm">Salvando este ponto: {workspace.progress.toLocaleString('pt-BR')} de {dataset.validRecords.toLocaleString('pt-BR')} medições…</p>}
-      {workspace.saved && workspace.dirty && !workspace.saving && <p role="status" className="mt-4 text-sm text-primary">Alterações não salvas.</p>}
       {feedback && <p role="status" className="mt-4 text-sm text-muted-foreground">{feedback}</p>}
       <dl className="chart-stats">{(stats ? indicatorItems(dataset, stats) : [['Menor nível', '—'], ['Média aritmética', '—'], ['Maior nível', '—'], ['Leq estimado', '—']]).map(([label, value]) => <div key={label}><dt>{label}{label.includes('eq') && <HelpTooltip label="Sobre o Leq estimado">{stats?.leq === null ? `Indisponível: ${stats.reason} ` : ''}{ESTIMATE_NOTE}</HelpTooltip>}</dt><dd className="tabular-nums">{value}</dd></div>)}</dl>
     </div>

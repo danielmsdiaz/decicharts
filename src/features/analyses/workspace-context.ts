@@ -1,14 +1,15 @@
 import { createContext, useContext } from 'react'
 import type { MeasurementDataset } from '@/features/measurements/types'
-import type { AnalysisSummary, ChartView, StoredAnalysis } from '../../../shared/persistence'
+import type { ImportSummary, ChartView, LoadedImport } from '../../../shared/persistence'
+import type { SaveProgress } from './import-service'
 
 export interface WorkspaceState {
   dataset: MeasurementDataset | null
   view: ChartView | null
   revision: number
-  saved: AnalysisSummary | null
+  saved: ImportSummary | null
   saving: boolean
-  progress: number
+  progress: SaveProgress | null
   saveError: string
   dirty: boolean
   anyDirty: boolean
@@ -17,7 +18,11 @@ export interface WorkspaceState {
   selectPoint: (key: string) => void
   acceptMany: (datasets: MeasurementDataset[], active?: MeasurementDataset) => void
   setView: (view: ChartView) => void
-  accept: (dataset: MeasurementDataset, stored?: StoredAnalysis) => void
+  acceptImport: (value: LoadedImport) => void
+  name: string
+  setName: (name: string) => void
+  saveConflict: boolean
+  reopenSaved: () => Promise<void>
   clear: () => void
   save: () => Promise<void>
   detach: (id: string) => void

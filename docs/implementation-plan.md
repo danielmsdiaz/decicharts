@@ -801,7 +801,7 @@ Plano aprovado implementado preservando a identidade visual, o processamento loc
 - [x] Importar uma aba com até 250 mil medições válidas somadas, dentro de 20 MiB; manter importação genérica de datas e CSV.
 - [x] Distinguir tempo absoluto/decorrido, manter milissegundos inteiros internamente e segundos na interface; nunca criar datas de 1900.
 - [x] Manter largura responsiva e ajustar escala/marcações ao período, preservando medições, lacunas, zoom e filtros.
-- [x] Manter coleção local e ajustes independentes por ponto; salvar somente o selecionado, com conclusão de envio aplicada ao ponto correto.
+- [x] Manter coleção local e ajustes independentes por ponto; salvamento individual entregue nesta etapa, posteriormente substituído pelo conjunto completo na seção 26.
 - [x] Mínimo, média aritmética, máximo e Leq estimado sob as condições explícitas da seção 21; ponderação acústica não inferida da preferência.
 - [x] Figura completa com prévia, PNG/SVG, identificação, localização, campos opcionais e logotipo local normalizado, enviado somente ao salvar.
 - [x] Metadados v2 e informações da figura nos JSON existentes; compatibilidade de leitura com contratos antigos, sem migração ou reset.
@@ -812,7 +812,7 @@ Plano aprovado implementado preservando a identidade visual, o processamento loc
 - [ ] Provisionar branch/banco exclusivo e executar a integração Neon ampliada para tempo relativo e informações da figura.
 - [ ] Registrar aceite completo Google real e reprodução de reinício do Vite durante login.
 
-Limites de entrega: leitura instantânea é a origem confirmada; agregação de Leq por intervalos, salvamento do conjunto inteiro, exportação em lote e busca no histórico ficam para futuras etapas. Nenhum arquivo real, endereço real ou segredo foi versionado. Nenhum deploy, push, migração ou escrita no Neon foi realizado nesta fase.
+Limites de entrega: leitura instantânea é a origem confirmada; agregação de Leq por intervalos, exportação em lote e busca no histórico seguem para futuras etapas. O salvamento do conjunto foi acrescentado na seção 26. Nenhum arquivo real, endereço real ou segredo foi versionado. Nenhum deploy, push, migração ou escrita no Neon foi realizado nesta fase.
 
 ## 23. Navegação, ajuda contextual e gráficos — 2026-11-25
 
@@ -849,3 +849,23 @@ As pendências externas da seção 22 permanecem abertas. Sem migração, escrit
 - [x] Preservar dados disponíveis durante ações; não substituir conteúdo por skeleton em salvar/exportar/processar arquivos.
 - [x] Respeitar movimento reduzido e status acessível; encerrar em sucesso ou erro, reativando na nova tentativa.
 - [x] Testar respostas lentas controladas, erro/nova tentativa e paginação sem ocultar resultados. 75 testes unitários, 18 cenários Chrome, lint e build aprovados.
+
+## 26. Salvamento da importação inteira — 2026-11-26
+
+Decisões confirmadas no planejamento: salvar manualmente todos os pontos da aba selecionada; dados processados, sem arquivo original; novos layouts de CSV fora do escopo; pontos vazios exigem correção; permitir editar durante envio; reimportar sempre cria outra análise.
+
+- [x] MeasurementImport como unidade do histórico, com UUID próprio, nome independente dos títulos, pontos ordenados e total de medições. Reutilizar Analysis/AnalysisChunk para dados imutáveis dos pontos.
+- [x] Tentativas ImportSave e fotografias ImportSavePoint preservam todos os ajustes, cores e logomarcas. Publicação transacional por referência, revisão otimista e resposta idempotente; atualização incompleta mantém a versão anterior.
+- [x] Primeira gravação registra metadados/configurações por ponto e envia blocos com concorrência global de três requisições; pontos já selados são reaproveitados na repetição. Atualização envia apenas configurações, sem blocos.
+- [x] Preservar limites de 250 mil medições somadas, 5 mil por bloco e 512 KiB por requisição. Leitura por versão e paginação de metadados também limitada por bytes.
+- [x] Proteção por UID em rotas e relações; grupo não publicado não aparece no histórico nem permite baixar blocos. Escritas individuais legadas em conjuntos múltiplos são bloqueadas.
+- [x] Salvar na faixa do arquivo, nome global editável, progresso/erro globais e recuperação de conflito com confirmação. Mudanças feitas durante envio permanecem pendentes; fotografia interrompida é retomada sem absorvê-las.
+- [x] Uma entrada por importação, reabertura completa antes de substituir o workspace e exclusão em cascata com quantidade de pontos informada. Pontos sem leituras não são descartados silenciosamente e bloqueiam Gerar gráfico.
+- [x] Migração aditiva 0002 com conjuntos unitários para todos os registros antigos, inclusive rascunhos, mantendo IDs, datas, configurações e blocos. Baseline histórica separada para bancos anteriores ao Prisma.
+- [x] Ensaiar baseline e migração em PostgreSQL 17 descartável local, comparar fingerprints dos dados legados e schema final, executar integrações do legado e dos dez pontos. Nunca usar a conexão da aplicação como destino de teste.
+- [x] Testes unitários/API, concorrência global, fotografia após falha, edição durante envio e perda da confirmação; Chrome com dez pontos, ponto vazio, conflito, reabertura, nomes iguais e exclusão. Lint, tipagem e build aprovados.
+- [ ] Provisionar/configurar TEST_DATABASE_URL de um Neon separado e repetir as integrações com seu adaptador.
+- [ ] Aplicar a migração revisada no banco da aplicação mediante autorização antes de disponibilizar o novo backend/frontend; não executada nesta entrega.
+- [ ] Aceite manual completo com Google real e Neon; sem push ou deploy nesta tarefa.
+
+Não há substituição de medições de uma análise existente, inclusão/exclusão individual de pontos, histórico de versões na interface ou recuperação automática após recarga. Rascunhos e fotografias inativas expiram após 24 horas; a fotografia publicada é preservada.

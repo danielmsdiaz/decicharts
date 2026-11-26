@@ -236,6 +236,10 @@ a {
   flex-wrap: wrap;
   gap: 8px;
 }
+.import-workspace-settings {
+  display: grid;
+  gap: 12px;
+}
 .is-dragging {
   border-color: var(--primary);
   background: var(--soft-primary);

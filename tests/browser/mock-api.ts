@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import type { AnalysisSummary, ChartView, DatasetMetadata, PointTuple } from '../../shared/persistence'
 import * as validate from '../../server/validation'
 import { HttpError } from '../../server/errors'
+import { mockImportRoutes } from './mock-imports'
 
 interface Draft {
   id: string; name: string; metadata: DatasetMetadata; chart: ChartView
@@ -13,6 +14,7 @@ function summary(item: Draft): AnalysisSummary {
 }
 export async function mockAccountApi(page: Page) {
   const analyses = new Map<string, Draft>()
+  const imports = mockImportRoutes()
   let preferences = { timezone: 'America/Recife', unit: 'dB' }
   await page.route('**/api/**', async route => {
     const request = route.request()
@@ -27,6 +29,10 @@ export async function mockAccountApi(page: Page) {
     if (parts[0] === 'profile') {
       if (method === 'PUT') preferences = { timezone: String(data.timezone), unit: String(data.unit) }
       return respond({ uid: 'fixture', name: 'Engenheira de teste', email: 'teste@example.invalid', photoURL: null, preferences })
+    }
+    if (parts[0] === 'imports') {
+      try { const result = imports(parts, method, data, url); return respond(result.body, result.status ?? 200) }
+      catch (issue) { return respond({ error: issue instanceof Error ? issue.message : 'Dados inválidos.' }, issue instanceof HttpError ? issue.status : 400) }
     }
     if (parts[0] !== 'analyses') return respond({ error: 'Endpoint inexistente.' }, 404)
     if (parts.length === 1) {
