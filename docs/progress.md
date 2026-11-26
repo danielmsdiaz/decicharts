@@ -445,3 +445,10 @@ Próxima ação:
 - Corrigido o texto no topo dos selects personalizados do Chrome: o seletor compartilhado para appearance: base-select agora usa flex com alinhamento vertical central, mantendo a altura de 44px e a seta no mesmo eixo. O menu de opções e o fallback nativo permanecem com seus próprios layouts.
 - Verificação pertinente: cenário existente de telas responsivas aprovado no Chrome, cobrindo desktop claro/celular escuro, abertura/fechamento do select por teclado e ausência de overflow. Capturas da prévia de importação inspecionadas nos dois tamanhos, confirmando texto centralizado. git diff --check aprovado; sem novos testes ou dependências para esta correção de CSS.
 - DESIGN.md atualizado. Nenhuma alteração funcional de importação/salvamento, banco, push ou deploy. Aceites externos anteriores preservados.
+
+### 2026-11-26 — Diagnóstico da demora ao salvar
+
+- Revisão estática do fluxo confirmou excesso de idas e voltas: primeira gravação de dez pontos com menos de 5 mil leituras cada usa 33 requisições (criar conjunto/tentativa, dez configurações, dez blocos, dez conclusões de ponto e publicação). Atualizar os ajustes dos dez pontos ainda usa 12 requisições.
+- Cada operação executa várias consultas sequenciais no Neon. pending/lockImport toma a mesma trava da importação em configurações, blocos e conclusões, serializando essas transações mesmo com três requisições simultâneas. O processamento por lotes no cliente também aguarda terminar o grupo atual antes de começar o próximo.
+- Próxima otimização recomendada: reduzir chamadas com envio/gravação em lote para conjuntos pequenos e ajustes, preservando limite de corpo, publicação atômica, idempotência, isolamento e fallback em blocos para dados maiores. Esta etapa apenas explica os gargalos identificados; não mediu tempos reais por etapa nem alterou o protocolo ou o banco.
+- git diff --check pertinente ao registro documental; nenhuma nova execução de testes, escrita no Neon, push ou deploy.
