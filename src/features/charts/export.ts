@@ -1,34 +1,39 @@
 import { init } from './engine'
-import type { ChartView, ReportInfo } from '../../../shared/persistence'
-import type { MeasurementDataset, TimeRange } from '@/features/measurements/types'
-import { reportOption } from './report'
+import type { ChartView } from '../../../shared/persistence'
+import type { MeasurementDataset } from '@/features/measurements/types'
+import { defaultReportFormat, reportOption, reportPixelRatio, type ReportFormat } from './report'
 
-export function reportSvg(dataset: MeasurementDataset, view: ChartView) {
-  const { option, width, height } = reportOption(dataset, view)
+export function reportSvg(dataset: MeasurementDataset, view: ChartView, aspect: ReportFormat = defaultReportFormat) {
+  const { option, width, height } = reportOption(dataset, view, aspect)
   const chart = init(null, undefined, { renderer: 'svg', ssr: true, width, height })
   try { chart.setOption(option); return chart.renderToSVGString() }
   finally { chart.dispose() }
 }
 
-export async function exportChart(dataset: MeasurementDataset, range: TimeRange, title: string, format: 'png' | 'svg', report?: ReportInfo) {
-  const view = { title, range, report }
+export async function createFigureBlob(dataset: MeasurementDataset, view: ChartView, format: 'png' | 'svg', aspect: ReportFormat): Promise<Blob> {
   await document.fonts.ready
-  let blob: Blob
-  if (format === 'svg') blob = new Blob([reportSvg(dataset, view)], { type: 'image/svg+xml;charset=utf-8' })
-  else {
-    let logoImage: HTMLImageElement | undefined
-    if (report?.logo) { logoImage = new Image(); logoImage.src = report.logo; await logoImage.decode() }
-    const { option, width, height } = reportOption(dataset, view, logoImage)
-    const container = document.createElement('div')
-    container.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:${height}px;`
-    document.body.appendChild(container)
-    const chart = init(container, undefined, { renderer: 'canvas', width, height })
-    try {
-      chart.setOption(option); chart.getZr().flush()
-      const dataUrl = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' })
-      blob = await (await fetch(dataUrl)).blob()
-    } finally { chart.dispose(); container.remove() }
-  }
+  if (format === 'svg') return new Blob([reportSvg(dataset, view, aspect)], { type: 'image/svg+xml;charset=utf-8' })
+
+  let logoImage: HTMLImageElement | undefined
+  const logo = view.report?.logo
+  if (logo) { logoImage = new Image(); logoImage.src = logo; await logoImage.decode() }
+
+  const { option, width, height } = reportOption(dataset, view, aspect, logoImage)
+  const chart = init(document.createElement('div'), undefined, { renderer: 'canvas', width, height })
+  try {
+    chart.setOption(option)
+    chart.getZr().flush()
+    const canvas = chart.renderToCanvas({ pixelRatio: reportPixelRatio, backgroundColor: '#ffffff' })
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob)
+        else reject(new Error('Não foi possível gerar o PNG.'))
+      }, 'image/png')
+    })
+  } finally { chart.dispose() }
+}
+
+export function downloadFigure(dataset: MeasurementDataset, blob: Blob, format: 'png' | 'svg') {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   const name = [dataset.fileName.replace(/\.[^.]+$/, ''), dataset.point?.id].filter(Boolean).join('-')

@@ -2,10 +2,10 @@
 
 ## Estado atual
 
-- Fase atual: 12 — Estados de carregamento com skeletons
-- Status: Implementação local concluída; aceites externos pendentes
-- Última atualização: 2026-11-25
-- Importação dinâmica, tempo relativo, indicadores, figura completa e salvamento por ponto concluídos localmente. Google real, reprodução da queda/reinício do Vite e integração em banco separado continuam pendentes; nenhum deploy ou escrita no Neon nesta etapa.
+- Fase atual: 13 — Exportação de figuras e transições de interface
+- Status: Implementação e validação local concluídas. Aceites externos pendentes.
+- Última atualização: 2026-11-26
+- Exportação com proporções, prévia no modal, escala de 0 a 110 dB, cabeçalho fixo e transições implementados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
 
 ## Resumo das fases
 
@@ -23,6 +23,7 @@
 | 10. Navegação e detalhe dos gráficos | Concluído |
 | 11. Redesenho e confirmações próprias | Concluído |
 | 12. Skeletons de carregamento | Concluído |
+| 13. Exportação de figuras e transições de interface | Concluído |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -40,7 +41,7 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 ## Trabalho em andamento
 
-Implementação e validação local das fases 9 a 12 concluídas. Todas as telas redesenhadas, navegação integrada e confirmações próprias com proteção de foco. Reprodução com Google real e servidor dev reiniciado continua manual.
+Implementação e validação local das fases 9 a 13 concluídas. Reprodução com Google real e servidor dev reiniciado continua manual.
 
 ## Próximas tarefas
 
@@ -354,3 +355,12 @@ Próxima ação:
 - Skeletons com status acessível, blocos decorativos ocultos e animação desativada em movimento reduzido. Nova tentativa do histórico volta ao skeleton; falhas encerram o carregamento sem painel vazio.
 - Validação: 75 testes unitários e 18 cenários Chrome aprovados; uma integração externa continua ignorada. Lint e build aprovados; seis capturas de histórico, perfil e gráfico conferidas em desktop claro/celular escuro. Ajuste de quebra no gráfico móvel confirmado em execução focada dos três novos cenários.
 - Detector executado uma vez: avisos consultivos sobre cores, tipografia e raios existentes no CSS frente à documentação; sem alterar a identidade aprovada para silenciá-los. O raio local do skeleton foi documentado. Sem auditoria adicional de documentação ou mudança no banco.
+
+### 2026-11-26 — Exportação de figuras, tema e movimento
+
+- Modal ao lado de **Salvar análise** reúne PNG, SVG e as proporções retrato (8:9), quadrada (1:1) e paisagem (8:5). O retrato é o padrão para figuras lado a lado. O navegador guarda a última proporção escolhida.
+- A prévia no modal exibe o mesmo arquivo usado no download. Os testes verificaram a identidade do conteúdo em PNG e SVG e a atualização da prévia ao mudar a proporção.
+- Eixo de 0 a 110 dB na tela e nas figuras. Rótulos alinhados à margem dos indicadores. Leituras fora da escala continuam nos indicadores e geram aviso.
+- Cabeçalho fixo e transições na navegação, no menu da conta, nos painéis e nos modais. A troca de tema ganhou um efeito de cortina e um brilho breve na marca. Os efeitos respeitam a preferência de movimento reduzido.
+- Validação local com 77 testes unitários e 16 cenários Chrome das suítes de interface e fluxos, incluindo cabeçalho fixo, navegação por teclado, arquivos baixados e retorno do foco. Tipagem, lint e build do frontend passaram. A integração Neon separada permaneceu pendente.
+- `AGENTS.md` registra o fluxo para consultar este arquivo, seguir `DESIGN.md` e commitar cada tarefa concluída.

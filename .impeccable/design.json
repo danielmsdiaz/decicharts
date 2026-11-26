@@ -415,9 +415,14 @@
         "purpose": "Estado de arraste da importação."
       },
       {
-        "name": "dialog-enter",
-        "value": "180ms cubic-bezier(.23,1,.32,1); opacity .7 → 1; translateY(6px) → translateY(0)",
-        "purpose": "Entrada da confirmação."
+        "name": "surface-transition",
+        "value": "150ms; opacity e cubic-bezier(.2, .65, .3, 1) para deslocamento",
+        "purpose": "Abertura e fechamento dos diálogos e listas personalizáveis, além do aparecimento de ajuda e prévia."
+      },
+      {
+        "name": "panel-transition",
+        "value": "220ms cubic-bezier(.2, .65, .3, 1)",
+        "purpose": "Expansão dos painéis, entrada de página e movimento do menu e do indicador de navegação."
       },
       {
         "name": "reduced-motion",

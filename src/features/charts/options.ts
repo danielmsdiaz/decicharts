@@ -3,6 +3,16 @@ import { datasetTime, levelUnit, secondsText } from '@/features/measurements/tem
 import type { MeasurementDataset, TimeRange } from '@/features/measurements/types'
 import { chartDetails } from './details'
 
+const decibelAxis = { min: 0, max: 110, interval: 20 }
+const usesDecibelScale = (dataset: MeasurementDataset) => /^db(?:\([acz]\))?$/i.test(levelUnit(dataset))
+
+export function scaleLimitNote(dataset: MeasurementDataset, stats: { min: number; max: number }) {
+  if (usesDecibelScale(dataset) && (stats.min < decibelAxis.min || stats.max > decibelAxis.max)) {
+    return 'Há medições fora da escala de 0 a 110 dB. Os indicadores incluem essas leituras.'
+  }
+  return ''
+}
+
 export function chartOption(dataset: MeasurementDataset, range: TimeRange, title: string, dark = false, exporting = false, sourceDataset = dataset): EChartsCoreOption {
   const relative = dataset.timeBasis === 'elapsed'
   const unit = levelUnit(dataset)
@@ -14,12 +24,16 @@ export function chartOption(dataset: MeasurementDataset, range: TimeRange, title
   const surface = dark ? '#192420' : '#ffffff'
   const singleInstant = exporting && range.start === range.end
   const axisFontSize = exporting ? 18 : 14
+  const decibels = usesDecibelScale(dataset)
+  const axisGutter = decibels ? 40 : 74
+  const axisTitle = `Nível sonoro (${unit})`
   return {
     animation: false,
     backgroundColor: exporting ? '#ffffff' : 'transparent',
     textStyle: { fontFamily: exporting ? '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif' : 'DM Sans Variable, sans-serif', color: foreground, fontSize: exporting ? 18 : 14 },
     title: exporting ? { text: title, subtext: `${datasetTime(dataset, range.start)} — ${datasetTime(dataset, range.end)}${relative ? '' : ` · ${dataset.timezone}`} `, left: 35, top: 24, textStyle: { color: foreground, fontSize: 24, fontWeight: 600 }, subtextStyle: { color: muted, fontSize: 16 } } : undefined,
-    grid: { top: exporting ? 140 : 50, left: exporting ? 105 : 85, right: 35, bottom: exporting ? 110 : 100 },
+    grid: { top: exporting ? 140 : 50, left: exporting ? 105 : axisGutter, right: exporting || !relative ? 35 : 15, bottom: exporting ? 110 : 100 },
+    graphic: exporting ? undefined : { type: 'text', left: 0, top: 12, style: { text: axisTitle, font: '14px "DM Sans Variable", sans-serif', fill: muted } },
     tooltip: {
       trigger: 'axis', renderMode: 'richText', confine: true,
       backgroundColor: surface, borderColor: grid, padding: [12, 16], textStyle: { color: foreground, fontSize: 13 },
@@ -51,8 +65,17 @@ export function chartOption(dataset: MeasurementDataset, range: TimeRange, title
       max: exporting ? range.end + (singleInstant ? 1 : 0) : dataset.measurements.at(-1)?.timestamp,
     },
     yAxis: {
-      type: 'value', scale: true, name: `Nível sonoro (${unit})`, nameGap: 25,
-      nameTextStyle: { color: muted, fontSize: axisFontSize }, axisLabel: { color: muted, fontSize: axisFontSize, formatter: (value: number) => value.toLocaleString('pt-BR') },
+      type: 'value', scale: true, name: exporting ? axisTitle : undefined, nameGap: 25,
+      ...(decibels ? decibelAxis : {}),
+      nameTextStyle: { color: muted, fontSize: axisFontSize, align: 'left' },
+      axisLabel: {
+        color: muted, fontSize: axisFontSize,
+        ...(exporting ? {} : { align: 'left', margin: axisGutter }),
+        formatter: (value: number) => {
+          const label = value.toLocaleString('pt-BR')
+          return !exporting && label.length > 9 ? value.toLocaleString('pt-BR', { notation: 'scientific', maximumFractionDigits: 2 }) : label
+        },
+      },
       splitLine: { lineStyle: { color: grid } },
       splitNumber: 6, axisTick: { show: true, lineStyle: { color: grid } },
       minorTick: { show: true, splitNumber: 2, lineStyle: { color: grid } },

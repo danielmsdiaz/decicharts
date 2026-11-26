@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { chartOption } from '../src/features/charts/options'
-import { reportOption } from '../src/features/charts/report'
+import { reportFormats, reportOption, type ReportFormat } from '../src/features/charts/report'
 import { reportSvg } from '../src/features/charts/export'
 import { dataset } from './helpers'
 import { chartDetails } from '../src/features/charts/details'
@@ -36,6 +36,16 @@ describe('figura e escalas temporais', () => {
       expect((option.series as { data: unknown[] }[])[0].data).toHaveLength(duration)
     }
   })
+  it('fixa a escala em decibéis e mantém as leituras fora dos limites nos indicadores', () => {
+    const data = dataset()
+    data.measurements = [-5, 60, 115].map((value, index) => ({ timestamp: (index + 1) * 1000, value }))
+    const view = { title: 'Monitoramento', range: { start: 1000, end: 3000 } }
+    expect(chartOption(data, view.range, view.title).yAxis).toMatchObject({ min: 0, max: 110 })
+    const svg = reportSvg(data, view)
+    for (const label of ['>0</text>', '>110</text>', '-5,0 dB', '115,0 dB', 'Há medições fora da escala de 0 a 110 dB']) expect(svg).toContain(label)
+    data.unit = 'Pa'
+    expect(chartOption(data, view.range, view.title).yAxis).not.toHaveProperty('max')
+  })
   it('exporta identificação, indicadores e hipótese sem inventar datas ou executar texto', () => {
     const data = dataset()
     data.timeBasis = data.mapping.timeBasis = 'elapsed'
@@ -44,13 +54,27 @@ describe('figura e escalas temporais', () => {
     data.measurements = [50, 60, 70].map((value, index) => ({ timestamp: (index + 1) * 1000, value }))
     const view = { title: 'Monitoramento', range: { start: 1000, end: 3000 }, report: { address: '</text><script>alert(1)</script>', enterprise: 'Exemplo sintético' } }
     const result = reportOption(data, view)
-    expect(result.width).toBe(1600)
-    expect(result.height).toBeGreaterThanOrEqual(1000)
+    expect(result).toMatchObject({ width: 960, height: 1080 })
     const svg = reportSvg(data, view)
     for (const label of ['Ponto sul', 'Exemplo sintético', 'Média aritmética', 'Leq estimado', '65,7 dB', 'instantâneas', 'Tempo decorrido']) expect(svg).toContain(label)
     expect(svg).not.toContain('<script>')
     expect(svg).not.toContain('1900')
     expect(svg).not.toContain('dB(A)')
     expect(reportSvg(data, { ...view, range: { start: 2000, end: 3000 } })).not.toContain('65,7 dB')
+  })
+  it('mantém a proporção e espaço para a curva com os campos de identificação longos', () => {
+    const data = dataset()
+    const field = 'Medição '.repeat(25).trim()
+    const view = { title: 'Monitoramento '.repeat(7).trim(), range: { start: data.measurements[0].timestamp, end: data.measurements.at(-1)!.timestamp }, report: {
+      enterprise: field, address: 'Endereço '.repeat(55).trim(), east: field, north: field, datum: field, zone: field, hemisphere: field,
+    } }
+    for (const aspect of Object.keys(reportFormats) as ReportFormat[]) {
+      const expected = reportFormats[aspect]
+      const { width, height, option } = reportOption(data, view, aspect)
+      const grid = option.grid as { top: number; bottom: number }
+      expect(width).toBe(expected.width)
+      expect(height).toBe(expected.height)
+      expect(height - grid.top - grid.bottom).toBeGreaterThan(230)
+    }
   })
 })

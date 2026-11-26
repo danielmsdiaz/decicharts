@@ -4,10 +4,12 @@ import { Link, NavLink } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/auth-context'
 
-export function Header({ theme, toggleTheme }: { theme: string; toggleTheme: () => void }) {
+export function Header({ theme, toggleTheme }: { theme: string; toggleTheme: (onRevealed: () => void) => void }) {
   const { user, logout, busy } = useAuth()
   const [failedPhoto, setFailedPhoto] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const brandMark = useRef<SVGSVGElement>(null)
+  const brandShine = useRef<Animation | null>(null)
   const account = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!open) return
@@ -16,15 +18,28 @@ export function Header({ theme, toggleTheme }: { theme: string; toggleTheme: () 
     document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape)
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape) }
   }, [open])
+
+  function changeTheme() {
+    brandShine.current?.cancel()
+    toggleTheme(() => {
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+      brandShine.current = brandMark.current?.animate?.([
+        { filter: 'none' },
+        { color: 'color-mix(in srgb, var(--primary) 55%, white)', filter: 'drop-shadow(0 0 5px var(--primary))', offset: 0.3 },
+        { filter: 'none' },
+      ], { duration: 340, easing: 'ease-out' }) ?? null
+    })
+  }
+
   return <header className="app-header"><div className="header-inner">
-    <Link to="/" className="brand" aria-label="Decicharts"><AudioLines aria-hidden="true" /><span>Decicharts</span></Link>
+    <Link to="/" className="brand" aria-label="Decicharts"><AudioLines ref={brandMark} aria-hidden="true" /><span>Decicharts</span></Link>
     {user && <nav className="account-nav" aria-label="Navegação principal"><NavLink to="/" end>Análise</NavLink><NavLink to="/analises">Minhas análises</NavLink><NavLink to="/perfil">Meu perfil</NavLink></nav>}
-    <div className="header-actions"><Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>{theme === 'dark' ? <Sun /> : <Moon />}</Button>
+    <div className="header-actions"><Button variant="ghost" size="icon" onClick={changeTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>{theme === 'dark' ? <Sun /> : <Moon />}</Button>
       {user && <div className="account-control" ref={account} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
         <button ref={trigger} type="button" className="account-trigger" aria-label="Menu da conta" aria-expanded={open} aria-controls="account-popover" data-dialog-focus-fallback onClick={() => setOpen(value => !value)}>
           {user.photoURL && user.photoURL !== failedPhoto ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" onError={() => setFailedPhoto(user.photoURL)} /> : <span className="avatar-initial">{(user.displayName || user.email || 'U')[0].toUpperCase()}</span>}<ChevronDown aria-hidden="true" />
         </button>
-        {open && <div className="account-popover" id="account-popover"><div className="account-details"><strong>{user.displayName || 'Conta Google'}</strong><span>{user.email}</span></div><Link to="/perfil" onClick={() => setOpen(false)}><UserRound aria-hidden="true" />Configurações da conta</Link><button type="button" disabled={busy} onClick={() => { setOpen(false); void logout() }}><LogOut aria-hidden="true" />Sair</button></div>}
+        <div className="account-popover" id="account-popover" data-open={open} inert={!open}><div className="account-details"><strong>{user.displayName || 'Conta Google'}</strong><span>{user.email}</span></div><Link to="/perfil" onClick={() => setOpen(false)}><UserRound aria-hidden="true" />Configurações da conta</Link><button type="button" disabled={busy} onClick={() => { setOpen(false); void logout() }}><LogOut aria-hidden="true" />Sair</button></div>
       </div>}
     </div>
   </div></header>

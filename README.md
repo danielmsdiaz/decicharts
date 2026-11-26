@@ -45,7 +45,7 @@ Validação real: entrar com Google, conferir nome/foto/e-mail, recarregar e ver
 
 A escolha de aba só aparece para planilhas com várias abas. Quando uma coluna não é reconhecida, a tela pede somente essa escolha. Os demais campos ficam em **Ajustar leitura do arquivo**; a data de referência aparece apenas para arquivos com horários sem data.
 
-No gráfico, escolha **Ponto de medição** quando houver vários pontos. Cada um mantém título, período e informações da figura ao alternar. O período e o título podem ser alterados em **Ajustar período e título**; dados de localização, data inicial e logotipo ficam em **Informações da figura**. Abra **Prévia da figura exportada** para conferir a composição completa. PNG e SVG permanecem na barra do gráfico.
+No gráfico, escolha **Ponto de medição** quando houver vários pontos. Cada um mantém título, período e informações da figura ao alternar. O período e o título podem ser alterados em **Ajustar período e título**; dados de localização, data inicial e logotipo ficam em **Informações da figura**. **Exportar figura**, ao lado de **Salvar análise**, abre as opções de download.
 
 As setas ao lado do seletor avançam/voltam entre pontos e param nas extremidades. Explicações ficam nos ícones de ajuda: passe o cursor, use foco pelo teclado ou toque no celular; Escape ou toque fora fecha a ajuda.
 
@@ -124,9 +124,11 @@ Header com navegação integrada, controle de tema e menu da conta. Login, impor
 
 Filtros são inclusivos: segundos para tempo decorrido, data/hora e fuso para séries absolutas. Ajuste a faixa inferior ou use **Ctrl + rolagem** para zoom; **Restaurar** retorna à série completa. Indicadores e exportação acompanham o intervalo aplicado. A largura permanece responsiva; o eixo X adapta sua escala à duração real, sem descartar dados ou comprimir lacunas.
 
-O gráfico inclui grade principal/secundária, marcações de mínimo/máximo e linha do Leq estimado quando disponível. Séries curtas mostram os pontos; a consulta por cursor usa guias nos eixos e a faixa de zoom inclui uma visão geral. As referências são recalculadas com o filtro e também aparecem na figura exportada; os dados originais não são modificados.
+O gráfico inclui grade principal/secundária, marcações de mínimo/máximo e linha do Leq estimado quando disponível. Séries curtas mostram os pontos; a consulta por cursor usa guias nos eixos e a faixa de zoom inclui uma visão geral. O eixo em decibéis vai de 0 a 110 dB na tela e na exportação. Leituras fora da escala ficam nos dados e nos indicadores, com um aviso no gráfico e na figura.
 
-Exporte uma figura completa em **PNG com largura de 3200 pixels** ou **SVG vetorial**: título, empreendimento, ponto, endereço/coordenadas disponíveis, data inicial quando informada, indicadores, gráfico e identificação da estimativa. Layout base de 1600 × 1000, altura ampliada quando o conteúdo exigir; PNG em escala 2×. Não se presumem datum, zona ou hemisfério. Campos vazios são omitidos. Intervalos sem medições não podem ser exportados.
+Em **Exportar figura**, escolha **PNG** ou **SVG** e selecione **Retrato (8:9)** para colocar duas figuras lado a lado, **Quadrada (1:1)** ou **Paisagem (8:5)** para uma figura mais larga. O modal mostra a prévia do arquivo a baixar. O retrato é o padrão, e o navegador lembra a última proporção escolhida. As dimensões do PNG são 1920 × 2160, 2240 × 2240 e 3200 × 2000 pixels, respectivamente.
+
+A figura reúne título, empreendimento, ponto, endereço e coordenadas disponíveis, data inicial quando informada, indicadores, gráfico e nota do Leq estimado. Campos vazios são omitidos. Intervalos sem medições não podem ser exportados.
 
 Metadados novos usam versão 2 e tipo temporal explícito. Análises antigas sem versão continuam sendo interpretadas como datas absolutas. As tabelas Prisma e a migração inicial permanecem intactas; essa evolução usa os campos JSON existentes.
 

@@ -25,7 +25,7 @@ export function PreferencesSkeleton() {
 
 export function ChartSkeleton() {
   return <LoadingState label="Preparando a visualização…" className="panel overflow-hidden">
-    <div className="chart-heading"><div className="min-w-0 flex-1 space-y-3"><Skeleton className="h-6 w-3/4 max-w-sm" /><Skeleton className="h-4 w-1/2 max-w-xs" /><Skeleton className="h-4 w-36" /></div><div className="chart-actions"><Skeleton className="h-11 w-36" /><Skeleton className="h-11 w-22" /><Skeleton className="h-11 w-22" /></div></div>
+    <div className="chart-heading"><div className="min-w-0 flex-1 space-y-3"><Skeleton className="h-6 w-3/4 max-w-sm" /><Skeleton className="h-4 w-1/2 max-w-xs" /><Skeleton className="h-4 w-36" /></div><div className="chart-actions"><Skeleton className="h-11 w-36" /><Skeleton className="h-11 w-36" /></div></div>
     <div className="chart-body"><div className="flex flex-wrap gap-x-7 gap-y-3 py-3"><Skeleton className="h-5 w-40" /><Skeleton className="h-5 w-36" /></div><div className="chart-stats">{[0, 1, 2, 3].map(index => <div className="space-y-3" key={index}><Skeleton className="h-4 w-3/4 max-w-32" /><Skeleton className="h-7 w-4/5 max-w-36" /></div>)}</div><Skeleton className="my-4 h-[388px] w-full sm:h-[448px]" /></div>
   </LoadingState>
 }

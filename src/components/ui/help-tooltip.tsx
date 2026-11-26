@@ -18,8 +18,11 @@ export function HelpTooltip({ label, children }: { label: string; children: Reac
     function place() {
       if (!trigger.current || !popup.current) return
       const anchor = trigger.current.getBoundingClientRect(), box = popup.current.getBoundingClientRect()
+      const headerBottom = document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 0
+      if (anchor.bottom <= headerBottom || anchor.top >= window.innerHeight) { setOpen(false); return }
+      const topEdge = Math.max(12, headerBottom + 8)
       setPosition({ left: Math.max(12, Math.min(window.innerWidth - box.width - 12, anchor.left + anchor.width / 2 - box.width / 2)),
-        top: Math.max(12, anchor.top - box.height - 10 >= 12 ? anchor.top - box.height - 10 : Math.min(window.innerHeight - box.height - 12, anchor.bottom + 10)) })
+        top: Math.max(topEdge, anchor.top - box.height - 10 >= topEdge ? anchor.top - box.height - 10 : Math.min(window.innerHeight - box.height - 12, anchor.bottom + 10)) })
     }
     function escape(event: KeyboardEvent) { if (event.key === 'Escape') { cancelTimer(); setOpen(false) } }
     function outside(event: PointerEvent) {

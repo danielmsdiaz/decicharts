@@ -18,6 +18,10 @@
   --danger: #b42318;
   --danger-soft: #fff1ef;
   --soft-primary: #e9f5f1;
+  --header-height: 77px;
+  --motion-fast: 150ms;
+  --motion-panel: 220ms;
+  --motion-ease: cubic-bezier(.2, .65, .3, 1);
 }
 .dark {
   color-scheme: dark;
@@ -34,6 +38,33 @@
   --danger: #ffb4aa;
   --danger-soft: #432b2b;
   --soft-primary: #203b35;
+}
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition {
+    pointer-events: none;
+  }
+  ::view-transition-old(root), ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-new(root) {
+    --curtain-direction: to left;
+    --curtain-start: left center;
+    --curtain-end: right center;
+    mask-image: linear-gradient(var(--curtain-direction), #000 45%, transparent 55%);
+    mask-size: 224% 100%;
+    mask-repeat: no-repeat;
+    animation: theme-curtain 460ms cubic-bezier(.4, 0, .2, 1) both;
+  }
+  .dark::view-transition-new(root) {
+    --curtain-direction: to right;
+    --curtain-start: right center;
+    --curtain-end: left center;
+  }
+  @keyframes theme-curtain {
+    from { mask-position: var(--curtain-start); }
+    to { mask-position: var(--curtain-end); }
+  }
 }
 @theme inline {
   --color-background: var(--background);
@@ -54,6 +85,7 @@
   border-color: var(--border);
 }
 html {
+  scroll-padding-block-start: calc(var(--header-height) + 12px);
   scrollbar-color: var(--input) var(--background);
   scrollbar-width: thin;
 }
@@ -254,6 +286,7 @@ a {
   list-style: none;
   font-weight: 500;
   color: var(--muted-foreground);
+  transition: color var(--motion-fast) ease;
 }
 .disclosure > summary:hover {
   color: var(--foreground);
@@ -269,9 +302,27 @@ a {
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   transform: rotate(45deg) translateY(-2px);
+  transition: transform var(--motion-fast) var(--motion-ease);
 }
 .disclosure[open] > summary::after {
   transform: rotate(225deg) translate(-2px, -1px);
+}
+@supports (interpolate-size: allow-keywords) and selector(::details-content) {
+  @media (prefers-reduced-motion: no-preference) {
+    .disclosure::details-content {
+      interpolate-size: allow-keywords;
+      block-size: 0;
+      overflow: clip;
+      overflow-clip-margin: 4px;
+      opacity: 0;
+      transition: block-size var(--motion-panel) var(--motion-ease), opacity var(--motion-fast) ease,
+        content-visibility var(--motion-panel) allow-discrete;
+    }
+    .disclosure[open]::details-content {
+      block-size: auto;
+      opacity: 1;
+    }
+  }
 }
 .reading-settings {
   margin-top: 22px;
@@ -344,17 +395,6 @@ a {
 }
 .report-settings {
   padding-bottom: 20px;
-}
-.report-preview {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-}
-.report-preview > svg {
-  display: block;
-  width: 100%;
-  height: auto;
 }
 .point-control {
   max-width: 680px;
@@ -436,8 +476,16 @@ a {
 .app-header {
   background: var(--card);
   border-bottom: 1px solid var(--border);
-  position: relative;
+  position: sticky;
+  inset-block-start: 0;
   z-index: 20;
+}
+.app-header + main:not([aria-busy='true']) {
+  animation: page-enter var(--motion-panel) var(--motion-ease);
+}
+@keyframes page-enter {
+  from { opacity: .55; translate: 0 4px; }
+  to { opacity: 1; translate: 0 0; }
 }
 .header-inner {
   max-width: 1440px;
@@ -476,18 +524,18 @@ a {
   align-items: center;
   color: var(--muted-foreground);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
+  transition: color var(--motion-fast) ease;
 }
 .account-nav a:hover {
   color: var(--foreground);
 }
 .account-nav a.active {
   color: var(--primary);
-  font-weight: 650;
 }
-.account-nav a.active::after {
+.account-nav a::after {
   content: '';
   position: absolute;
   height: 3px;
@@ -496,6 +544,13 @@ a {
   left: 0;
   right: 0;
   border-radius: 3px 3px 0 0;
+  opacity: 0;
+  scale: .68 1;
+  transition: opacity var(--motion-fast) ease, scale var(--motion-panel) var(--motion-ease);
+}
+.account-nav a.active::after {
+  opacity: 1;
+  scale: 1;
 }
 .header-actions {
   margin-left: auto;
@@ -514,6 +569,7 @@ a {
   padding: 4px;
   background: transparent;
   border-radius: 8px;
+  transition: background-color var(--motion-fast) ease;
 }
 .account-trigger:hover {
   background: var(--accent);
@@ -522,6 +578,10 @@ a {
   width: 14px;
   height: 14px;
   color: var(--muted-foreground);
+  transition: rotate var(--motion-panel) var(--motion-ease);
+}
+.account-trigger[aria-expanded='true'] > svg {
+  rotate: 180deg;
 }
 .account-trigger img, .avatar-initial {
   width: 34px;
@@ -546,6 +606,18 @@ a {
   background: var(--card);
   box-shadow: 0 8px 32px rgb(0 0 0 / 16%);
   border-radius: 12px;
+  border: 1px solid var(--border);
+  opacity: 0;
+  translate: 0 -5px;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) ease, translate var(--motion-panel) var(--motion-ease), visibility var(--motion-panel);
+}
+.account-popover[data-open='true'] {
+  opacity: 1;
+  translate: 0 0;
+  visibility: visible;
+  pointer-events: auto;
 }
 .account-details {
   display: grid;
@@ -574,6 +646,7 @@ a {
   text-decoration: none;
   font-size: 14px;
   text-align: left;
+  transition: background-color var(--motion-fast) ease;
 }
 .account-popover a:hover, .account-popover button:hover {
   background: var(--accent);
@@ -581,6 +654,63 @@ a {
 .account-popover svg {
   width: 17px;
   height: 17px;
+}
+.select-control > svg {
+  transition: rotate var(--motion-panel) var(--motion-ease);
+}
+.select-control:has(select:open) > svg {
+  rotate: 180deg;
+}
+@supports (appearance: base-select) and selector(::picker(select)) {
+  @media (pointer: fine) {
+    .select-control > select, .select-control > select::picker(select) {
+      appearance: base-select;
+    }
+    .select-control > select::picker-icon {
+      display: none;
+    }
+    .select-control > select::picker(select) {
+      margin-block: 5px;
+      max-block-size: min(320px, 45vh);
+      padding: 4px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--card);
+      color: var(--foreground);
+      box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
+    }
+    .select-control option {
+      gap: 8px;
+      padding: 7px 9px;
+      border-radius: 6px;
+    }
+    .select-control option:is(:hover, :focus-visible) {
+      background: var(--accent);
+    }
+    .select-control option::checkmark {
+      order: 1;
+      margin-inline-start: auto;
+      color: var(--primary);
+    }
+  }
+  @media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .select-control > select::picker(select) {
+      opacity: 0;
+      translate: 0 -4px;
+      transition: opacity var(--motion-fast) ease, translate var(--motion-fast) var(--motion-ease),
+        display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
+    }
+    .select-control > select:open::picker(select) {
+      opacity: 1;
+      translate: 0 0;
+    }
+    @starting-style {
+      .select-control > select:open::picker(select) {
+        opacity: 0;
+        translate: 0 -4px;
+      }
+    }
+  }
 }
 .upload-formats {
   display: flex;
@@ -680,7 +810,7 @@ a {
   font-size: 13px;
   line-height: 1.6;
 }
-.confirmation-dialog {
+.confirmation-dialog, .export-dialog {
   padding: 0;
   border: 0;
   border-radius: 16px;
@@ -693,11 +823,50 @@ a {
   box-shadow: 0 20px 80px rgb(0 0 0 / 24%);
   overflow: auto;
 }
-.confirmation-dialog::backdrop {
+.confirmation-dialog::backdrop, .export-dialog::backdrop {
   background: rgb(8 18 15 / 52%);
 }
-.confirmation-dialog[open] {
-  animation: dialog-enter 180ms cubic-bezier(.23,1,.32,1);
+.confirmation-dialog:not([open]), .export-dialog:not([open]) {
+  pointer-events: none;
+  interactivity: inert;
+}
+.confirmation-dialog:not([open])::backdrop, .export-dialog:not([open])::backdrop {
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (transition-behavior: allow-discrete) and (overlay: auto) {
+    :is(.confirmation-dialog, .export-dialog) {
+      opacity: 0;
+      translate: 0 7px;
+      transition: opacity var(--motion-fast) ease, translate var(--motion-fast) var(--motion-ease),
+        display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
+    }
+    :is(.confirmation-dialog, .export-dialog)[open] {
+      opacity: 1;
+      translate: 0 0;
+    }
+    :is(.confirmation-dialog, .export-dialog)::backdrop {
+      opacity: 0;
+      transition: opacity var(--motion-fast) ease, display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
+    }
+    :is(.confirmation-dialog, .export-dialog)[open]::backdrop {
+      opacity: 1;
+    }
+    @starting-style {
+      :is(.confirmation-dialog, .export-dialog)[open] {
+        opacity: 0;
+        translate: 0 7px;
+      }
+      :is(.confirmation-dialog, .export-dialog)[open]::backdrop {
+        opacity: 0;
+      }
+    }
+  }
+  @supports not ((transition-behavior: allow-discrete) and (overlay: auto)) {
+    .confirmation-dialog[open], .export-dialog[open] {
+      animation: dialog-enter var(--motion-fast) var(--motion-ease);
+    }
+  }
 }
 .confirmation-content {
   padding: 28px;
@@ -754,6 +923,200 @@ a {
   margin-top: 28px;
   flex-wrap: wrap;
 }
+.export-dialog {
+  width: 900px;
+  border: 1px solid var(--border);
+}
+.export-dialog-content {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  max-height: calc(100svh - 50px);
+  padding: clamp(16px, 5vw, 26px);
+}
+.export-dialog-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 28px;
+}
+.export-dialog-heading h2 {
+  color: var(--foreground);
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -.025em;
+  line-height: 1.2;
+}
+.export-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--soft-primary);
+  color: var(--primary);
+  flex: none;
+}
+.export-dialog-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.export-dialog-body {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+  padding: 4px;
+  margin: -4px;
+  overflow-y: auto;
+}
+.export-dialog-options {
+  display: grid;
+  gap: 22px;
+}
+.export-options {
+  min-width: 0;
+}
+.export-options legend, .export-preview h3 {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.export-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.export-choice-grid-aspects {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.export-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px clamp(7px, 2.5vw, 14px);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.export-choice:hover {
+  border-color: var(--primary);
+}
+.export-choice:has(:checked) {
+  border-color: var(--primary);
+  background: var(--soft-primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.export-choice:has(:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.export-file-choice > svg {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  color: var(--primary);
+}
+.export-choice strong, .export-choice small {
+  display: block;
+}
+.export-choice strong {
+  font-size: 14px;
+  font-weight: 650;
+}
+.export-choice small, .export-file-size {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.export-aspect-choice {
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 4px;
+  text-align: center;
+}
+.export-aspect-icon {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  margin-bottom: 2px;
+  color: var(--muted-foreground);
+}
+.export-aspect-icon > span {
+  display: block;
+  width: 20px;
+  aspect-ratio: 8 / 9;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+}
+[data-aspect='square'] .export-aspect-icon > span {
+  aspect-ratio: 1;
+}
+[data-aspect='landscape'] .export-aspect-icon > span {
+  width: 25px;
+  aspect-ratio: 8 / 5;
+}
+.export-choice:has(:checked) .export-aspect-icon {
+  color: var(--primary);
+}
+.export-file-size {
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.export-preview-stage {
+  display: grid;
+  place-items: center;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  height: clamp(230px, 48vh, 510px);
+  padding: clamp(10px, 2vw, 20px);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.export-preview-stage img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 4px 16px rgb(12 24 22 / 20%);
+}
+.help-tooltip, .export-preview-stage img {
+  animation: surface-enter var(--motion-fast) ease-out;
+}
+@keyframes surface-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.export-preview-error {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.export-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 720px) {
+  .export-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .export-dialog-options {
+    gap: 16px;
+  }
+  .export-preview-stage {
+    height: clamp(180px, 32vh, 300px);
+  }
+}
 .page-title {
   display: flex;
   align-items: center;
@@ -766,26 +1129,11 @@ a {
   gap: 8px;
 }
 .chart-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  column-gap: 28px;
-  row-gap: 12px;
+  display: grid;
+  gap: 6px;
 }
 .chart-tools > details {
   padding-bottom: 0;
-}
-.chart-tools > details[open] {
-  flex-basis: 100%;
-  margin: 0;
-  padding: 18px 0;
-  border: 0;
-  border-radius: 0;
-  border-block: 1px solid var(--border);
-  background: transparent;
-}
-.chart-tools > details[open] summary {
-  margin-bottom: 16px;
 }
 /* Loading placeholders follow the content layout in both themes. */
 .skeleton {
@@ -816,6 +1164,9 @@ a {
   }
 }
 @media(max-width:640px) {
+  :root {
+    --header-height: 109px;
+  }
   .dashboard-shell {
     padding: 26px 18px 48px;
     gap: 20px;
@@ -957,26 +1308,13 @@ a {
   .chart-actions {
     width: 100%;
   }
-  .chart-actions > button:first-child, .chart-actions > .skeleton:first-child {
-    flex-basis: 100%;
-  }
-  .chart-actions > button:not(:first-child), .chart-actions > .skeleton:not(:first-child) {
+  .chart-actions > button, .chart-actions > .skeleton {
     flex: 1;
-  }
-  .chart-tools {
-    display: block;
-  }
-  .chart-tools > details + details {
-    margin-top: 12px;
   }
 }
 @media(prefers-reduced-motion:reduce) {
   *, *::before, *::after {
     transition-duration: 0s !important;
     animation: none !important;
-  }
-  *,*::before,*::after {
-    animation: none!important;
-    transition-duration: 0s!important;
   }
 }

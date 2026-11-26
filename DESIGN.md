@@ -162,11 +162,11 @@ Aplicar números tabulares a indicadores, períodos e contagens. Rótulos em cai
 
 ## Layout
 
-Header e conteúdo compartilham largura máxima de (1440px). O header desktop tem altura mínima de (76px), gutter de (40px) e reúne marca, navegação, tema e conta numa única faixa. O conteúdo usa padding (36px 40px 64px) e intervalo vertical de (24px).
+Header e conteúdo compartilham largura máxima de (1440px). O header permanece no topo durante a rolagem. No desktop, tem altura mínima de (76px), gutter de (40px) e reúne marca, navegação, tema e conta numa única faixa. O conteúdo usa padding (36px 40px 64px) e intervalo vertical de (24px).
 
 Até (900px), o gutter passa a (24px). Até (640px), o conteúdo usa (26px 18px 48px) e gap de (20px); a navegação ocupa uma faixa de (52px) abaixo da marca e dos controles. A página suporta largura mínima de (320px). As larguras de verificação desta entrega foram (1440px) e (390px).
 
-O arquivo ativo ocupa uma faixa própria, seguida do seletor de ponto quando há vários e do painel de gráfico em toda a largura. Os quatro indicadores ficam numa linha no desktop e em duas colunas no celular. Ações podem quebrar linha; no celular, salvar ocupa uma linha e PNG/SVG dividem a seguinte. Tabelas usam rolagem no seu contêiner, sem alargar a página.
+O arquivo ativo ocupa uma faixa própria, seguida do seletor de ponto quando há vários e do painel de gráfico em toda a largura. Os quatro indicadores ficam numa linha no desktop e em duas colunas no celular. Salvar e exportar ocupam a mesma faixa e podem quebrar linha quando o espaço é limitado. Os rótulos do eixo Y compartilham a margem dos indicadores. Tabelas usam rolagem no seu contêiner, sem alargar a página.
 
 Login centralizado, com conteúdo de até (400px), sem cartão elevado. Histórico usa linhas separadas; perfil separa identidade e preferências por bordas. Preferências e ajustes aparecem em duas colunas quando há espaço e uma coluna no celular.
 
@@ -200,7 +200,9 @@ Campos e selects compartilham altura, borda, fundo e cantos. Cada campo tem rót
 
 ### Navigation
 
-Links de navegação mantêm cor discreta; a rota ativa recebe teal, peso maior e traço inferior de (3px). O menu da conta é um disclosure ancorado no avatar, com nome, e-mail, configurações e sair. Fecha ao clicar fora, sair do grupo ou pressionar Escape; Escape devolve o foco ao disparador. Fotos indisponíveis recebem fallback de inicial.
+Links de navegação mantêm cor discreta. A rota ativa recebe teal e um traço inferior de (3px). O menu da conta é um disclosure ancorado no avatar, com nome, e-mail, configurações e sair. Fecha ao clicar fora, sair do grupo ou pressionar Escape. Escape devolve o foco ao disparador. Fotos indisponíveis recebem fallback de inicial.
+
+Menu, navegação, disclosures e modais usam transições curtas de (150ms) a (220ms). As listas dos selects usam transições nos navegadores com suporte ao seletor personalizável e ponteiro preciso. A preferência de movimento reduzido desativa essas transições.
 
 ### Cards / Containers
 
@@ -210,7 +212,7 @@ O painel organiza gráfico e importação conferida; a faixa do arquivo preserva
 
 O gráfico é a superfície principal. Arquivo, ponto e período permanecem verificáveis; setas e seletor alternam pontos sem perder ajustes locais. Média aritmética e Leq estimado são indicadores distintos. Preservar medições, duplicados e escala; não suavizar, interpolar ou amostrar para fins estéticos. A ajuda contextual, a faixa de zoom, as guias e a consulta de valores originais apoiam a leitura.
 
-A figura PNG/SVG permanece clara, mesmo no tema escuro da interface. Prévia e exportação compartilham a composição com identificação, quatro indicadores e nota técnica; informações ausentes não são inventadas. A exportação não copia a superfície verde da bancada.
+A figura PNG/SVG usa fundo claro e reúne identificação, quatro indicadores e nota técnica. O diálogo de exportação usa cartões de seleção única para o tipo de arquivo e a proporção e mostra a figura que será baixada. O foco começa no tipo selecionado e retorna ao botão de exportação ao fechar.
 
 ### Contextual help
 
