@@ -49,11 +49,11 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 
 Implementação e validação local das fases 9 a 14 concluídas. Reprodução com Google real e servidor dev reiniciado continua manual.
 
-Editor acessível por Criar documento dentro da análise, com títulos/subtítulos, textos, tabelas, fotos, seleção dos gráficos, legendas e trechos de uma/duas colunas. A própria folha é o editor visual; Verificar prévia abre todas as páginas grandes e limpas em um diálogo com rolagem vertical como PDF, sem prévia lateral. Editor ampliado à esquerda, ações e miniaturas à direita; edição de uma página por vez, adição/duplicação/exclusão e zoom. Documento local preservado na navegação e figuras atualizadas somente por ação explícita. Word exportado contém textos/tabelas editáveis e mídias incorporadas. A composição ainda não é salva na conta nem recuperada após recarga: exportar antes de sair. Detalhes e próximos passos na seção 27 do plano.
+Editor acessível por Criar documento dentro da análise, com títulos/subtítulos, textos, tabelas, fotos, seleção dos gráficos, legendas e trechos de uma/duas colunas. A própria folha é o editor visual; Verificar prévia abre todas as páginas grandes e limpas em um diálogo com rolagem vertical como PDF, sem prévia lateral. Editor ampliado à esquerda, ações e miniaturas à direita; edição de uma página por vez, adição/duplicação/exclusão e zoom. Folhas A4 com altura fixa e continuação automática; edição recompõe o fluxo, e prévia/Word usam as mesmas páginas. Documento local preservado na navegação e figuras atualizadas somente por ação explícita. Word exportado contém textos/tabelas editáveis e mídias incorporadas. A composição ainda não é salva na conta nem recuperada após recarga: exportar antes de sair. Detalhes e próximos passos na seção 27 do plano.
 
 ## Próximas tarefas
 
-Editor de documento: conferir a incorporação do trecho no relatório maior usando Microsoft Word. LibreOffice e estrutura OOXML já conferidos; paginação da prévia é orientativa. Entregar persistência explícita associada à análise, substituição/redimensionamento de fotos e refinamento da paginação de trechos longos. A entrega atual não envia documentos ou fotos ao servidor.
+Editor de documento: conferir a incorporação do trecho no relatório maior usando Microsoft Word. LibreOffice e estrutura OOXML já conferidos; paginação da prévia é orientativa. Entregar persistência explícita associada à análise, substituição/redimensionamento de fotos e aceite ampliado da paginação no Microsoft Word. A entrega atual não envia documentos ou fotos ao servidor.
 1. Confirmar o último ajuste de idempotência na conclusão concorrente legada com `test:postgres:local`, quando a execução for autorizada. A suíte passou inicialmente; uma repetição revelou falha intermitente nesse cenário e a nova execução foi recusada.
 2. Criar manualmente um branch/banco Neon separado e configurar TEST_DATABASE_URL; aplicar as migrações nesse destino explícito e repetir as integrações. PostgreSQL descartável local já validou a migração, o legado e o conjunto completo antes do último ajuste de concorrência.
 3. Validar Google real → importar → salvar conjunto → recarregar → reabrir todos os pontos; conferir ajustes, logout e reinício do Vite. Migração 0002 aplicada ao Neon configurado e schema conferido em 26/11/2026.
@@ -88,9 +88,9 @@ Editor de documento: conferir a incorporação do trecho no relatório maior usa
 
 | Verificação | Resultado |
 |-------------|-----------|
-| Vitest padrão | 96 aprovados; 4 testes de integração de banco ignorados por padrão |
+| Vitest padrão | 101 aprovados; 4 testes de integração de banco ignorados por padrão |
 | Neon real com Prisma | Migração 0002 e consulta real do histórico conferidas; integração ampliada com gravações sintéticas aguarda banco separado |
-| Chrome/Playwright | 29 cenários cobertos; quatro cenários de documentos aprovados nesta alteração, incluindo páginas, rolagem da prévia no desktop/celular e Word com todas as páginas em ordem. Regressão anterior completa de 27 aprovada; demais verificações registradas abaixo |
+| Chrome/Playwright | 34 cenários cobertos; nove cenários de documentos aprovados, incluindo continuação automática de texto/tabela/legenda, páginas, rolagem da prévia e Word com todas as páginas em ordem. Regressão anterior completa de 27 aprovada; demais verificações registradas abaixo |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
@@ -508,3 +508,12 @@ Próxima ação:
 - Verificar prévia mostra todas as páginas em sequência vertical, como PDF, a partir da página em edição. Contador acompanha a rolagem, setas deslocam entre folhas e teclado permite percorrer a região. Fechar preserva a página do editor e devolve o foco ao disparador.
 - Validação: 96 testes unitários aprovados (quatro integrações de banco ignoradas); quatro cenários Chrome de documentos aprovados, incluindo rolagem por mouse/teclado no desktop, rolagem no celular, zoom e DOCX de três páginas com duas quebras explícitas e conteúdos na ordem correta. Capturas desktop/celular inspecionadas. Lint, TypeScript/build aprovados; detector de layout sem achados e revisão visual final aprovada, sem bloqueios materiais.
 - Sem alteração de API, banco ou persistência: documento segue local à aba. Aceite no Microsoft Word, persistência futura e pendências anteriores de PostgreSQL/Google real permanecem.
+
+
+### 2026-11-26 — Limite A4 e continuação automática
+
+- Folhas limitadas a 794×1123px lógicos. Ao atingir a área útil, texto continua automaticamente, com preferência por limites entre palavras; tabelas seguem por linhas e figuras ficam inteiras. Legendas longas seguem sem repetir a imagem. Nenhuma redução da fonte para caber.
+- Paginação derivada do conteúdo normalizado, sem alterar o documento a cada tecla; edição de fragmento recompõe somente seu intervalo ProseMirror, preservando texto, marcas, listas e demais folhas. Apagar reorganiza o fluxo; quebras manuais continuam explícitas. Adicionar/duplicar/excluir atua na folha escolhida, sem fixar o restante do documento.
+- Editor e prévia mantêm folhas de altura fixa; miniaturas e Word compartilham a distribuição. Word usa uma fotografia com quebras explícitas. Página ativa preservada ao voltar da análise. Controles de formatação e figura fora do conteúdo medido, no painel lateral; legendas crescem com o texto.
+- Nove cenários Chrome de documentos aprovados: texto de 1.500 palavras em várias folhas, preservação integral e redução de páginas ao apagar, tabela de 70 linhas com edição no meio, legenda de 100 linhas com apenas uma imagem no Word, além dos fluxos anteriores. 101 testes unitários aprovados, com fragmentos, marcas, tabelas, inserção/exclusão e numeração de listas. Regressões cobrem digitação no limite com foco e desfazer/refazer, mover/juntar colunas sem perder trechos ocultos e inserir em coluna vazia de continuação respeitando a ordem. Lint, TypeScript/build aprovados e detector de layout sem achados. Capturas desktop/celular conferidas; revisão especializada final aprovada após corrigir palavras partidas e os dois casos de colunas. Limite de altura das imagens compartilhado com a exportação.
+- Sem API, migração, escrita no banco, push ou deploy. Documento segue local à aba. Aceite visual no Microsoft Word e pendências anteriores permanecem.

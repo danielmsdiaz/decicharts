@@ -9,6 +9,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   const { registerLogoutGuard } = useAuth()
   const confirm = useConfirmation()
   const [history, setHistory] = useState<History>(() => ({ document: blankDocument(), past: [], future: [], assets: new Map(), at: 0 }))
+  const [editorPageId, setEditorPageId] = useState('first')
   const current = useRef(history)
   function commit(next: History) {
     const retained = new Set([next.document, ...next.past, ...next.future].flatMap(doc => [...documentAssets(doc)]))
@@ -39,6 +40,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     } catch (issue) { values.forEach(value => URL.revokeObjectURL(value.url)); throw issue }
   }
   function clear(analysisId?: string, name?: string) {
+    setEditorPageId('first')
     commit({ document: { ...blankDocument(), analysisId, ...(name ? { name } : {}) }, past: [], future: [], assets: new Map(), at: 0 })
   }
   const dirty = blockCount(history.document) > 0
@@ -53,7 +55,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     const state = current
     return () => { state.current.assets.forEach(value => URL.revokeObjectURL(value.url)) }
   }, [])
-  return <ReportContext.Provider value={{ document: history.document, assets: history.assets, change, addAssets, clear,
+  return <ReportContext.Provider value={{ editorPageId, setEditorPageId, document: history.document, assets: history.assets, change, addAssets, clear,
     canUndo: history.past.length > 0, canRedo: history.future.length > 0,
     undo: () => {
       const before = current.current, previous = before.past.at(-1)

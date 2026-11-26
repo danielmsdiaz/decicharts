@@ -3,12 +3,67 @@ import { describe, expect, it } from 'vitest'
 import JSZip from 'jszip'
 import { blankDocument, duplicateRow, insertBlocks, newBlock, replaceBlock, rowFor, setColumns, type ReportAsset, type ReportBlock } from '../src/features/reports/model'
 import { createWordDocument } from '../src/features/reports/word-export'
+import { addFlowPage, cutRich, deleteFlowPage, insertOnPage, replaceRichFragment, type FlowPage } from '../src/features/reports/pagination'
+import { reportSchema } from '../src/features/reports/richtext'
 import { addReportPage, deleteReportPage, FIRST_PAGE, reportPages } from '../src/features/reports/pages'
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
 const text = (value: string) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: value }] }] })
 
 describe('documento por blocos', () => {
+  it('edita a continuação de um parágrafo sem perder o começo, o final ou as marcas', () => {
+    const content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Antes meio depois', marks: [{ type: 'bold' }] }] }] }
+    const source = reportSchema.nodeFromJSON(content), from = 7, to = 11, slice = source.slice(from, to, true)
+    expect(reportSchema.nodeFromJSON(cutRich(content, from, to)).textContent).toBe('meio')
+    const updated = replaceRichFragment(content, { type: 'rich', from, to, openStart: slice.openStart, openEnd: slice.openEnd }, text('outro trecho'))
+    expect(reportSchema.nodeFromJSON(updated).textContent).toBe('Antes outro trecho depois')
+    expect(updated.content?.[0].content?.[0].marks).toEqual([{ type: 'bold' }])
+    expect(updated.content?.[0].content?.at(-1)?.marks).toEqual([{ type: 'bold' }])
+    expect(source.textContent).toBe('Antes meio depois')
+  })
+  it('edita linhas de uma tabela dividida sem alterar as linhas das outras páginas', () => {
+    const content = { type: 'doc', content: [{ type: 'table', content: ['A', 'B', 'C'].map(value => ({ type: 'tableRow', content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: value }] }] }] })) }] }
+    const source = reportSchema.nodeFromJSON(content), from = 1 + source.firstChild!.child(0).nodeSize, to = from + source.firstChild!.child(1).nodeSize, slice = source.slice(from, to, true)
+    const fragment = cutRich(content, from, to)
+    fragment.content![0].content![0].content![0].content![0].content![0].text = 'Editado'
+    expect(reportSchema.nodeFromJSON(replaceRichFragment(content, { type: 'rich', from, to, openStart: slice.openStart, openEnd: slice.openEnd }, fragment)).textContent).toBe('AEditadoC')
+  })
+  it('continua a numeração de listas nas folhas seguintes', () => {
+    const content = { type: 'doc', content: [{ type: 'orderedList', attrs: { start: 3 }, content: ['A', 'B', 'C'].map(value => ({ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: value }] }] })) }] }
+    const source = reportSchema.nodeFromJSON(content), from = 1 + source.firstChild!.child(0).nodeSize
+    const continuation = cutRich(content, from, source.content.size)
+    expect(continuation.content?.[0].attrs?.start).toBe(4)
+    expect(reportSchema.nodeFromJSON(continuation).textContent).toBe('BC')
+  })
+  it('insere e exclui na folha de continuação sem apagar conteúdo de outras folhas', () => {
+    const block: ReportBlock = { ...newBlock('text'), content: text('AAAABBBBCCCC') }
+    const row = rowFor([[block]]), doc = { ...blankDocument(), rows: [row] }, source = reportSchema.nodeFromJSON(block.content)
+    const page = (from: number, to: number, id: string): FlowPage => {
+      const slice = source.slice(from, to, true)
+      return { id, manualId: FIRST_PAGE, start: 0, end: 1, rows: [{ ...row, columns: [[{ ...block, content: cutRich(block.content, from, to) }]] }], fragments: { [block.id]: { type: 'rich', from, to, openStart: slice.openStart, openEnd: slice.openEnd } } }
+    }
+    const pages = [page(0, 5, FIRST_PAGE), page(5, 9, 'first:flow:1'), page(9, source.content.size, 'first:flow:2')]
+    const deleted = deleteFlowPage(doc, pages[1], pages)
+    expect(reportSchema.nodeFromJSON((deleted.rows[0].columns[0][0] as typeof block).content).textContent).toBe('AAAACCCC')
+    const added = addFlowPage(doc, pages[1])
+    expect(reportPages(added.document)).toHaveLength(3)
+    expect(reportPages(added.document)[1].rows).toHaveLength(0)
+    const content = (value: typeof doc) => value.rows.flatMap(row => row.columns.flat()).filter(block => 'content' in block).map(block => reportSchema.nodeFromJSON(block.content).textContent).join('')
+    expect(content(added.document)).toBe('AAAABBBBCCCC')
+    const inserted = insertOnPage(doc, pages[1], { rowId: null, column: 0, index: 1 }, [{ ...newBlock('text'), content: text('NOVO') }])
+    expect(content(inserted)).toBe('AAAABBBBNOVOCCCC')
+    expect(content(doc)).toBe('AAAABBBBCCCC')
+  })
+  it('insere na coluna vazia de uma continuação depois do conteúdo já consumido', () => {
+    const left: ReportBlock = { ...newBlock('text'), content: text('AAAABBBBCCCC') }, right: ReportBlock = { ...newBlock('text'), content: text('ANTIGO') }
+    const row = rowFor([[left], [right]]), doc = { ...blankDocument(), rows: [row] }, source = reportSchema.nodeFromJSON(left.content), slice = source.slice(5, 9, true)
+    const page: FlowPage = { id: 'first:flow:1', manualId: FIRST_PAGE, start: 0, end: 1, rows: [{ ...row, columns: [[{ ...left, content: cutRich(left.content, 5, 9) }], []] }], columnOffsets: { [row.id]: [0, 1] }, fragments: { [left.id]: { type: 'rich', from: 5, to: 9, openStart: slice.openStart, openEnd: slice.openEnd } } }
+    const inserted = insertOnPage(doc, page, { rowId: row.id, column: 1, index: 0 }, [{ ...newBlock('text'), content: text('NOVO') }])
+    const contents = (column: number) => inserted.rows.flatMap(row => row.columns[column]).filter(block => 'content' in block).map(block => reportSchema.nodeFromJSON(block.content).textContent).join('')
+    expect(contents(0)).toBe('AAAABBBBCCCC')
+    expect(contents(1)).toBe('ANTIGONOVO')
+    expect(inserted.rows).toHaveLength(3)
+  })
   it('mantém páginas vazias, duplica com IDs próprios e exclui páginas sem misturar seus conteúdos', () => {
     const first: ReportBlock = { ...newBlock('text'), content: text('Primeira página') }
     let doc = { ...blankDocument(), rows: [rowFor([[first]])] }

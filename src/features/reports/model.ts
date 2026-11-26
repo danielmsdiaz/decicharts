@@ -5,12 +5,13 @@ export type TextKind = 'title' | 'subtitle' | 'text'
 export interface FigureSource { importId: string; pointId: string; label: string; version: number | null; view: ChartView }
 export type ReportBlock =
   | { id: string; kind: TextKind | 'table'; content: JSONContent }
-  | { id: string; kind: 'figure'; assetId: string; caption: string; alt: string; source?: FigureSource }
+  | { id: string; kind: 'figure'; assetId: string; caption: string; alt: string; continuation?: boolean; source?: FigureSource }
   | { id: string; kind: 'break' }
 export interface ReportRow { id: string; columns: ReportBlock[][] }
 export interface ReportDocument { schemaVersion: 1; analysisId?: string; name: string; rows: ReportRow[] }
 export interface ReportAsset { id: string; blob: Blob; url: string; width: number; height: number }
 export interface InsertTarget { rowId: string | null; column: number; index: number }
+export const MAX_REPORT_FIGURE_HEIGHT = 700
 export const MAX_REPORT_ASSETS_BYTES = 20 * 1024 * 1024
 export const MAX_REPORT_BLOCKS = 500
 export const blankDocument = (): ReportDocument => ({ schemaVersion: 1, name: 'Medições de ruído', rows: [] })

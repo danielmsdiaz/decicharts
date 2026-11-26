@@ -2,6 +2,8 @@ import { createContext, useContext } from 'react'
 import type { ReportAsset, ReportDocument } from './model'
 
 export interface ReportWorkspace {
+  editorPageId: string
+  setEditorPageId: (id: string) => void
   document: ReportDocument
   assets: ReadonlyMap<string, ReportAsset>
   change: (update: (doc: ReportDocument) => ReportDocument, group?: string) => void

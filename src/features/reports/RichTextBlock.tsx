@@ -1,28 +1,32 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { EditorContent, useEditor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import { TableKit } from '@tiptap/extension-table'
-import TextAlign from '@tiptap/extension-text-align'
+import { reportExtensions } from './richtext'
 import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, List, ListOrdered } from 'lucide-react'
 import type { JSONContent } from '@tiptap/core'
 import type { ReportBlock } from './model'
 
 type Block = Extract<ReportBlock, { content: JSONContent }>
-export function RichTextBlock({ block, selected, onSelect, onChange }: { block: Block; selected: boolean; onSelect: () => void; onChange: (value: JSONContent) => void }) {
+export function RichTextBlock({ block, selected, onSelect, onChange, caret, toolbarTarget }: { block: Block; selected: boolean; onSelect: () => void; onChange: (value: JSONContent, selection: { from: number; to: number }) => void; caret?: { from: number; to: number; version: number }; toolbarTarget: HTMLElement | null }) {
+  const caretFrom = caret?.from, caretTo = caret?.to, caretVersion = caret?.version
   const label = block.kind === 'title' ? 'Título' : block.kind === 'subtitle' ? 'Subtítulo' : block.kind === 'table' ? 'Tabela' : 'Texto'
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: false, blockquote: false, codeBlock: false, code: false, link: false, horizontalRule: false, undoRedo: false, trailingNode: false }), TableKit.configure({ table: { resizable: false } }), TextAlign.configure({ types: ['paragraph'] })],
+    extensions: reportExtensions(),
     content: block.content, shouldRerenderOnTransaction: true,
     editorProps: { attributes: { role: 'textbox', 'aria-label': label, 'aria-multiline': 'true', 'data-placeholder': label === 'Tabela' ? '' : `Digite o ${label.toLowerCase()}…` } },
-    onUpdate: ({ editor }) => onChange(editor.getJSON()), onFocus: onSelect,
+    onUpdate: ({ editor }) => onChange(editor.getJSON(), { from: editor.state.selection.from, to: editor.state.selection.to }), onFocus: onSelect,
   }, [block.id])
   useEffect(() => {
     if (editor && JSON.stringify(editor.getJSON()) !== JSON.stringify(block.content)) editor.commands.setContent(block.content, { emitUpdate: false })
   }, [editor, block.content])
-  useEffect(() => { if (selected && editor && !editor.isFocused) editor.commands.focus('end') }, [selected, editor])
+  useEffect(() => {
+    if (!selected || !editor) return
+    if (caretFrom !== undefined && caretTo !== undefined) editor.commands.setTextSelection({ from: Math.max(1, Math.min(caretFrom, editor.state.doc.content.size - 1)), to: Math.max(1, Math.min(caretTo, editor.state.doc.content.size - 1)) })
+    if (!editor.isFocused) editor.commands.focus(caretFrom !== undefined ? undefined : 'end', { scrollIntoView: false })
+  }, [selected, editor, caretFrom, caretTo, caretVersion])
   if (!editor) return null
   return <div className={`report-richtext report-${block.kind}`}>
-    {selected && <div className="report-text-tools" role="toolbar" aria-label="Formatar conteúdo" onMouseDown={event => event.preventDefault()}>
+    {selected && toolbarTarget && createPortal(<div className="report-text-tools" role="toolbar" aria-label="Formatar conteúdo" onMouseDown={event => event.preventDefault()}>
       {([
         [Bold, 'Negrito', 'bold', () => editor.chain().focus().toggleBold().run()],
         [Italic, 'Itálico', 'italic', () => editor.chain().focus().toggleItalic().run()],
@@ -36,7 +40,7 @@ export function RichTextBlock({ block, selected, onSelect, onChange }: { block: 
         <button type="button" onClick={() => editor.chain().focus().deleteRow().run()}>Excluir linha</button>
         <button type="button" onClick={() => editor.chain().focus().deleteColumn().run()}>Excluir coluna</button>
       </div>}
-    </div>}
+    </div>, toolbarTarget)}
     <EditorContent editor={editor} />
   </div>
 }

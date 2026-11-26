@@ -253,3 +253,175 @@ test('edita uma página por vez, navega por miniaturas e exporta todas em ordem'
   await page.getByLabel('Zoom da página', { exact: true }).selectOption('100')
   await expect.poll(() => page.locator('.report-paper').evaluate(element => element.getBoundingClientRect().width)).toBe(794)
 })
+
+test('texto ultrapassa a folha A4, continua automaticamente e volta a ocupar menos páginas ao apagar', async ({ page }) => {
+  await start(page)
+  await add(page, 'Texto')
+  const content = 'INÍCIO ' + Array.from({ length: 1500 }, (_, i) => `palavra${String(i).padStart(4, '0')} `).join('') + 'FIM'
+  await page.getByRole('textbox', { name: 'Texto', exact: true }).fill(content)
+  const choices = page.getByRole('button', { name: /^Página \d+$/ })
+  await expect.poll(() => choices.count()).toBeGreaterThan(1)
+  const count = await choices.count()
+  await expect(page.locator('.report-stage-heading')).toContainText(`Página ${count} de ${count}`)
+  await expect(page.getByRole('textbox', { name: 'Texto', exact: true })).toContainText('FIM')
+  await page.getByRole('textbox', { name: 'Texto', exact: true }).press('End')
+  await page.keyboard.type(' CONTINUA')
+  let recovered = ''
+  for (let index = 0; index < count; index++) {
+    await choices.nth(index).click()
+    recovered += await page.getByRole('textbox', { name: 'Texto', exact: true }).textContent()
+    const bounds = await page.locator('.report-paper').evaluate(paper => {
+      const box = paper.getBoundingClientRect(), zoom = box.width / 794
+      const contents = [...paper.querySelectorAll('.tiptap')].map(element => element.getBoundingClientRect().bottom)
+      return { height: box.height / zoom, contentBottom: (Math.max(...contents) - box.top) / zoom }
+    })
+    expect(bounds.height).toBeCloseTo(1123, 0)
+    expect(bounds.contentBottom).toBeLessThan(1123 - 60)
+  }
+  expect(recovered).toBe(content + ' CONTINUA')
+  await page.getByRole('button', { name: 'Verificar prévia', exact: true }).click()
+  const preview = page.getByRole('dialog', { name: 'Prévia do documento', exact: true })
+  await expect(preview.locator('.report-preview-page')).toHaveCount(count)
+  expect((await preview.locator('.report-preview-page').allTextContents()).join('')).toBe(recovered)
+  for (const sheet of await preview.locator('.report-preview-page').all()) {
+    await expect.poll(() => sheet.evaluate(element => element.getBoundingClientRect().height)).toBeCloseTo(1123, 0)
+  }
+  await page.screenshot({ path: '/tmp/decicharts-report-auto-pages-desktop.png', animations: 'disabled' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(preview.locator('.report-preview-page')).toHaveCount(count)
+  await preview.getByRole('region', { name: 'Páginas da prévia', exact: true }).evaluate(element => element.scrollTo(0, element.scrollHeight))
+  await page.screenshot({ path: '/tmp/decicharts-report-auto-pages-mobile.png', animations: 'disabled' })
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await preview.getByRole('button', { name: 'Voltar à edição', exact: true }).click()
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Exportar Word', exact: true }).click()
+  const downloaded = await downloading
+  await downloaded.saveAs('/tmp/decicharts-report-auto-pages.docx')
+  const zip = await JSZip.loadAsync(await (await import('node:fs/promises')).readFile('/tmp/decicharts-report-auto-pages.docx'))
+  const xml = await zip.file('word/document.xml')!.async('string')
+  expect(xml.match(/w:type="page"/g)).toHaveLength(count - 1)
+  expect(xml).toContain('INÍCIO'); expect(xml).toContain('FIM CONTINUA')
+  expect([...xml.matchAll(/<w:t(?: [^>]*)?>(.*?)<\/w:t>/g)].map(match => match[1]).join('')).toBe(recovered)
+  for (let attempts = 0; attempts < count + 2 && await choices.count() > 1; attempts++) {
+    await choices.last().click()
+    await page.getByRole('textbox', { name: 'Texto', exact: true }).fill('')
+  }
+  await expect(choices).toHaveCount(1)
+  // A full first sheet must continue naturally while typing, retaining focus and undo.
+  const prefix = await page.getByRole('textbox', { name: 'Texto', exact: true }).textContent()
+  await page.clock.install(); await page.clock.fastForward(1000)
+  await page.getByRole('textbox', { name: 'Texto', exact: true }).press('Control+End')
+  const suffix = ' mais conteúdo digitado'.repeat(5)
+  await page.keyboard.type(suffix)
+  await expect(choices).toHaveCount(2)
+  await expect(page.getByRole('textbox', { name: 'Texto', exact: true })).toBeFocused()
+  await expect(page.locator('.report-stage-heading')).toContainText('Página 2 de 2')
+  await page.keyboard.press('Control+z')
+  await expect(choices).toHaveCount(1)
+  await page.keyboard.press('Control+Shift+z')
+  await expect(choices).toHaveCount(2)
+  let afterRedo = ''
+  for (let i = 0; i < 2; i++) { await choices.nth(i).click(); afterRedo += await page.getByRole('textbox', { name: 'Texto', exact: true }).textContent() }
+  expect(afterRedo).toBe(prefix + suffix)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+test('tabela longa continua em folhas A4 e mantém todas as linhas editáveis', async ({ page }) => {
+  await start(page)
+  await add(page, 'Texto')
+  const html = `<table><tbody>${Array.from({ length: 70 }, (_, i) => `<tr><td>Linha ${String(i).padStart(3, '0')}</td><td>Resultado ${i}</td></tr>`).join('')}</tbody></table>`
+  await page.getByRole('textbox', { name: 'Texto', exact: true }).evaluate((element, html) => {
+    const clipboardData = new DataTransfer(); clipboardData.setData('text/html', html)
+    element.dispatchEvent(new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }))
+  }, html)
+  const choices = page.getByRole('button', { name: /^Página \d+$/ })
+  await expect.poll(() => choices.count()).toBeGreaterThan(1)
+  const count = await choices.count(), recovered: string[] = []
+  for (let i = 0; i < count; i++) {
+    await choices.nth(i).click()
+    const cells = page.locator('.report-paper .tiptap td')
+    recovered.push(...await cells.allTextContents())
+    const target = cells.filter({ hasText: /^Resultado 35$/ })
+    if (await target.count()) await target.fill('Resultado revisado 35')
+    const overflow = await page.locator('.report-paper').evaluate(element => {
+      const bounds = element.getBoundingClientRect(), scale = bounds.width / 794
+      return Math.max(...[...element.querySelectorAll('.tiptap')].map(child => child.getBoundingClientRect().bottom)) > bounds.bottom - 60 * scale
+    })
+    expect(overflow).toBe(false)
+  }
+  expect(recovered).toEqual(Array.from({ length: 70 }, (_, i) => [`Linha ${String(i).padStart(3, '0')}`, `Resultado ${i}`]).flat())
+  await page.getByRole('button', { name: 'Verificar prévia', exact: true }).click()
+  const preview = page.getByRole('dialog', { name: 'Prévia do documento', exact: true })
+  await expect(preview.locator('.report-preview-page')).toHaveCount(count)
+  await expect(preview.locator('.report-preview-page').getByText('Resultado revisado 35', { exact: true })).toHaveCount(1)
+  await expect(preview.locator('.report-preview-page').getByText('Linha 069', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+test('foto fica inteira e legenda longa continua sem repetir a imagem no Word', async ({ page }) => {
+  await start(page)
+  await add(page, 'Foto')
+  await page.getByLabel('Foto para o documento').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') })
+  const caption = Array.from({ length: 100 }, (_, i) => `Legenda ${String(i).padStart(3, '0')}`).join('\n')
+  await page.getByLabel('Legenda de foto', { exact: true }).fill(caption)
+  const choices = page.getByRole('button', { name: /^Página \d+$/ })
+  await expect.poll(() => choices.count()).toBeGreaterThan(1)
+  const count = await choices.count(); let recovered = '', images = 0
+  for (let i = 0; i < count; i++) {
+    await choices.nth(i).click()
+    recovered += await page.getByLabel('Legenda de foto', { exact: true }).inputValue()
+    images += await page.locator('.report-paper img').count()
+  }
+  expect(recovered).toBe(caption); expect(images).toBe(1)
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Exportar Word', exact: true }).click()
+  const downloaded = await downloading; await downloaded.saveAs('/tmp/decicharts-report-caption-pages.docx')
+  const zip = await JSZip.loadAsync(await (await import('node:fs/promises')).readFile('/tmp/decicharts-report-caption-pages.docx'))
+  const xml = await zip.file('word/document.xml')!.async('string')
+  expect(xml.match(/<w:drawing>/g)).toHaveLength(1)
+  expect(xml).toContain('Legenda 099')
+  expect(xml.match(/w:type="page"/g)).toHaveLength(count - 1)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+test('mudar colunas de um texto paginado preserva também as partes de outras folhas', async ({ page }) => {
+  await start(page)
+  await add(page, 'Duas colunas')
+  await page.locator('.report-column').first().getByRole('button', { name: 'Adicionar conteúdo', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Texto', exact: true }).click()
+  const content = Array.from({ length: 600 }, (_, i) => `conteudo${i} `).join('') + 'FIM'
+  await page.getByRole('textbox', { name: 'Texto', exact: true }).fill(content)
+  const choices = page.getByRole('button', { name: /^Página \d+$/ })
+  await expect.poll(() => choices.count()).toBeGreaterThan(1)
+  await page.getByRole('button', { name: 'Mover para outra coluna', exact: true }).click()
+  await expect(page.locator('.report-column').last().getByRole('textbox', { name: 'Texto', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '1 coluna', exact: true }).click()
+  await expect(page.locator('.report-column')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Verificar prévia', exact: true }).click()
+  const preview = page.getByRole('dialog', { name: 'Prévia do documento', exact: true })
+  expect((await preview.locator('.report-preview-page').allTextContents()).join('')).toBe(content)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+test('inserir em coluna vazia de uma continuação respeita o conteúdo da folha anterior', async ({ page }) => {
+  await start(page)
+  await add(page, 'Duas colunas')
+  await page.locator('.report-column').last().getByRole('button', { name: 'Adicionar conteúdo', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Texto', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Texto', exact: true }).fill('TEXTO ANTERIOR')
+  await page.locator('.report-column').first().getByRole('button', { name: 'Adicionar conteúdo', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Texto', exact: true }).click()
+  const content = Array.from({ length: 600 }, (_, i) => `conteudo${i} `).join('') + 'FIM'
+  await page.locator('.report-column').first().getByRole('textbox', { name: 'Texto', exact: true }).fill(content)
+  const choices = page.getByRole('button', { name: /^Página \d+$/ })
+  await expect.poll(() => choices.count()).toBeGreaterThan(1)
+  await page.locator('.report-column').last().getByRole('button', { name: 'Adicionar conteúdo', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Texto', exact: true }).click()
+  await page.locator('.report-column').last().getByRole('textbox', { name: 'Texto', exact: true }).fill('TEXTO NOVO')
+  await expect(choices.first()).not.toHaveAttribute('aria-current', 'page')
+  await page.getByRole('button', { name: 'Verificar prévia', exact: true }).click()
+  const text = (await page.getByRole('dialog', { name: 'Prévia do documento', exact: true }).locator('.report-preview-page').allTextContents()).join('')
+  expect(text.indexOf('TEXTO ANTERIOR')).toBeLessThan(text.indexOf('TEXTO NOVO'))
+  expect(text.replace('TEXTO ANTERIOR', '').replace('TEXTO NOVO', '')).toBe(content)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})

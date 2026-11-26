@@ -4,6 +4,7 @@ import {
   type ILevelsOptions, type IParagraphOptions,
 } from 'docx'
 import type { JSONContent } from '@tiptap/core'
+import { MAX_REPORT_FIGURE_HEIGHT } from './model'
 import type { ReportAsset, ReportBlock, ReportDocument } from './model'
 
 type Child = Paragraph | Table
@@ -59,8 +60,8 @@ export async function createWordDocument(report: ReportDocument, assets: Readonl
         const asset = assets.get(block.assetId)
         if (!asset) throw new Error('Uma figura está indisponível. Insira-a novamente antes de exportar.')
         const maxWidth = width / 15, maxHeight = (pageHeight - margin * 2 - 650) / 15
-        const factor = Math.min(maxWidth / asset.width, maxHeight / asset.height)
-        children.push(new Paragraph({ alignment: AlignmentType.CENTER, keepNext: !!block.caption.trim(), spacing: { after: block.caption.trim() ? 60 : 140, line: 240 },
+        const factor = Math.min(maxWidth / asset.width, Math.min(maxHeight, MAX_REPORT_FIGURE_HEIGHT) / asset.height)
+        if (!block.continuation) children.push(new Paragraph({ alignment: AlignmentType.CENTER, keepNext: !!block.caption.trim(), spacing: { after: block.caption.trim() ? 60 : 140, line: 240 },
           children: [new ImageRun({ type: asset.blob.type === 'image/jpeg' ? 'jpg' : 'png', data: new Uint8Array(await asset.blob.arrayBuffer()),
             transformation: { width: Math.round(asset.width * factor), height: Math.round(asset.height * factor) },
             altText: { name: block.alt || 'Figura', title: block.alt || 'Figura', description: block.alt || 'Figura do relatório' } })] }))

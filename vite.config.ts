@@ -26,11 +26,12 @@ export default defineConfig(({ mode }) => {
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   // Workers load these after the page. Prebundle them before the first upload so
   // Vite does not reload the page to discover a new dependency mid-import.
-  optimizeDeps: { include: ['papaparse', 'xlsx', '@tiptap/react', '@tiptap/core', '@tiptap/starter-kit', '@tiptap/extension-table', '@tiptap/extension-text-align', 'docx'] },
+  optimizeDeps: { include: ['papaparse', 'xlsx', '@tiptap/react', '@tiptap/core', '@tiptap/pm/model', '@tiptap/pm/transform', '@tiptap/starter-kit', '@tiptap/extension-table', '@tiptap/extension-text-align', 'docx'] },
   worker: { format: 'es' },
   build: { rollupOptions: { output: { manualChunks(id) {
     if (id.includes('/node_modules/zrender/')) return 'zrender'
     if (id.includes('/node_modules/echarts/')) return 'echarts'
+    if (id.includes('/node_modules/@tiptap/') || id.includes('/node_modules/prosemirror-')) return 'document-editor'
   } } } },
   }
 })

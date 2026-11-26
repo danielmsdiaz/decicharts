@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { JSONContent } from '@tiptap/core'
 import type { ReportAsset, ReportBlock, ReportDocument, ReportRow } from './model'
+import type { BlockFragment } from './pagination'
 
 const paperWidth = 794, paperHeight = 1123, paperMargin = 76, usableHeight = paperHeight - paperMargin * 2
 interface Page { rows: ReportRow[]; height: number }
@@ -29,22 +30,22 @@ function RichContent({ nodes = [] }: { nodes?: JSONContent[] }): ReactNode {
     return <span key={index}>{children}</span>
   })
 }
-function PreviewBlock({ block, assets }: { block: ReportBlock; assets: ReadonlyMap<string, ReportAsset> }) {
+function PreviewBlock({ block, assets, fragment }: { block: ReportBlock; assets: ReadonlyMap<string, ReportAsset>; fragment?: BlockFragment }) {
   if (block.kind === 'break') return null
   if (block.kind === 'figure') {
     const asset = assets.get(block.assetId)
-    return <figure>{asset && <img src={asset.url} width={asset.width} height={asset.height} alt={block.alt} />}{block.caption.trim() && <figcaption>{block.caption}</figcaption>}</figure>
+    return <figure>{asset && (fragment?.type !== 'figure' || fragment.image) && <img style={fragment?.type === 'figure' ? { maxHeight: fragment.imageHeight } : undefined} src={asset.url} width={asset.width} height={asset.height} alt={block.alt} />}{block.caption.trim() && <figcaption>{block.caption}</figcaption>}</figure>
   }
   const content = <RichContent nodes={block.content.content} />
   return block.kind === 'title' ? <h1>{content}</h1> : block.kind === 'subtitle' ? <h2>{content}</h2> : <div>{content}</div>
 }
-function PreviewRow({ row, assets }: { row: ReportRow; assets: ReadonlyMap<string, ReportAsset> }) {
-  return <div className={`report-preview-row preview-columns-${row.columns.length}`} data-preview-row={row.id}>{row.columns.map((column, index) => <div key={index}>{column.map(block => <PreviewBlock key={block.id} block={block} assets={assets} />)}</div>)}</div>
+function PreviewRow({ row, assets, fragments }: { row: ReportRow; assets: ReadonlyMap<string, ReportAsset>; fragments?: Record<string, BlockFragment> }) {
+  return <div className={`report-preview-row preview-columns-${row.columns.length}`} data-preview-row={row.id}>{row.columns.map((column, index) => <div key={index}>{column.map(block => <PreviewBlock key={block.id} block={block} assets={assets} fragment={fragments?.[block.id]} />)}</div>)}</div>
 }
-export function PreviewPageContent({ rows, assets }: { rows: ReportRow[]; assets: ReadonlyMap<string, ReportAsset> }) {
-  return rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} />)
+export function PreviewPageContent({ rows, assets, fragments }: { rows: ReportRow[]; assets: ReadonlyMap<string, ReportAsset>; fragments?: Record<string, BlockFragment> }) {
+  return rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} fragments={fragments} />)
 }
-export function LivePreview({ document: doc, assets, singlePage = false, pageNumber = 1 }: { document: ReportDocument; assets: ReadonlyMap<string, ReportAsset>; singlePage?: boolean; pageNumber?: number }) {
+export function LivePreview({ document: doc, assets, singlePage = false, pageNumber = 1, fragments }: { document: ReportDocument; assets: ReadonlyMap<string, ReportAsset>; singlePage?: boolean; pageNumber?: number; fragments?: Record<string, BlockFragment> }) {
   const measurement = useRef<HTMLDivElement>(null), container = useRef<HTMLDivElement>(null)
   const [layout, setLayout] = useState<{ scale: number; pages: Page[] }>({ scale: .4, pages: [] })
   useLayoutEffect(() => {
@@ -70,13 +71,13 @@ export function LivePreview({ document: doc, assets, singlePage = false, pageNum
     return () => { active = false; observer.disconnect() }
   }, [doc, assets, singlePage])
   return <div ref={container} className="report-live-preview" aria-label="Folhas do documento">
-    <div ref={measurement} className="report-preview-measure report-print-content" aria-hidden="true">{doc.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} />)}</div>
+    <div ref={measurement} className="report-preview-measure report-print-content" aria-hidden="true">{doc.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} fragments={fragments} />)}</div>
     {(layout.pages.length ? layout.pages : [{ rows: [], height: 0 }]).map((page, index) => {
-      const continuous = page.height > usableHeight
-      const height = Math.max(paperHeight, page.height + paperMargin * 2)
+      const continuous = !singlePage && page.height > usableHeight
+      const height = singlePage ? paperHeight : Math.max(paperHeight, page.height + paperMargin * 2)
       return <div className="report-preview-page-wrap" key={index} style={{ height: height * layout.scale + 32 }}>
         <div className="report-preview-page report-print-content" style={{ width: paperWidth, minHeight: height, transform: `scale(${layout.scale})` }}>
-          {page.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} />)}
+          {page.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} fragments={fragments} />)}
           {!doc.rows.length && <p className="report-preview-empty">Documento em branco.</p>}
         </div>
         <span className="report-preview-page-number">{continuous ? `${pageNumber + index} · Trecho longo · prévia contínua` : pageNumber + index}</span>
