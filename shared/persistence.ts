@@ -2,6 +2,8 @@ import type { ColumnMapping, MeasurementDataset, PointInfo, TimeBasis, TimeRange
 
 export const CHUNK_SIZE = 5_000
 export const MAX_POINTS = 250_000
+export const MAX_BATCH_BYTES = 480 * 1024
+export const MAX_BATCH_POINTS = 100
 export interface Preferences { timezone: string; unit: string }
 export const DEFAULT_PREFERENCES: Preferences = { timezone: 'America/Recife', unit: 'dB' }
 export interface UserProfile { uid: string; name: string | null; email: string | null; photoURL: string | null; preferences: Preferences }
@@ -53,6 +55,9 @@ export interface ImportInput { id: string; name: string; fileName: string; sheet
 export interface SaveInput { id: string; baseVersion: number; name: string }
 export interface SaveReceipt { id: string; state: 'uploading' | 'committed'; version: number | null; updatedAt?: string }
 export interface ImportPointInput { ordinal: number; chart: ChartView; metadata?: DatasetMetadata }
+export interface ImportBatchPoint extends ImportPointInput { id: string; points?: PointTuple[] }
+export interface ImportBatchInput { points: ImportBatchPoint[]; publish: boolean }
+export interface ImportBatchResult { points: { id: string; ready: boolean }[]; committed?: SaveReceipt }
 export interface StoredImportPoint { id: string; ordinal: number; metadata: DatasetMetadata; chart: ChartView; chunkCount: number }
 export interface ImportPointPage { points: StoredImportPoint[]; nextOffset: number | null }
 export interface LoadedImport { summary: ImportSummary; points: { stored: StoredImportPoint; dataset: MeasurementDataset }[] }

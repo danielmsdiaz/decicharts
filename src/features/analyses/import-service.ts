@@ -1,22 +1,51 @@
 import type { User } from 'firebase/auth'
 import { api, ApiError } from '@/lib/api'
 import type { MeasurementDataset } from '@/features/measurements/types'
-import { CHUNK_SIZE, MAX_POINTS, metadataFromDataset, type ChartView, type ImportSummary, type ImportPointPage, type PointTuple, type SaveReceipt, type LoadedImport } from '../../../shared/persistence'
+import { CHUNK_SIZE, MAX_POINTS, MAX_BATCH_BYTES, MAX_BATCH_POINTS, metadataFromDataset, type ChartView, type ImportSummary, type ImportPointPage, type PointTuple, type SaveReceipt, type LoadedImport, type ImportBatchInput, type ImportBatchPoint, type ImportBatchResult } from '../../../shared/persistence'
 
 export interface SaveProgress { points: number; totalPoints: number; records: number; totalRecords: number; publishing: boolean }
 export interface SaveSnapshot {
   id: string; saveId: string; baseVersion: number; name: string
   points: { id: string; dataset: MeasurementDataset; view: ChartView; ordinal: number }[]
 }
-// One limiter for the whole import, never three workers per point. Settle the
-// current batch before throwing, so retry cannot race a previous batch.
-async function batches(total: number, signal: AbortSignal, run: (index: number) => Promise<void>) {
-  for (let start = 0; start < total; start += 3) {
-    signal.throwIfAborted()
-    const results = await Promise.allSettled(Array.from({ length: Math.min(3, total - start) }, (_, offset) => run(start + offset)))
-    const failed = results.find((result): result is PromiseRejectedResult => result.status === 'rejected')
-    if (failed) throw failed.reason
+function pointBatches(snapshot: SaveSnapshot): ImportBatchInput[] {
+  const batches: ImportBatchInput[] = []
+  const encoder = new TextEncoder()
+  const size = (value: unknown) => encoder.encode(JSON.stringify(value)).byteLength
+  let current: ImportBatchInput = { points: [], publish: false }, bytes = size(current)
+  for (const point of snapshot.points) {
+    const value: ImportBatchPoint = { id: point.id, ordinal: point.ordinal, chart: point.view,
+      ...(snapshot.baseVersion === 0 ? { metadata: metadataFromDataset(point.dataset) } : {}) }
+    if (snapshot.baseVersion === 0 && point.dataset.validRecords <= CHUNK_SIZE) {
+      value.points = point.dataset.measurements.map(value => [value.timestamp, value.value])
+      if (size(value) + 64 > MAX_BATCH_BYTES) delete value.points
+    }
+    const length = size(value) + 1
+    if (length + 64 > MAX_BATCH_BYTES) throw new Error('Os metadados de um ponto excedem o limite de envio. Reduza as informações ou a logomarca.')
+    if (current.points.length && (bytes + length > MAX_BATCH_BYTES || current.points.length >= MAX_BATCH_POINTS)) {
+      batches.push(current); current = { points: [], publish: false }; bytes = size(current)
+    }
+    current.points.push(value); bytes += length
   }
+  if (current.points.length) batches.push(current)
+  if (batches.length === 1 && (snapshot.baseVersion > 0 || batches[0].points.every(point => point.points !== undefined))) batches[0].publish = true
+  return batches
+}
+// One work-conserving limiter for the import. Stop taking new jobs on failure,
+// then settle in-flight requests so a retry cannot race the previous upload.
+async function batches(total: number, signal: AbortSignal, run: (index: number) => Promise<void>) {
+  let next = 0, stopped = false
+  async function worker() {
+    while (!stopped && next < total) {
+      signal.throwIfAborted()
+      const index = next++
+      try { await run(index) }
+      catch (issue) { stopped = true; throw issue }
+    }
+  }
+  const results = await Promise.allSettled(Array.from({ length: Math.min(3, total) }, worker))
+  const failed = results.find((result): result is PromiseRejectedResult => result.status === 'rejected')
+  if (failed) throw failed.reason
 }
 export async function saveImport(user: User, snapshot: SaveSnapshot, signal: AbortSignal, progress: (value: SaveProgress) => void): Promise<ImportSummary> {
   const { points, id, saveId, baseVersion, name } = snapshot
@@ -31,17 +60,21 @@ export async function saveImport(user: User, snapshot: SaveSnapshot, signal: Abo
   const state: SaveProgress = { points: 0, totalPoints: points.length, records: 0, totalRecords, publishing: false }
   let result = started
   if (started.state !== 'committed') {
-    const ready: boolean[] = []
-    await batches(points.length, signal, async index => {
-      const point = points[index]
-      const received = await send<{ ready: boolean }>(`${prefix}/points/${point.id}`, 'PUT', {
-        ordinal: point.ordinal, chart: point.view, ...(baseVersion === 0 ? { metadata: metadataFromDataset(point.dataset) } : {}),
-      })
-      ready[index] = received.ready
-      if (received.ready) { state.records += point.dataset.validRecords; state.points++ }
+    const ready = new Map<string, boolean>()
+    const groups = pointBatches(snapshot)
+    const byId = new Map(points.map(point => [point.id, point]))
+    await batches(groups.length, signal, async index => {
+      const received = await send<ImportBatchResult>(`${prefix}/batch`, 'PUT', groups[index])
+      const expected = new Set(groups[index].points.map(point => point.id))
+      if (received.points.length !== expected.size || new Set(received.points.map(point => point.id)).size !== expected.size || received.points.some(point => !expected.has(point.id))) throw new Error('A confirmação do lote está incompleta. Tente salvar novamente.')
+      for (const point of received.points) {
+        ready.set(point.id, point.ready)
+        if (point.ready) { state.records += byId.get(point.id)!.dataset.validRecords; state.points++ }
+      }
+      if (received.committed) result = received.committed
       progress({ ...state })
     })
-    const jobs = points.flatMap((point, index) => ready[index] ? [] : Array.from({ length: Math.ceil(point.dataset.validRecords / CHUNK_SIZE) }, (_, chunkIndex) => ({ point, chunkIndex })))
+    const jobs = points.flatMap(point => ready.get(point.id) ? [] : Array.from({ length: Math.ceil(point.dataset.validRecords / CHUNK_SIZE) }, (_, chunkIndex) => ({ point, chunkIndex })))
     const remaining = new Map(points.map(point => [point.id, Math.ceil(point.dataset.validRecords / CHUNK_SIZE)]))
     await batches(jobs.length, signal, async index => {
       const { point, chunkIndex } = jobs[index]
@@ -54,8 +87,10 @@ export async function saveImport(user: User, snapshot: SaveSnapshot, signal: Abo
         state.points++; progress({ ...state })
       }
     })
-    progress({ ...state, publishing: true })
-    result = await send<SaveReceipt>(`${prefix}/complete`, 'POST')
+    if (result.state !== 'committed') {
+      progress({ ...state, publishing: true })
+      result = await send<SaveReceipt>(`${prefix}/complete`, 'POST')
+    }
   }
   if (result.state !== 'committed' || result.version !== baseVersion + 1) throw new Error('A confirmação do conjunto está incompleta. Tente salvar novamente.')
   return { ...input, version: result.version, saveId, updatedAt: result.updatedAt ?? new Date().toISOString() }

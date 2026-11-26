@@ -80,6 +80,7 @@ export function createHandler(dependencies: { authenticate: (request: Request) =
             if (parts.length === 3 && method === 'POST') return json(await repo.startSave(identity.uid, id, validate.saveInput(await body(request))), 201)
             if (parts.length >= 4) {
               const saveId = validate.uuid(parts[3])
+              if (parts.length === 5 && parts[4] === 'batch' && method === 'PUT') return json(await repo.putImportBatch(identity.uid, id, saveId, validate.importBatch(await body(request))))
               if (parts.length === 5 && parts[4] === 'complete' && method === 'POST') return json(await repo.completeSave(identity.uid, id, saveId))
               if (parts[4] === 'points' && parts.length >= 6) {
                 const pointId = validate.uuid(parts[5])

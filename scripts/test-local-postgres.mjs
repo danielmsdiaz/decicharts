@@ -43,6 +43,6 @@ if (checked !== '2') throw new Error('A migração não preservou os conjuntos u
 console.log('Migração local validada: legado publicado e rascunho, IDs, dados, configurações e datas preservados.')
 checkSchema('prisma/schema.prisma')
 console.log('Schema local coincide com Prisma após a migração.')
-run(process.execPath, ['node_modules/vitest/vitest.mjs', 'run', 'tests/neon.integration.test.ts', 'tests/imports.integration.test.ts'], {
+run(process.execPath, ['node_modules/vitest/vitest.mjs', 'run', 'tests/neon.integration.test.ts', 'tests/imports.integration.test.ts', 'tests/import-batch.integration.test.ts'], {
   env: { ...env, TEST_DATABASE_URL: connection, RUN_NEON_INTEGRATION: '1' }, stdio: 'inherit',
 })

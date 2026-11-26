@@ -1,10 +1,10 @@
 import { isDeepStrictEqual } from 'node:util'
 import type { Prisma, PrismaClient, MeasurementImport, ImportSave } from './generated/prisma/client'
-import type { ImportInput, SaveInput, SaveReceipt, ImportSummary, ImportPointInput, ImportPage, ImportPointPage, DatasetMetadata, ChartView } from '../shared/persistence'
+import type { ImportInput, SaveInput, SaveReceipt, ImportSummary, ImportPointInput, ImportPage, ImportPointPage, DatasetMetadata, ChartView, ImportBatchInput, ImportBatchResult } from '../shared/persistence'
 import { CHUNK_SIZE, MAX_POINTS } from '../shared/persistence'
 import { HttpError, notFound } from './errors'
 import type { Identity } from './auth'
-import type { chunk } from './validation'
+import { chunk, importBatch } from './validation'
 import { checkRange, sealPoint, writePointChunk } from './point-storage'
 
 export interface ImportRepository {
@@ -16,6 +16,7 @@ export interface ImportRepository {
   putImportChunk(uid: string, id: string, saveId: string, pointId: string, index: number, value: ReturnType<typeof chunk>): Promise<void>
   completeImportPoint(uid: string, id: string, saveId: string, pointId: string): Promise<void>
   completeSave(uid: string, id: string, saveId: string): Promise<SaveReceipt>
+  putImportBatch(uid: string, id: string, saveId: string, input: ImportBatchInput): Promise<ImportBatchResult>
   readImportPoints(uid: string, id: string, saveId: string, offset: number): Promise<ImportPointPage>
   readImportChunk(uid: string, id: string, pointId: string, index: number): Promise<number[][]>
   removeImport(uid: string, id: string): Promise<void>
@@ -38,19 +39,37 @@ async function lockImport(tx: Prisma.TransactionClient, uid: string, id: string)
   if (!rows.length) throw notFound()
   return tx.measurementImport.findUniqueOrThrow({ where: importKey(uid, id) })
 }
-async function pending(tx: Prisma.TransactionClient, uid: string, id: string, saveId: string) {
+async function pending(tx: Prisma.TransactionClient, uid: string, id: string, saveId: string, allowCommitted = false) {
   const root = await lockImport(tx, uid, id)
   const save = await tx.importSave.findUnique({ where: saveKey(uid, id, saveId) })
   if (!save) throw notFound()
+  if (allowCommitted && save.state === 'committed') return { root, save }
   if (save.state !== 'uploading' || save.baseVersion !== root.version) throw conflict()
   await tx.importSave.update({ where: saveKey(uid, id, saveId), data: { updatedAt: new Date() } })
   if (root.state === 'uploading') await tx.measurementImport.update({ where: importKey(uid, id), data: { updatedAt: new Date() } })
-  return root
+  return { root, save }
 }
 async function member(tx: Prisma.TransactionClient, uid: string, id: string, saveId: string, pointId: string) {
   const snapshot = await tx.importSavePoint.findUnique({ where: pointKey(uid, id, saveId, pointId), include: { point: true } })
   if (!snapshot) throw notFound()
   return snapshot
+}
+
+async function publishSave(tx: Prisma.TransactionClient, root: MeasurementImport, save: ImportSave) {
+  const uid = root.userUid, id = root.id, saveId = save.id
+  if (save.state === 'committed') return receipt(save)
+  if (save.baseVersion !== root.version) throw conflict()
+  const [points, snapshots] = await Promise.all([
+    tx.analysis.findMany({ where: { userUid: uid, importId: id }, orderBy: { ordinal: 'asc' }, select: { id: true, ordinal: true, state: true, recordCount: true, metadata: true } }),
+    tx.importSavePoint.findMany({ where: { userUid: uid, importId: id, saveId }, orderBy: { ordinal: 'asc' }, select: { pointId: true, ordinal: true } }),
+  ])
+  if (points.length !== root.pointCount || snapshots.length !== root.pointCount || points.some((point, index) => point.state !== 'ready' || point.ordinal !== index || snapshots[index].ordinal !== index || snapshots[index].pointId !== point.id)
+    || points.reduce((sum, point) => sum + point.recordCount, 0) !== root.recordCount || root.recordCount > MAX_POINTS) throw new HttpError(409, 'Faltam pontos ou medições. O conjunto não foi publicado; tente novamente.')
+  const ids = points.map(point => (point.metadata as unknown as DatasetMetadata).point?.id).filter((value): value is string => !!value).map(value => value.normalize('NFC').trim().toLocaleUpperCase('pt-BR'))
+  if (new Set(ids).size !== ids.length) throw new HttpError(400, 'Há pontos com identificação repetida na importação.')
+  const version = root.version + 1
+  await tx.measurementImport.update({ where: importKey(uid, id), data: { name: save.name, state: 'ready', activeSaveId: saveId, version, updatedAt: new Date() } })
+  return receipt(await tx.importSave.update({ where: saveKey(uid, id, saveId), data: { state: 'committed', version, updatedAt: new Date() } }))
 }
 
 export function createImportRepository(client: PrismaClient, ensureProfile: (identity: Identity) => Promise<unknown>): ImportRepository {
@@ -97,7 +116,7 @@ export function createImportRepository(client: PrismaClient, ensureProfile: (ide
     },
     async putImportPoint(uid, id, saveId, pointId, input) {
       return client.$transaction(async tx => {
-        const root = await pending(tx, uid, id, saveId)
+        const { root } = await pending(tx, uid, id, saveId)
         if (input.ordinal >= root.pointCount) throw new HttpError(400, 'Posição de ponto inválida.')
         let point = await tx.analysis.findUnique({ where: importKey(uid, pointId) })
         if (point && (point.importId !== id || point.ordinal !== input.ordinal)) throw conflict()
@@ -124,7 +143,7 @@ export function createImportRepository(client: PrismaClient, ensureProfile: (ide
     },
     async putImportChunk(uid, id, saveId, pointId, index, value) {
       await client.$transaction(async tx => {
-        const root = await pending(tx, uid, id, saveId)
+        const { root } = await pending(tx, uid, id, saveId)
         if (root.state !== 'uploading') throw conflict()
         const snapshot = await member(tx, uid, id, saveId, pointId)
         await writePointChunk(tx, snapshot.point, index, value)
@@ -132,8 +151,11 @@ export function createImportRepository(client: PrismaClient, ensureProfile: (ide
     },
     async completeImportPoint(uid, id, saveId, pointId) {
       await client.$transaction(async tx => {
-        await pending(tx, uid, id, saveId)
+        const { save } = await pending(tx, uid, id, saveId, true)
         const snapshot = await member(tx, uid, id, saveId, pointId)
+        // A concurrent legacy completion may already have published this save.
+        // Repeating its seal must succeed without writing to a committed version.
+        if (save.state === 'committed' && snapshot.point.state !== 'ready') throw conflict()
         await sealPoint(tx, snapshot.point, snapshot.chart as unknown as ChartView)
       })
     },
@@ -142,19 +164,71 @@ export function createImportRepository(client: PrismaClient, ensureProfile: (ide
         const root = await lockImport(tx, uid, id)
         const save = await tx.importSave.findUnique({ where: saveKey(uid, id, saveId) })
         if (!save) throw notFound()
-        if (save.state === 'committed') return receipt(save)
-        if (save.baseVersion !== root.version) throw conflict()
-        const [points, snapshots] = await Promise.all([
-          tx.analysis.findMany({ where: { userUid: uid, importId: id }, orderBy: { ordinal: 'asc' }, select: { id: true, ordinal: true, state: true, recordCount: true, metadata: true } }),
-          tx.importSavePoint.findMany({ where: { userUid: uid, importId: id, saveId }, orderBy: { ordinal: 'asc' }, select: { pointId: true, ordinal: true } }),
+        return publishSave(tx, root, save)
+      })
+    },
+    async putImportBatch(uid, id, saveId, raw) {
+      // Revalidate direct callers too; one malformed last point rolls back the batch.
+      const input = importBatch(raw)
+      return client.$transaction(async tx => {
+        const { root, save } = await pending(tx, uid, id, saveId)
+        const ids = input.points.map(point => point.id), ordinals = input.points.map(point => point.ordinal)
+        if (ordinals.some(ordinal => ordinal >= root.pointCount)) throw new HttpError(400, 'Posição de ponto inválida.')
+        const [existing, snapshots] = await Promise.all([
+          tx.analysis.findMany({ where: { userUid: uid, OR: [{ id: { in: ids } }, { importId: id, ordinal: { in: ordinals } }] } }),
+          tx.importSavePoint.findMany({ where: { userUid: uid, importId: id, saveId, OR: [{ pointId: { in: ids } }, { ordinal: { in: ordinals } }] } }),
         ])
-        if (points.length !== root.pointCount || snapshots.length !== root.pointCount || points.some((point, index) => point.state !== 'ready' || point.ordinal !== index || snapshots[index].ordinal !== index || snapshots[index].pointId !== point.id)
-          || points.reduce((sum, point) => sum + point.recordCount, 0) !== root.recordCount || root.recordCount > MAX_POINTS) throw new HttpError(409, 'Faltam pontos ou medições. O conjunto não foi publicado; tente novamente.')
-        const ids = points.map(point => (point.metadata as unknown as DatasetMetadata).point?.id).filter((value): value is string => !!value).map(value => value.normalize('NFC').trim().toLocaleUpperCase('pt-BR'))
-        if (new Set(ids).size !== ids.length) throw new HttpError(400, 'Há pontos com identificação repetida na importação.')
-        const version = root.version + 1
-        await tx.measurementImport.update({ where: importKey(uid, id), data: { name: save.name, state: 'ready', activeSaveId: saveId, version, updatedAt: new Date() } })
-        return receipt(await tx.importSave.update({ where: saveKey(uid, id, saveId), data: { state: 'committed', version, updatedAt: new Date() } }))
+        const byId = new Map(existing.map(point => [point.id, point]))
+        const byOrdinal = new Map(existing.filter(point => point.importId === id).map(point => [point.ordinal, point.id]))
+        const snapshotById = new Map(snapshots.map(point => [point.pointId, point]))
+        const snapshotByOrdinal = new Map(snapshots.map(point => [point.ordinal, point.pointId]))
+        const newPoints: Prisma.AnalysisCreateManyInput[] = []
+        const newChunks: Prisma.AnalysisChunkCreateManyInput[] = []
+        const newSnapshots: Prisma.ImportSavePointCreateManyInput[] = []
+        const result: ImportBatchResult = { points: [] }
+        const readyInlineIds = input.points.filter(point => point.points && byId.get(point.id)?.state === 'ready').map(point => point.id)
+        const oldChunks = readyInlineIds.length ? await tx.analysisChunk.findMany({ where: { userUid: uid, analysisId: { in: readyInlineIds }, chunkIndex: 0 }, select: { analysisId: true, payload: true } }) : []
+        const payloads = new Map(oldChunks.map(value => [value.analysisId, value.payload]))
+        for (const value of input.points) {
+          const old = byId.get(value.id), snapshot = snapshotById.get(value.id)
+          if (old && (old.importId !== id || old.ordinal !== value.ordinal)) throw conflict()
+          if ((byOrdinal.has(value.ordinal) && byOrdinal.get(value.ordinal) !== value.id)
+            || (snapshotByOrdinal.has(value.ordinal) && snapshotByOrdinal.get(value.ordinal) !== value.id)) throw conflict()
+          if (snapshot && (snapshot.ordinal !== value.ordinal || !isDeepStrictEqual(snapshot.chart, value.chart))) throw conflict()
+          if (old && value.metadata && !isDeepStrictEqual(old.metadata, value.metadata)) throw conflict()
+          if (!old && (root.state !== 'uploading' || !value.metadata)) throw conflict()
+          const metadata = value.metadata ?? old!.metadata as unknown as DatasetMetadata
+          if (metadata.fileName !== root.fileName || metadata.sheetName !== root.sheetName) throw new HttpError(400, 'O ponto deve pertencer ao arquivo e à aba da importação.')
+          let ready = old?.state === 'ready'
+          if (old && ready) {
+            checkRange(old, value.chart)
+            if (value.points && (old.chunkCount !== 1 || !isDeepStrictEqual(payloads.get(value.id), value.points))) throw conflict()
+          }
+          if (!old) {
+            const data = value.points ? chunk(value.points) : null
+            if (data && (data.count !== metadata.validRecords || data.duplicates !== metadata.duplicateTimestamps || (metadata.timeBasis === 'elapsed' && data.first < 0))) throw new HttpError(400, 'As medições do lote não correspondem aos metadados do ponto.')
+            if (data) checkRange({ firstTs: BigInt(data.first), lastTs: BigInt(data.last) }, value.chart)
+            ready = data !== null
+            newPoints.push({ userUid: uid, importId: id, id: value.id, ordinal: value.ordinal, name: root.name,
+              metadata: asJson(metadata), chart: asJson(value.chart), recordCount: metadata.validRecords, chunkCount: Math.ceil(metadata.validRecords / CHUNK_SIZE),
+              state: ready ? 'ready' : 'uploading', firstTs: data ? BigInt(data.first) : null, lastTs: data ? BigInt(data.last) : null })
+            if (data) newChunks.push({ userUid: uid, analysisId: value.id, chunkIndex: 0, recordCount: data.count,
+              firstTs: BigInt(data.first), lastTs: BigInt(data.last), duplicateCount: data.duplicates, payload: asJson(data.points) })
+          }
+          if (!snapshot) newSnapshots.push({ userUid: uid, importId: id, saveId, pointId: value.id, ordinal: value.ordinal, chart: asJson(value.chart) })
+          result.points.push({ id: value.id, ready })
+        }
+        if (newPoints.length) {
+          const current = await tx.analysis.aggregate({ where: { userUid: uid, importId: id }, _sum: { recordCount: true }, _count: true })
+          if (current._count + newPoints.length > root.pointCount || (current._sum.recordCount ?? 0) + newPoints.reduce((total, point) => total + point.recordCount, 0) > root.recordCount) throw new HttpError(400, 'O conjunto excede as quantidades declaradas.')
+          await tx.analysis.createMany({ data: newPoints })
+        }
+        if (newChunks.length) await tx.analysisChunk.createMany({ data: newChunks })
+        if (newSnapshots.length) await tx.importSavePoint.createMany({ data: newSnapshots })
+        // An interrupted legacy/chunk upload may still need sealing. Let the
+        // client resume it instead of rejecting an otherwise valid batch.
+        if (input.publish && result.points.every(point => point.ready)) result.committed = await publishSave(tx, root, save)
+        return result
       })
     },
     async readImportPoints(uid, id, saveId, offset) {

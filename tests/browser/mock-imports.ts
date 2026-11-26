@@ -58,6 +58,22 @@ export function mockImportRoutes() {
       return { body: { id: parts[3], state: 'committed', version: save.committed, updatedAt: root.updatedAt } }
     }
     if (save.committed || save.input.baseVersion !== root.version) throw new HttpError(409, 'A análise foi alterada em outra sessão.')
+    if (parts[4] === 'batch') {
+      const input = validate.importBatch(data)
+      for (const value of input.points) {
+        if (!root.points.has(value.id)) {
+          if (!value.metadata) throw new HttpError(400, 'Faltam metadados.')
+          root.points.set(value.id, { id: value.id, ordinal: value.ordinal, metadata: value.metadata, ready: !!value.points, chunks: value.points ? { 0: value.points } : {} })
+        }
+        save.charts.set(value.id, value.chart)
+      }
+      const points = input.points.map(value => ({ id: value.id, ready: root.points.get(value.id)!.ready }))
+      if (input.publish && points.every(value => value.ready)) {
+        if (root.points.size !== root.input.pointCount || save.charts.size !== root.input.pointCount || [...root.points.values()].some(point => !point.ready)) throw new HttpError(409, 'Faltam pontos.')
+        root.version++; root.active = parts[3]; root.name = save.input.name; save.committed = root.version; root.updatedAt = new Date().toISOString()
+      }
+      return { body: { points, ...(save.committed ? { committed: { id: parts[3], state: 'committed', version: save.committed, updatedAt: root.updatedAt } } : {}) } }
+    }
     const pointId = parts[5]
     if (parts.length === 6) {
       const input = validate.importPoint(data)

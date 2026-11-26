@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:migrate": "node scripts/prisma.mjs migrate deploy",
-    "test:neon": "RUN_NEON_INTEGRATION=1 vitest run tests/neon.integration.test.ts tests/imports.integration.test.ts",
+    "test:neon": "RUN_NEON_INTEGRATION=1 vitest run tests/neon.integration.test.ts tests/imports.integration.test.ts tests/import-batch.integration.test.ts",
     "db:generate": "node scripts/prisma.mjs generate",
     "db:migrate:dev": "node scripts/prisma.mjs migrate dev",
     "db:baseline": "node --experimental-strip-types scripts/prisma-baseline.mjs",

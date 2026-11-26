@@ -8,7 +8,7 @@ import { dataset } from './helpers'
 
 const identity = { uid: 'alice', name: 'Alice', email: 'alice@example.invalid', photoURL: null }
 const id = '22222222-2222-4222-8222-222222222222'
-const repo: Repository = { profile: vi.fn(), preferences: vi.fn(), list: vi.fn(), start: vi.fn(), putChunk: vi.fn(), complete: vi.fn(), read: vi.fn(), readChunk: vi.fn(), update: vi.fn(), remove: vi.fn(), listImports: vi.fn(), startImport: vi.fn(), readImport: vi.fn(), startSave: vi.fn(), putImportPoint: vi.fn(), putImportChunk: vi.fn(), completeImportPoint: vi.fn(), completeSave: vi.fn(), readImportPoints: vi.fn(), readImportChunk: vi.fn(), removeImport: vi.fn() }
+const repo: Repository = { profile: vi.fn(), preferences: vi.fn(), list: vi.fn(), start: vi.fn(), putChunk: vi.fn(), complete: vi.fn(), read: vi.fn(), readChunk: vi.fn(), update: vi.fn(), remove: vi.fn(), listImports: vi.fn(), startImport: vi.fn(), readImport: vi.fn(), startSave: vi.fn(), putImportPoint: vi.fn(), putImportBatch: vi.fn(), putImportChunk: vi.fn(), completeImportPoint: vi.fn(), completeSave: vi.fn(), readImportPoints: vi.fn(), readImportChunk: vi.fn(), removeImport: vi.fn() }
 const handler = createHandler({ authenticate: async request => {
   if (request.headers.get('authorization') !== 'Bearer alice') throw new HttpError(401, 'Sessão necessária.')
   return identity
@@ -33,6 +33,8 @@ describe('contrato e autorização da API', () => {
     expect(repo.startSave).toHaveBeenCalledWith('alice', id, { id: saveId, name: 'Conjunto', baseVersion: 0 })
     await handler(request(`imports/${id}/saves/${saveId}/points/${pointId}`, 'PUT', { ordinal: 0, metadata: metadataFromDataset(data), chart }))
     expect(repo.putImportPoint).toHaveBeenCalledWith('alice', id, saveId, pointId, expect.objectContaining({ ordinal: 0, chart }))
+    await handler(request(`imports/${id}/saves/${saveId}/batch`, 'PUT', { points: [{ id: pointId, ordinal: 0, metadata: metadataFromDataset(data), chart, points: data.measurements.map(point => [point.timestamp, point.value]) }], publish: true }))
+    expect(repo.putImportBatch).toHaveBeenCalledWith('alice', id, saveId, expect.objectContaining({ publish: true, points: [expect.objectContaining({ id: pointId, ordinal: 0, chart })] }))
     await handler(request(`imports/${id}/saves/${saveId}/points/${pointId}/chunks/0`, 'PUT', { points: [[1, 50]] }))
     expect(repo.putImportChunk).toHaveBeenCalledWith('alice', id, saveId, pointId, 0, expect.objectContaining({ count: 1 }))
     await handler(request(`imports/${id}/saves/${saveId}/points/${pointId}/complete`, 'POST'))
@@ -52,6 +54,14 @@ describe('contrato e autorização da API', () => {
     expect((await handler(request('imports', 'POST', { big: 'x'.repeat(MAX_BODY_BYTES) }))).status).toBe(413)
     expect((await handler(request('imports', 'GET', undefined, false))).status).toBe(401)
     expect(repo.startImport).not.toHaveBeenCalled(); expect(repo.startSave).not.toHaveBeenCalled()
+  })
+  it('recusa lotes vazios, repetidos e acima do limite antes de gravar', async () => {
+    const data = dataset(), point = { id, ordinal: 0, chart: { title: 'P', range: { start: 0, end: 1 } }, metadata: metadataFromDataset(data) }
+    for (const body of [{ points: [], publish: false }, { points: [point, point], publish: true }, { points: Array.from({ length: 101 }, () => point), publish: false }, { points: [point], publish: 'true' }]) {
+      expect((await handler(request(`imports/${id}/saves/${id}/batch`, 'PUT', body))).status).toBe(400)
+    }
+    expect((await handler(request(`imports/${id}/saves/${id}/batch`, 'PUT', { points: [], publish: false, extra: 'x'.repeat(MAX_BODY_BYTES) }))).status).toBe(413)
+    expect(repo.putImportBatch).not.toHaveBeenCalled()
   })
   it('bloqueia chamadas sem sessão antes de acessar o banco', async () => {
     expect((await handler(request('profile', 'GET', undefined, false))).status).toBe(401)

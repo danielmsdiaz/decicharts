@@ -6,26 +6,22 @@ test.beforeEach(async ({ page }) => { await mockAccountApi(page) })
 const mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const ids = Array.from({ length: 10 }, (_, index) => `P${index + 1}`)
 
-test('dez pontos: falha no último, edição durante envio, repetição, reabertura e exclusão do conjunto', async ({ page }) => {
+test('dez pontos em lote: falha de envio, edição durante envio, repetição, reabertura e exclusão do conjunto', async ({ page }) => {
   await page.goto('/tests/browser/fixture.html')
   const file = { name: 'campo.xlsx', mimeType, buffer: Buffer.from(multipointWorkbook(ids, ids.map(() => 3))) }
   await page.getByLabel('Arquivo de medições').setInputFiles(file)
   await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
   const selector = page.getByLabel('Ponto de medição', { exact: true })
   await expect(selector.locator('option')).toHaveCount(10)
-  let lastId = '', fail = true, release!: () => void, blocked!: () => void, chunks = 0
+  let fail = true, release!: () => void, blocked!: () => void, chunks = 0
   const gate = new Promise<void>(done => { release = done })
   const started = new Promise<void>(done => { blocked = done })
   const imports = new Set<string>(), attempts = new Set<string>()
   await page.route('**/api/imports/**', async route => {
     const request = route.request(), url = new URL(request.url())
-    const config = url.pathname.match(/\/saves\/[^/]+\/points\/([^/]+)$/)
-    if (request.method() === 'PUT' && config && request.postDataJSON().ordinal === 9) lastId = config[1]
     if (request.method() === 'POST' && url.pathname.endsWith('/saves')) attempts.add(request.postDataJSON().id)
-    if (request.method() === 'PUT' && url.pathname.includes('/chunks/')) {
-      chunks++
-      if (fail && url.pathname.includes(`/points/${lastId}/`)) { fail = false; blocked(); await gate; return route.abort() }
-    }
+    if (request.method() === 'PUT' && url.pathname.includes('/chunks/')) chunks++
+    if (request.method() === 'PUT' && url.pathname.endsWith('/batch') && fail) { fail = false; blocked(); await gate; return route.abort() }
     return route.fallback()
   })
   await page.route('**/api/imports', async route => {
@@ -91,6 +87,39 @@ test('um ponto vazio impede concluir a importação, sem descartar os demais sil
   await expect(page.getByRole('alert')).toContainText('Vazio')
   await expect(page.getByRole('button', { name: 'Gerar gráfico', exact: true })).toBeDisabled()
   await expect(page.getByLabel('Conferir ponto').locator('option')).toHaveCount(2)
+})
+
+test('salvamento misto retoma falha no último bloco de um ponto grande e reabre todos os dados', async ({ page }) => {
+  let fail = true, chunks = 0
+  await page.route('**/api/imports/**/chunks/*', async route => {
+    if (route.request().method() !== 'PUT') return route.fallback()
+    chunks++
+    if (fail && route.request().url().endsWith('/chunks/1')) {
+      fail = false
+      return route.fulfill({ status: 503, json: { error: 'Último bloco interrompido.' } })
+    }
+    await route.fallback()
+  })
+  await page.goto('/tests/browser/fixture.html')
+  await page.getByLabel('Arquivo de medições').setInputFiles({ name: 'misto.xlsx', mimeType, buffer: Buffer.from(multipointWorkbook(['Curto', 'Longo'], [3, 5001])) })
+  await page.getByRole('button', { name: 'Gerar gráfico', exact: true }).click()
+  await page.getByRole('button', { name: 'Salvar análise', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Último bloco interrompido')
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Nenhuma análise salva' })).toBeVisible()
+  await page.getByRole('link', { name: 'Análise', exact: true }).click()
+  await page.getByRole('button', { name: 'Tentar salvar novamente', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Análise salva', exact: true })).toBeDisabled()
+  expect(chunks).toBe(4)
+  await page.reload()
+  await page.getByRole('link', { name: 'Minhas análises', exact: true }).click()
+  await expect(page.getByRole('listitem')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Abrir', exact: true }).click()
+  const selector = page.getByLabel('Ponto de medição', { exact: true })
+  await expect(selector.locator('option')).toHaveCount(2)
+  await expect(page.getByTestId('measurement-count')).toHaveText('3')
+  await selector.selectOption({ index: 1 })
+  await expect(page.getByTestId('measurement-count')).toHaveText('5.001')
 })
 
 test('conflito preserva ajustes e cancelar a reabertura permite tentar novamente', async ({ page }) => {

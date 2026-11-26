@@ -303,7 +303,7 @@ test('falha de salvamento mantém o gráfico e permite repetir sem duplicar aná
   await expect(page.getByRole('button', { name: 'Selecionar arquivo', exact: true })).toBeEnabled()
   await importCsv(page)
   let fail = true
-  await page.route('**/api/imports/*/saves/*/points/*/chunks/*', async route => {
+  await page.route('**/api/imports/*/saves/*/batch', async route => {
     if (fail && route.request().method() === 'PUT') { fail = false; return route.abort() }
     return route.fallback()
   })

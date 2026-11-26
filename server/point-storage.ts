@@ -15,7 +15,7 @@ export async function writePointChunk(tx: Prisma.TransactionClient, row: Analysi
     firstTs: BigInt(value.first), lastTs: BigInt(value.last), duplicateCount: value.duplicates }, update: {} })
 }
 
-export function checkRange(row: Analysis, chart: ChartView) {
+export function checkRange(row: Pick<Analysis, 'firstTs' | 'lastTs'>, chart: ChartView) {
   if (row.firstTs === null || row.lastTs === null || chart.range.start < Number(row.firstTs) || chart.range.end > Number(row.lastTs)) {
     throw new HttpError(400, 'O período deve estar dentro das medições do ponto.')
   }

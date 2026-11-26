@@ -856,7 +856,7 @@ Decisões confirmadas no planejamento: salvar manualmente todos os pontos da aba
 
 - [x] MeasurementImport como unidade do histórico, com UUID próprio, nome independente dos títulos, pontos ordenados e total de medições. Reutilizar Analysis/AnalysisChunk para dados imutáveis dos pontos.
 - [x] Tentativas ImportSave e fotografias ImportSavePoint preservam todos os ajustes, cores e logomarcas. Publicação transacional por referência, revisão otimista e resposta idempotente; atualização incompleta mantém a versão anterior.
-- [x] Primeira gravação registra metadados/configurações por ponto e envia blocos com concorrência global de três requisições; pontos já selados são reaproveitados na repetição. Atualização envia apenas configurações, sem blocos.
+- [x] Primeira gravação agrupa metadados/configurações e medições de pontos pequenos em lotes de até 100 pontos/480 KiB. Pontos maiores usam blocos de 5 mil; concorrência global de três requisições com fila contínua. Pontos já selados são reaproveitados na repetição. Atualização envia apenas configurações em lote, sem blocos.
 - [x] Preservar limites de 250 mil medições somadas, 5 mil por bloco e 512 KiB por requisição. Leitura por versão e paginação de metadados também limitada por bytes.
 - [x] Proteção por UID em rotas e relações; grupo não publicado não aparece no histórico nem permite baixar blocos. Escritas individuais legadas em conjuntos múltiplos são bloqueadas.
 - [x] Salvar na faixa do arquivo, nome global editável, progresso/erro globais e recuperação de conflito com confirmação. Mudanças feitas durante envio permanecem pendentes; fotografia interrompida é retomada sem absorvê-las.
@@ -869,3 +869,5 @@ Decisões confirmadas no planejamento: salvar manualmente todos os pontos da aba
 - [ ] Aceite manual completo com Google real e Neon; sem push ou deploy nesta tarefa.
 
 Não há substituição de medições de uma análise existente, inclusão/exclusão individual de pontos, histórico de versões na interface ou recuperação automática após recarga. Rascunhos e fotografias inativas expiram após 24 horas; a fotografia publicada é preservada.
+
+Otimização de 26/11/2026: um lote completo pode publicar na mesma transação das inserções em massa. Dez pontos pequenos caindo em um lote passam de 33 para três chamadas no primeiro salvamento e de 12 para duas na atualização. Comparativo no PostgreSQL descartável registrou 370 versus 28 consultas; isso não mede a latência Neon. Testes comuns, navegador e build aprovados; a repetição final do banco detectou uma falha intermitente no teste legado de conclusão concorrente. A revisão identificou uma janela em que uma conclusão já publicada rejeitava o selo atrasado de outra chamada; a repetição do selo passou a ser somente leitura e idempotente. Confirmar essa correção em nova execução de banco: a tentativa de reexecução foi recusada. Nenhuma nova migração ou escrita no Neon da aplicação nesta otimização.

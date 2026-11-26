@@ -1,6 +1,6 @@
 import { DateTime, IANAZone } from 'luxon'
 import type { ChartView, DatasetMetadata, PointTuple, Preferences, ReportInfo } from '../shared/persistence'
-import { CHUNK_SIZE, MAX_POINTS } from '../shared/persistence'
+import { CHUNK_SIZE, MAX_POINTS, MAX_BATCH_POINTS, type ImportBatchInput } from '../shared/persistence'
 import { HttpError } from './errors'
 
 export function object(value: unknown): Record<string, unknown> {
@@ -62,6 +62,16 @@ export function saveInput(value: unknown) {
 export function importPoint(value: unknown) {
   const raw = object(value)
   return { ordinal: integer(raw.ordinal, 0, MAX_POINTS - 1), chart: chartView(raw.chart), ...(raw.metadata === undefined ? {} : { metadata: metadata(raw.metadata) }) }
+}
+export function importBatch(value: unknown): ImportBatchInput {
+  const raw = object(value)
+  if (!Array.isArray(raw.points) || !raw.points.length || raw.points.length > MAX_BATCH_POINTS || typeof raw.publish !== 'boolean') throw new HttpError(400, 'Lote de pontos inválido.')
+  const points = raw.points.map(value => {
+    const item = object(value)
+    return { ...importPoint(item), id: uuid(item.id), ...(item.points === undefined ? {} : { points: chunk(item.points).points }) }
+  })
+  if (new Set(points.map(point => point.id)).size !== points.length || new Set(points.map(point => point.ordinal)).size !== points.length) throw new HttpError(400, 'Há pontos ou posições repetidos no lote.')
+  return { points, publish: raw.publish }
 }
 export function pageOffset(value: string | null) {
   return integer(Number(value || 0), 0, 2_147_483_647)

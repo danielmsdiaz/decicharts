@@ -3,11 +3,13 @@
 ## Estado atual
 
 - Fase atual: 14 — Salvamento da importação inteira
-- Status: Implementação e verificações locais concluídas; migração 0002 aplicada ao banco da aplicação. Aceites Google real e integração em Neon separado pendentes.
+- Status: Salvamento em lote implementado; migração 0002 já aplicada ao banco da aplicação. Confirmar no PostgreSQL descartável o último ajuste da conclusão concorrente legada; aceites Google real e integração em Neon separado pendentes.
 - Última atualização: 2026-11-26
 - Exportação com proporções, prévia no modal, identificação em destaque, gráfico mais baixo, cores personalizáveis e envio de logomarca com limites explícitos implementados. Escala de 0 a 110 dB, cabeçalho fixo e transições preservados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
 
 Salvar/reabrir/atualizar/excluir agora opera sobre a importação inteira da aba escolhida, com ajustes individuais, tentativas idempotentes e publicação atômica. Migração ensaiada em PostgreSQL descartável e aplicada ao Neon configurado após autorização em 26/11/2026; consulta real do histórico e schema conferidos.
+
+O salvamento de dez pontos pequenos agora usa três chamadas à API, e a atualização dos ajustes usa duas. Inserções em massa e publicação podem compartilhar a transação de um lote completo; pontos maiores continuam usando blocos. Essa otimização não exige migração.
 
 ## Resumo das fases
 
@@ -48,11 +50,12 @@ Implementação e validação local das fases 9 a 14 concluídas. Reprodução c
 
 ## Próximas tarefas
 
-1. Criar manualmente um branch/banco Neon separado e configurar TEST_DATABASE_URL; aplicar as migrações nesse destino explícito e repetir as duas integrações. PostgreSQL descartável local já validou a migração, o legado e o conjunto completo.
-2. Validar Google real → importar → salvar conjunto → recarregar → reabrir todos os pontos; conferir ajustes, logout e reinício do Vite. Migração 0002 aplicada ao Neon configurado e schema conferido em 26/11/2026.
-3. Conferir outros layouts reais e a ponderação efetiva do equipamento; o arquivo recebido não comprova ponderação A nem integração energética.
-4. Adicionar busca e filtros paginados ao histórico em entrega futura.
-5. Publicar somente após autorização explícita.
+1. Confirmar o último ajuste de idempotência na conclusão concorrente legada com `test:postgres:local`, quando a execução for autorizada. A suíte passou inicialmente; uma repetição revelou falha intermitente nesse cenário e a nova execução foi recusada.
+2. Criar manualmente um branch/banco Neon separado e configurar TEST_DATABASE_URL; aplicar as migrações nesse destino explícito e repetir as integrações. PostgreSQL descartável local já validou a migração, o legado e o conjunto completo antes do último ajuste de concorrência.
+3. Validar Google real → importar → salvar conjunto → recarregar → reabrir todos os pontos; conferir ajustes, logout e reinício do Vite. Migração 0002 aplicada ao Neon configurado e schema conferido em 26/11/2026.
+4. Conferir outros layouts reais e a ponderação efetiva do equipamento; o arquivo recebido não comprova ponderação A nem integração energética.
+5. Adicionar busca e filtros paginados ao histórico em entrega futura.
+6. Publicar somente após autorização explícita.
 
 ## Decisões técnicas
 
@@ -60,7 +63,7 @@ Implementação e validação local das fases 9 a 14 concluídas. Reprodução c
 - API filtra todas as consultas por UID do token verificado. Identidade do corpo é ignorada.
 - DATABASE_URL nunca possui prefixo VITE_ nem é enviada ao navegador.
 - Arquivos originais e células brutas dos diagnósticos permanecem locais. Salvamento remoto é explícito.
-- Até 250 mil registros, transferidos em blocos de até 5 mil pontos e três requisições simultâneas; corpo da API limitado a 512 KiB.
+- Até 250 mil registros. Salvamento em lotes de até 100 pontos/480 KiB UTF-8, incluindo medições de pontos pequenos; fallback em blocos de até 5 mil medições. Fila global de três requisições simultâneas e corpo da API limitado a 512 KiB.
 - Análises incompletas permanecem ocultas; rascunhos antigos são limpos na próxima tentativa de salvar do mesmo usuário.
 - Exclusão usa cascata no PostgreSQL. Fechar análise limpa somente a sessão.
 - Migração executada manualmente com npm run db:migrate; login e build não criam tabelas.
@@ -81,14 +84,14 @@ Implementação e validação local das fases 9 a 14 concluídas. Reprodução c
 
 | Verificação | Resultado |
 |-------------|-----------|
-| Vitest padrão | 86 aprovados; 2 integrações de banco ignoradas por padrão |
+| Vitest padrão | 90 aprovados; 4 testes de integração de banco ignorados por padrão |
 | Neon real com Prisma | Migração 0002 e consulta real do histórico conferidas; integração ampliada com gravações sintéticas aguarda banco separado |
-| Chrome/Playwright | 24 cenários cobertos; regressão de 23 aprovada e reexecução final da confirmação aprovada |
+| Chrome/Playwright | 25 cenários cobertos; sete pertinentes aprovados nesta otimização; regressão anterior de 24 registrada abaixo |
 | TypeScript/ESLint/build | Aprovados; build sem avisos de tamanho |
 | npm audit | Zero vulnerabilidades reportadas |
 | Capacidade local | 250 mil registros lidos, normalizados, renderizados e filtrados |
 | Migração Prisma | Baseline preservada; 0002 aplicada ao Neon configurado, schema sem drift e contagens/fingerprints anteriores e posteriores idênticos |
-| PostgreSQL descartável | Duas integrações aprovadas: legado e conjunto de dez pontos, versões, falhas, paginação e isolamento |
+| PostgreSQL descartável | Quatro testes aprovados inicialmente; última repetição com três aprovados e falha intermitente na conclusão concorrente legada. Último ajuste de idempotência aguarda reexecução autorizada |
 | Isolamento/exclusão | Outro UID não lê/altera/exclui dados; cascata verificada |
 | Bundle frontend | Conexão Neon, Prisma Client, adaptador/driver e fixtures ausentes |
 | Inspeção visual | Redesenho aprovado e seis capturas adicionais de skeletons; detector atual com avisos consultivos de tokens existentes |
@@ -452,3 +455,13 @@ Próxima ação:
 - Cada operação executa várias consultas sequenciais no Neon. pending/lockImport toma a mesma trava da importação em configurações, blocos e conclusões, serializando essas transações mesmo com três requisições simultâneas. O processamento por lotes no cliente também aguarda terminar o grupo atual antes de começar o próximo.
 - Próxima otimização recomendada: reduzir chamadas com envio/gravação em lote para conjuntos pequenos e ajustes, preservando limite de corpo, publicação atômica, idempotência, isolamento e fallback em blocos para dados maiores. Esta etapa apenas explica os gargalos identificados; não mediu tempos reais por etapa nem alterou o protocolo ou o banco.
 - git diff --check pertinente ao registro documental; nenhuma nova execução de testes, escrita no Neon, push ou deploy.
+
+### 2026-11-26 — Redução das etapas de salvamento
+
+- Novo PUT /imports/:id/saves/:saveId/batch recebe até 100 pontos; o cliente monta lotes de até 480 KiB UTF-8, com metadados, ajustes e até 5 mil medições por ponto. Servidor usa createMany em uma transação por lote, com publicação na mesma transação quando o lote contém o conjunto completo. Corpos da API continuam limitados a 512 KiB; pontos maiores e pontos em envio interrompido continuam no protocolo de blocos existente.
+- Dez pontos pequenos que caibam em um lote usam três chamadas na primeira gravação (antes 33); atualizar os ajustes usa duas (antes 12), sem reenviar medições. Fila global mantém até três envios ocupados; em caso de falha, para de iniciar trabalhos e aguarda os que já estavam em andamento antes de liberar nova tentativa.
+- Preservados isolamento por UID, metadados e medições imutáveis, identificação/ordem, limite total de 250 mil leituras, comparação de conteúdo repetido, fotografia dos ajustes, revisão otimista e publicação completa. Falha no último ponto desfaz todas as inserções do lote; atualizações mantêm a versão publicada anterior até a conclusão.
+- Comparativo de dez pontos/600 leituras em PostgreSQL descartável: protocolo individual 370 consultas e 264 ms; lote 28 consultas e 30 ms nesta execução. Contagem por eventos Prisma sem imprimir SQL ou parâmetros. Os tempos são locais e não medem nem garantem latência Neon.
+- Validação: 90 testes comuns aprovados e quatro integrações ignoradas por padrão; lint, TypeScript e build aprovados. Seis cenários Chrome pertinentes aprovados, mais o novo cenário misto de três e 5.001 leituras: falha no último bloco, histórico oculto, retomada e reabertura das 5.004 leituras sem duplicação. Testes de serviço cobrem divisão por bytes/logomarcas, três envios globais, confirmação perdida e espera dos envios em andamento após erro.
+- Banco local: quatro testes aprovados nas primeiras execuções, incluindo rollback do lote, atualização, isolamento, repetição e comparativo; a última repetição teve três aprovados e uma falha intermitente na conclusão concorrente legada. Revisão identificou a janela em que outra chamada já havia publicado a mesma tentativa e o selo atrasado era recusado. Repetir esse selo agora aceita somente ponto já pronto e não altera a versão publicada; acrescentada regressão de banco. A nova execução de banco foi recusada, portanto essa última alteração ainda requer confirmação no PostgreSQL descartável.
+- README e plano atualizados. Nenhuma dependência, mudança de schema, migração ou escrita no Neon da aplicação nesta otimização. Sem push ou deploy.
