@@ -29,6 +29,7 @@ O salvamento de dez pontos pequenos agora usa três chamadas à API, e a atualiz
 | 12. Skeletons de carregamento | Concluído |
 | 13. Exportação de figuras e transições de interface | Concluído |
 | 14. Salvamento da importação inteira | Implementação e migração concluídas; aceites externos pendentes |
+| 15. Editor clicável e exportação Word | Planejado na seção 27; implementação não iniciada |
 
 A implementação da fase 2 e seus testes estão concluídos; falta registrar o aceite manual completo da conta Google real.
 
@@ -47,6 +48,8 @@ A implementação da fase 2 e seus testes estão concluídos; falta registrar o 
 ## Trabalho em andamento
 
 Implementação e validação local das fases 9 a 14 concluídas. Reprodução com Google real e servidor dev reiniciado continua manual.
+
+Próxima funcionalidade planejada: editor clicável para compor o trecho de medições do relatório, com textos, tabelas, fotos e gráficos, e exportação Word. Escopo, proposta técnica e aceites estão na seção 27 de docs/implementation-plan.md. Nenhuma funcionalidade de documentos foi implementada.
 
 ## Próximas tarefas
 
@@ -465,3 +468,11 @@ Próxima ação:
 - Validação: 90 testes comuns aprovados e quatro integrações ignoradas por padrão; lint, TypeScript e build aprovados. Seis cenários Chrome pertinentes aprovados, mais o novo cenário misto de três e 5.001 leituras: falha no último bloco, histórico oculto, retomada e reabertura das 5.004 leituras sem duplicação. Testes de serviço cobrem divisão por bytes/logomarcas, três envios globais, confirmação perdida e espera dos envios em andamento após erro.
 - Banco local: quatro testes aprovados nas primeiras execuções, incluindo rollback do lote, atualização, isolamento, repetição e comparativo; a última repetição teve três aprovados e uma falha intermitente na conclusão concorrente legada. Revisão identificou a janela em que outra chamada já havia publicado a mesma tentativa e o selo atrasado era recusado. Repetir esse selo agora aceita somente ponto já pronto e não altera a versão publicada; acrescentada regressão de banco. A nova execução de banco foi recusada, portanto essa última alteração ainda requer confirmação no PostgreSQL descartável.
 - README e plano atualizados. Nenhuma dependência, mudança de schema, migração ou escrita no Neon da aplicação nesta otimização. Sem push ou deploy.
+
+### 2026-11-26 — Planejamento do editor clicável e Word
+
+- Conversa consolidou composição a partir de página em branco para posterior incorporação ao relatório maior. O usuário substituiu a hipótese de modelo recorrente pelo editor livre com inserção de título, subtítulo, tabela, texto, foto e gráfico. Trechos aceitam uma/duas colunas; elementos e legendas podem ser editados, movidos e acrescentados em sequência. Gráficos mantêm uma cópia da versão inserida, atualizável por ação explícita.
+- Documento de exemplo e quadros do vídeo examinados localmente como referência de uso. Nenhum arquivo, imagem, texto pessoal ou assinatura foi copiado para o repositório. O áudio do vídeo não foi analisado e não foi usado como fonte de requisitos.
+- Revisados rotas, contexto/provider de análises, geração PNG/SVG, guardas de logout, API/limites e schema. Reuso de createFigureBlob é viável; o contexto atual precisa expor cópias dos pontos além do ativo. O guarda único de logout precisa ser coordenado para proteger análise e documento simultaneamente. Imagens exigem persistência separada do manifesto para respeitar 512 KiB por requisição.
+- Seção 27 do plano registra interação, proposta de documentos independentes e revisões, mídias em blocos, isolamento, falhas/repetição, biblioteca candidata, paginação e Word editável. Primeira etapa será uma prova vertical com duas colunas e .docx real para validar biblioteca, legibilidade, armazenamento e cotas antes de consolidar a infraestrutura. Cotas de documento são propostas de engenharia; limites existentes de importação permanecem próprios.
+- Skill Impeccable aplicada em modo de planejamento, herdando DESIGN.md. Verificação pertinente: revisão documental e git diff --check; sem testes de aplicação, pois não houve alteração de código. Nenhuma dependência instalada, migração, acesso de escrita ao banco, push ou deploy. Aceites externos e confirmação do ajuste legado de concorrência continuam pendentes.

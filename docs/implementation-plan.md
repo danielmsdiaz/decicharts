@@ -871,3 +871,75 @@ Decisões confirmadas no planejamento: salvar manualmente todos os pontos da aba
 Não há substituição de medições de uma análise existente, inclusão/exclusão individual de pontos, histórico de versões na interface ou recuperação automática após recarga. Rascunhos e fotografias inativas expiram após 24 horas; a fotografia publicada é preservada.
 
 Otimização de 26/11/2026: um lote completo pode publicar na mesma transação das inserções em massa. Dez pontos pequenos caindo em um lote passam de 33 para três chamadas no primeiro salvamento e de 12 para duas na atualização. Comparativo no PostgreSQL descartável registrou 370 versus 28 consultas; isso não mede a latência Neon. Testes comuns, navegador e build aprovados; a repetição final do banco detectou uma falha intermitente no teste legado de conclusão concorrente. A revisão identificou uma janela em que uma conclusão já publicada rejeitava o selo atrasado de outra chamada; a repetição do selo passou a ser somente leitura e idempotente. Confirmar essa correção em nova execução de banco: a tentativa de reexecução foi recusada. Nenhuma nova migração ou escrita no Neon da aplicação nesta otimização.
+
+## 27. Editor clicável de documentos para Word — planejamento em 26/11/2026
+
+Status: escopo discutido com o usuário e plano registrado; funcionalidade ainda não implementada. Modo da superfície: Operate, herdando DESIGN.md, tokens e componentes atuais. A referência recebida foi examinada localmente; nenhum conteúdo, foto, assinatura ou dado pessoal do documento deve entrar no repositório ou em fixtures.
+
+### Resultado e interação definidos
+
+- O engenheiro monta a parte de medições, fotos e gráficos em um documento próprio e exporta para Word para incorporá-la ao relatório maior. Começa em branco. A escolha inicial de modelo recorrente foi substituída pelo pedido explícito de composição livre.
+- Clicar num espaço de inserção abre as opções Título, Subtítulo, Texto, Tabela, Foto e Gráfico. O espaço não depende de hover: há botão acessível no início, entre elementos e depois do último. Clicar no conteúdo existente edita ou seleciona aquele elemento. Texto e título são editados na página; ações contextuais oferecem mover, duplicar e excluir, com desfazer/refazer.
+- Cada trecho aceita uma ou duas colunas, com conteúdo independente em cada lado. Foto e texto, duas fotos ou dois gráficos podem coexistir. Alterar para uma coluna preserva os elementos em ordem de leitura, sem perda. O fluxo normal do documento define posições; arrastar livremente por coordenadas não faz parte desta versão.
+- Gráfico abre um seletor com prévias e seleção de um ou mais pontos; a ordem de inserção é verificável e pode ser alterada. Depois dele, o usuário pode inserir legenda, outro gráfico ou qualquer outro elemento. Legenda é opcional, editável e vinculada à figura para acompanhar movimentos e exportação.
+- O gráfico inserido conserva uma cópia da figura. Só a ação Atualizar gráfico substitui essa cópia; posição e legenda permanecem. Alterar ou excluir a análise de origem não altera nem remove figuras dos documentos.
+
+### Composição da interface
+
+Proposta para a primeira versão: destino Documentos na navegação, lista de documentos e rota protegida de edição. Nome do documento, Salvar e Exportar Word ficam numa faixa compacta. A folha A4 é o foco; menu de inserção e controles do elemento aparecem no contexto. Não acrescentar um formulário lateral obrigatório para todos os campos.
+
+Texto: títulos/subtítulos semânticos, parágrafos, negrito, itálico, alinhamento e listas simples. Tabela: definir linhas/colunas e editar, inserir e remover células por linhas/colunas; cabeçalho opcional. Mesclagem arbitrária de células fica para uma evolução. Foto: PNG/JPEG, prévia, substituição, tamanho com proporção preservada e texto alternativo; os limites de proporção da logomarca atual não se aplicam às fotos.
+
+Página branca de documento nos dois temas, cercada pelos controles do tema atual. Colunas pertencem ao documento: o celular pode oferecer zoom ou apresentar seus controles em sequência, sem transformar o conteúdo exportado em uma coluna. Menus e seleção devem funcionar por teclado e toque, Escape fecha e devolve foco, e mover deve ter alternativa ao arrasto. Reutilizar confirmações próprias, ajuda contextual e movimento reduzido.
+
+Estados necessários: vazio, inserção, edição, seleção múltipla de gráficos, geração de prévias, mídia inválida, referência de gráfico indisponível, alterações pendentes, envio em andamento, falha com repetição, conflito entre sessões e exportação em andamento/erro. Exportar usa uma fotografia local consistente; edições durante a geração não misturam versões.
+
+### Integração com os gráficos existentes
+
+- Reaproveitar createFigureBlob/reportOption para as figuras completas, preservando valores, título, intervalo, identificação, cores, logomarca, indicadores e notas técnicas. PNG é a imagem incorporada ao Word; textos e tabelas do documento são elementos editáveis do Word, enquanto gráficos e fotos são imagens.
+- O contexto atual só expõe dataset/view do ponto ativo e metadados resumidos dos demais. Acrescentar uma leitura explícita das fotografias dos pontos, sem selecionar cada ponto nem modificar a análise aberta para gerar prévias.
+- Permitir inserir da análise em memória e de análises salvas da própria conta. Ler outras análises para o seletor sem substituir o workspace; carregar dados e prévias sob demanda, mantendo concorrência limitada e cancelamento. Não renderizar simultaneamente todas as figuras de uma coleção grande.
+- Figura guarda assetId, dimensões, proporção e proveniência disponível: importId, pointId, saveId/version e cópia dos ajustes. Não duplicar todas as medições dentro do documento. Figura de análise ainda não salva pode ser inserida localmente; isso não salva a análise implicitamente. Ao salvar o documento, a cópia da imagem é preservada. Atualização exige origem ainda acessível na sessão ou análise salva, com opção de selecionar novamente quando necessário.
+- Atualizar gera a nova imagem primeiro e só então substitui a antiga. Cancelar ou falhar preserva a figura anterior. Exportar e reabrir usam a imagem guardada, sem regenerá-la a partir de análises que podem ter mudado.
+
+### Documento, salvamento e mídia — proposta técnica
+
+Recurso independente das importações: documento com UUID, UID, nome, versão de schema, revisão e árvore JSON tipada. Nós têm UUID estável e tipos explícitos para texto formatado, título/subtítulo, tabela, figura com legenda, trecho de uma/duas colunas e quebra de página. Uma única fonte de estado alimenta editor, persistência e exportador; DOM/HTML bruto não é o formato canônico. Evitar grupos de colunas recursivos nesta versão.
+
+Bibliotecas candidatas para a prova inicial: Tiptap/ProseMirror para edição estruturada e tabelas, com nós próprios para figuras/colunas; docx para gerar OOXML editável no navegador. Confirmar APIs, licenças das extensões necessárias, dependências, tamanho de bundle e funcionamento com React 19 antes de fixar a escolha. Carregar editor e exportador sob demanda. Não implementar um editor rich text completo com contenteditable sem uma base que cuide de seleção, composição de teclado e desfazer.
+
+Salvar explicitamente, como nas análises atuais. O estado do documento deve sobreviver à navegação dentro da aplicação. Salvamento remoto independente permite salvar/reabrir/renomear/excluir documentos; falha mantém o trabalho local. Persistência automática após recarga e colaboração simultânea não estão incluídas. Antes de sair, abrir outro documento ou fazer logout, proteger as alterações; fechar/recarregar mantém beforeunload nativo.
+
+Há apenas um setLogoutGuard no AuthProvider. Coordenar os guardas de análise e documento num registro compartilhado ou guardião agregado: um provider não pode apagar a proteção do outro. Limpar dados e cancelar operações na troca de UID; não misturar rascunhos entre contas.
+
+Modelagem proposta, aditiva: Report como raiz, ReportRevision como tentativa/fotografia do manifesto, ReportAsset e ReportAssetChunk para mídias imutáveis, e associação ReportRevisionAsset para validar e proteger as referências utilizadas. Chaves e relações incluem UID e reportId. A proveniência da análise é informativa e não possui cascata que apague a cópia da figura.
+
+Para a primeira versão, propor mídias normalizadas em tabelas próprias no Neon, com bytes separados do manifesto. Isso utiliza a infraestrutura existente sem exigir outro serviço de nuvem. Validar custo/tamanho na prova inicial; se o volume exigir armazenamento de objetos, resolver essa escolha antes de construir a persistência. Não salvar fotos em campos de logomarca nem em AnalysisChunk, e não acrescentar imagens base64 ao JSON de todos os blocos.
+
+Normalizar fotos respeitando orientação e proporção; gerar os gráficos a partir dos dados completos sem sampling para reduzir arquivo. Validar formato/conteúdo, dimensões, tamanho e cota total também no servidor. Limites iniciais propostos para ensaio: manifesto até 480 KiB UTF-8, até 500 blocos, 50 mídias e 20 MiB de mídias normalizadas por documento. São cotas de engenharia a verificar com exemplos sintéticos representativos antes de fixar a entrega, independentes dos 250 mil registros das importações. Exceder um limite precisa gerar orientação, nunca remover conteúdo ou reduzir texto silenciosamente.
+
+API proposta: GET/POST /api/reports, GET/DELETE /api/reports/:id, criação de tentativa em /revisions, envio em lote de metadados das mídias, transferência de blocos de mídia e conclusão/publicação da revisão. Requisições JSON continuam limitadas a 512 KiB; blocos binários de 256 KiB codificados em base64 cabem nesse limite com metadados. Download de mídias deve ser autenticado, com adaptação do cliente atual, que hoje assume respostas JSON. Não tornar URLs de mídia públicas nem buscar URLs arbitrárias enviadas pelo navegador.
+
+Cada clique em Salvar captura documento e referências de mídia com operationId e baseVersion. Enviar só mídias novas, com IDs e hashes estáveis, até três requisições globais e confirmação de integridade; separar trava de upload por mídia da curta trava de publicação do documento. Publicar o manifesto e a revisão numa transação apenas após todas as mídias estarem prontas e pertencerem ao mesmo usuário/documento. Enquanto isso, a revisão anterior segue disponível. Atualização usa revisão otimista; conflito não sobrescreve outra sessão. Repetição mantém IDs/conteúdo e reconhece confirmação já publicada; edição durante envio continua pendente.
+
+Limpeza precisa preservar mídias de revisões publicadas e tentativas em curso, e remover órfãos somente após janela de expiração definida. Excluir documento remove suas revisões e mídias; excluir uma análise não remove mídias do documento. Reabertura valida manifesto e todas as referências antes de substituir o trabalho atual.
+
+### Exportação e paginação
+
+Gerar .docx real a partir da árvore tipada. Títulos, textos, listas, legendas e tabelas são nativos/editáveis. As figuras são incorporadas ao arquivo para funcionar sem ligação com o Decicharts. Trechos de duas colunas podem usar tabelas sem bordas com larguras definidas, evitando posicionamento absoluto frágil; respeitar proporção e largura útil da página.
+
+Começar com A4 retrato, margens consistentes, quebras manuais e prévia de paginação. Manter título junto ao próximo conteúdo e legenda com a figura, sem recortar figuras na virada da página. Textos e tabelas longos precisam de fluxo entre páginas; conteúdo maior que uma página exige tratamento explícito, sem sumir nem ser reduzido até ficar ilegível. A prévia do navegador é orientativa; o aceite deve conferir a abertura real no Word, pois seu motor pode distribuir linhas e páginas de outra forma.
+
+Importar/reeditar um Word existente, montar o relatório ambiental completo, capa/sumário automáticos, cabeçalhos complexos e páginas paisagem não integram esta primeira versão. O arquivo enviado é referência de uso; a entrega é o trecho a incorporar ao relatório maior, conforme escolha do usuário.
+
+### Etapas e critérios de aceite
+
+1. **Prova vertical antes de consolidar a infraestrutura:** página editável com título, parágrafo, tabela, foto e dois gráficos lado a lado com legendas; exportar .docx e abrir no Word. Conferir textos/tabelas editáveis, imagem incorporada, quebra de página e legibilidade real das figuras. Medir manifesto e imagens; fixar biblioteca, armazenamento e limites com evidência.
+2. **Editor e estado:** lista/rota de documentos, inserção contextual dos seis tipos, edição, colunas, ordenação, exclusão, desfazer/refazer e legendas. Navegar para a análise e voltar conserva ambos os trabalhos. Validar teclado/toque e temas; não depender de arrasto ou hover.
+3. **Seletor e cópias dos gráficos:** análise atual e análises salvas, prévias sob demanda, seleção múltipla e atualização manual por figura. Verificar que cores, logo, intervalo, identificação, indicadores e notas permanecem iguais ao PNG atual. Origem alterada/excluída não afeta figura inserida.
+4. **Persistência:** contratos e tabelas novos, envio separado de mídias, publicação completa, reabertura, exclusão e guardas coordenados. Escrever e ensaiar a migração aditiva em PostgreSQL descartável e TEST_DATABASE_URL separado, preservar fingerprints das tabelas existentes. Aplicação da migração no banco da aplicação fica para a entrega revisada; não executar migrações nesta etapa de planejamento.
+5. **Exportação integrada e aceite:** documento montado e reaberto exporta os mesmos conteúdos/ordem/colunas; incorporar o trecho num Word maior e conferir figuras, legendas, tabelas e quebras. Lint, tipagem, testes pertinentes e build, com bundles novos separados.
+
+Testes necessários: documento vazio e simples; dez gráficos; foto + texto em duas colunas; conversão de duas para uma coluna sem perda; tabela editável e longa; figura com legenda na borda da página; movimentação/desfazer; atualização manual que preserva legenda/posição; fonte excluída; reload após salvar; falha na última mídia e na publicação; confirmação perdida e repetição sem duplicação; edição durante envio; duas sessões em conflito; UID distinto não lista/lê/escreve/baixa mídias; exclusão sem afetar análises; cota e corpo excedidos; troca de conta e dois trabalhos não salvos; DOCX independente da rede, com textos/tabelas nativos e imagens internas. Usar somente fixtures sintéticas.
+
+O teste legado de conclusão concorrente que segue pendente na seção 26 deve ser confirmado antes de depender dessa infraestrutura na implementação. Planejar documentos não encerra nem altera esse aceite anterior.
