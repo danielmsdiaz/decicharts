@@ -159,7 +159,7 @@ test('colunas, desfazer, foto inválida, teclado e proteção de saída preserva
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: 'Ativar tema escuro' }).click()
   const outliers = await page.evaluate(() => [...document.querySelectorAll('main *')].filter(element => element.getBoundingClientRect().right > innerWidth + 1 && !element.closest('[aria-hidden="true"]')).map(element => ({ tag: element.tagName, cls: element.className, right: element.getBoundingClientRect().right })).slice(0, 15))
-  await page.screenshot({ path: '/tmp/decicharts-report-editor-mobile.png', fullPage: true, animations: 'disabled' })
+  await page.screenshot({ path: '/tmp/decicharts-report-inline-controls-mobile.png', fullPage: true, animations: 'disabled' })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), JSON.stringify(outliers)).toBe(true)
   await page.screenshot({ path: '/tmp/decicharts-report-editor-mobile.png', fullPage: true, animations: 'disabled' })
 })
@@ -441,20 +441,23 @@ test('usa a altura real do conteúdo: título, texto e quatro gráficos cabem na
     await expect(choices).toHaveCount(i < 2 ? 1 : 2)
     if (i === 1) {
       await expect(page.locator('.report-paper img')).toHaveCount(4)
-      await expect(page.locator('.report-paper .report-row-tools')).toHaveCount(0)
-      await expect(page.locator('.report-paper .report-block-actions')).toHaveCount(0)
+      await expect(page.locator('.report-paper .report-row-tools')).toHaveCount(1)
+      await expect(page.locator('.report-paper .report-block-actions')).toHaveCount(1)
+      await expect(page.locator('.report-sidebar .report-row-tools, .report-sidebar .report-block-actions')).toHaveCount(0)
       const bottom = await page.locator('.report-paper').evaluate(paper => {
         const box = paper.getBoundingClientRect(), scale = box.width / 794
         return (Math.max(...[...paper.querySelectorAll('figure')].map(element => element.getBoundingClientRect().bottom)) - box.top) / scale
       })
       expect(bottom).toBeLessThan(1123 - 76)
       expect(bottom).toBeGreaterThan(800)
+      await page.screenshot({ path: '/tmp/decicharts-report-inline-controls-desktop.png', animations: 'disabled' })
     }
   }
   await choices.first().click()
   await page.getByRole('button', { name: 'Verificar prévia', exact: true }).click()
   const preview = page.getByRole('dialog', { name: 'Prévia do documento', exact: true })
   await expect(preview.locator('.report-preview-page')).toHaveCount(2)
+  await expect(preview.locator('.report-inline-tools')).toHaveCount(0)
   await expect(preview.locator('.report-preview-page').first().locator('img')).toHaveCount(4)
   await expect(preview.locator('.report-preview-page').last().locator('img')).toHaveCount(2)
   await page.setViewportSize({ width: 1440, height: 1400 })
@@ -462,6 +465,7 @@ test('usa a altura real do conteúdo: título, texto e quatro gráficos cabem na
   await page.screenshot({ path: '/tmp/decicharts-report-four-charts-desktop.png', animations: 'disabled' })
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(preview.locator('.report-preview-page')).toHaveCount(2)
+  await expect(preview.locator('.report-inline-tools')).toHaveCount(0)
   await page.screenshot({ path: '/tmp/decicharts-report-four-charts-mobile.png', animations: 'disabled' })
   await page.setViewportSize({ width: 1440, height: 1000 })
   await preview.getByRole('button', { name: 'Voltar à edição', exact: true }).click()

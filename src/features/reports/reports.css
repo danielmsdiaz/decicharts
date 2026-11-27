@@ -205,7 +205,7 @@
 .report-format-panel .report-figure-tools { padding-block: 0; }
 
 /* The A4 canvas has exactly the same content geometry as the clean preview.
-   Editing controls use the sidebar and the margin, never printable space. */
+   Editing controls float beside the selected content and never consume printable space. */
 .report-row-group { padding-bottom: 8px; }
 .report-column { position: relative; }
 .report-title .tiptap p, .report-subtitle .tiptap p:last-child, .report-title .tiptap p:last-child, .report-subtitle .tiptap p { margin: 0; }
@@ -221,13 +221,11 @@
 .report-column .report-insert-point button { left: -23px; }
 .report-paper .report-empty-column { position: absolute; top: 0; min-height: 30px; height: 30px; padding: 0 8px; font-size: 11px; flex-direction: row; }
 .report-paper .report-empty-column svg { width: 14px; height: 14px; }
-.report-selection-tools:has(> div:empty):not(:has(button)) { display: none; }
-.report-selection-tools .report-row-tools { position: static; margin: 0; color: var(--muted-foreground); gap: 4px; }
-.report-selection-tools .report-block-actions { margin: 4px 0 0; gap: 4px; }
-.report-selection-tools button { color: var(--foreground); }
-.report-selection-tools button:hover { background: var(--accent); }
-.report-selection-tools .report-column-choice { width: 100%; margin: 0 0 4px; background: var(--background); }
-.report-selection-tools .report-column-choice button { flex: 1; }
-.report-selection-tools .report-column-choice button[aria-pressed="true"] { background: var(--soft-primary); color: var(--primary); }
+.report-inline-tools { position: absolute; z-index: 4; right: 0; bottom: calc(100% + 6px); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%; padding: 4px; background: #f2f4f3; border: 1px solid #dce3df; border-radius: 6px; color: #1e2d2b; font: 12px "DM Sans Variable", sans-serif; }
+.report-inline-tools .report-row-tools { position: static; margin: 0; gap: 4px; }
+.report-inline-tools .report-block-actions { margin: 0; gap: 4px; }
+.report-inline-tools .report-inline-block-tools:empty { display: none; }
+.report-inline-tools .report-column-choice { margin: 0; }
+.report-inline-tools button:focus-visible { outline: 2px solid #0b7566; outline-offset: 2px; }
 .report-print-content .report-preview-row > div { display: flow-root; }
 .report-print-content .report-preview-row > div > div { display: flow-root; }

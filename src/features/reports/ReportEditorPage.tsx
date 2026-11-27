@@ -32,7 +32,6 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
   const [cursor, setCursor] = useState<{ id: string; kind: 'rich' | 'figure'; from: number; to: number; version: number } | null>(null)
   const cursorVersion = useRef(0)
   const [formatTarget, setFormatTarget] = useState<HTMLDivElement | null>(null)
-  const [rowTarget, setRowTarget] = useState<HTMLDivElement | null>(null)
   const [blockTarget, setBlockTarget] = useState<HTMLDivElement | null>(null)
   const [menu, setMenu] = useState<Menu | null>(null), [picker, setPicker] = useState<PageTarget | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
@@ -161,7 +160,7 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
         const rowIndex = doc.rows.findIndex(value => value.id === row.id)
         return <div className="report-row-group" key={row.id}>
         <section className="report-row" aria-label={`Trecho ${localIndex + 1}`}>
-          {row.id === activeRow?.id && rowTarget && createPortal(<div className="report-row-tools" aria-label={`Ações do trecho ${localIndex + 1}`}>
+          {row.id === activeRow?.id && <div className="report-inline-tools"><div className="report-row-tools" aria-label={`Ações do trecho ${localIndex + 1}`}>
             <div className="report-column-choice" aria-label="Colunas"><button type="button" aria-pressed={row.columns.length === 1} disabled={!!busy} onClick={() => report.change(value => ({ ...value, rows: value.rows.map(item => item.id === row.id ? setColumns(item, 1) : item) }))}>1 coluna</button><button type="button" aria-pressed={row.columns.length === 2} disabled={!!busy || row.columns.flat().some(block => block.kind === 'break')} onClick={() => report.change(value => ({ ...value, rows: value.rows.map(item => item.id === row.id ? setColumns(item, 2) : item) }))}>2 colunas</button></div>
             <button type="button" aria-label="Mover trecho para cima" title="Mover trecho para cima" disabled={localIndex === 0 || !!busy} onClick={() => report.change(value => { const rows = [...value.rows]; [rows[rowIndex - 1], rows[rowIndex]] = [rows[rowIndex], rows[rowIndex - 1]]; return { ...value, rows } })}><ArrowUp /></button>
             <button type="button" aria-label="Mover trecho para baixo" title="Mover trecho para baixo" disabled={localIndex === page.rows.length - 1 || !!busy} onClick={() => report.change(value => { const rows = [...value.rows]; [rows[rowIndex], rows[rowIndex + 1]] = [rows[rowIndex + 1], rows[rowIndex]]; return { ...value, rows } })}><ArrowDown /></button>
@@ -170,7 +169,7 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
               return { ...value, rows: [...value.rows.slice(0, rowIndex + 1), duplicateRow(row), ...value.rows.slice(rowIndex + 1)] }
             }))}><Copy /></button>
             <button type="button" aria-label="Excluir trecho" title="Excluir trecho" disabled={!!busy} onClick={() => { report.change(value => ({ ...value, rows: value.rows.filter(item => item.id !== row.id) })); setStatus('Trecho removido. Use Desfazer para recuperá-lo.') }}><Trash2 /></button>
-          </div>, rowTarget)}
+          </div><div ref={setBlockTarget} className="report-inline-block-tools" /></div>}
           <div className={`report-columns columns-${row.columns.length}`}>
             {row.columns.map((column, columnIndex) => <div className="report-column" key={columnIndex}>
               {row.columns.length === 2 && column.length > 0 && <InsertPoint label={`Inserir no início da coluna ${columnIndex + 1}`} disabled={!!busy} onClick={anchor => openMenu({ rowId: row.id, column: columnIndex, index: 0 }, anchor)} />}
@@ -221,7 +220,6 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
         <Button variant="outline" aria-haspopup="dialog" disabled={!!busy || !!layout.error} onClick={() => setPreviewOpen(true)}><Eye />Verificar prévia</Button>
         <Button disabled={!doc.rows.length || !!busy || !!layout.error || !doc.name.trim()} onClick={() => void exportWord()}><Download />{busy === 'Gerando Word…' ? busy : 'Exportar Word'}</Button>
         <label className="report-zoom-label">Zoom da página<Select aria-label="Zoom da página" value={zoom} onChange={event => setZoom(event.target.value as PageZoom)}><option value="fit">Ajustar à largura</option><option value="100">100%</option><option value="125">125%</option><option value="150">150%</option></Select></label>
-        <div className="report-selection-tools"><div ref={setRowTarget} /><div ref={setBlockTarget} /></div>
         <div ref={setFormatTarget} className="report-format-panel" />
         {(error || layout.error) && <p className="notice error" role="alert">{error || layout.error}</p>}
         <div className={`report-feedback ${busy || status ? 'has-text' : ''}`} role="status" aria-live="polite">{busy || status}</div>

@@ -526,3 +526,11 @@ Próxima ação:
 - Ações de trecho/elemento e seletor de colunas movidos para a lateral; pontos de inserção na margem, sem ocupar altura. Editor alinhado à prévia em espaçamento, títulos, tabelas e legendas. O fluxo automático, as quebras manuais e os intervalos do documento fonte permanecem preservados.
 - Regressão Chrome reproduz título, texto e dois pares de gráficos na primeira folha; terceiro par segue à segunda. Prévia desktop/celular conferida e Word contém seis imagens e uma quebra de página. Revisão especializada final aprovada, sem bloqueios. Validação final: dez cenários Chrome e 101 testes unitários aprovados (quatro integrações de banco ignoradas); lint, TypeScript/build e diff sem erros. Detector de layout sem achados.
 - Sem API, dependências, migração, escrita no banco, push ou deploy. Aceite no Microsoft Word e persistência de documentos continuam pendentes.
+
+
+### 2026-11-27 — Controles novamente dentro da folha
+
+- Sobre a base c610ce1 solicitada pelo usuário, restaurados na folha os controles de colunas e mover/duplicar/excluir trecho/elemento. A barra acompanha o trecho selecionado; ações gerais, miniaturas, formatação e ajustes da figura continuam na lateral atual.
+- Barra flutuante com tipografia/cores do editor sobre a folha branca, foco visível e sem ocupar altura imprimível. Preservados cálculo da paginação, distribuição A4, zoom, prévia contínua e Word sem controles. Não restauradas as reservas antigas de altura que provocavam quebra prematura.
+- Validação: lint e TypeScript/build aprovados, sem avisos de bundle. Cinco cenários Chrome aprovados: editor/Word, colunas/mover/excluir/desfazer/teclado/saída, quatro gráficos na primeira folha e dois fluxos de colunas/continuação entre páginas. Controles presentes no editor e ausentes da prévia/lateral; capturas desktop claro/celular escuro conferidas. Diff sem erros. Detector consultivo aponta apenas Arial/19px existentes.
+- Sem dependências, API, banco, migração, push ou deploy. Persistência do documento e aceites externos anteriores seguem pendentes.
