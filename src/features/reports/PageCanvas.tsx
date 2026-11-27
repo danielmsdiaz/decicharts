@@ -13,6 +13,9 @@ export function PageCanvas({ pageId, zoom, children }: { pageId: string; zoom: P
     const observer = new ResizeObserver(measure); observer.observe(element)
     return () => observer.disconnect()
   }, [])
-  useLayoutEffect(() => { viewport.current?.scrollTo({ top: 0, left: 0 }) }, [pageId])
+  useLayoutEffect(() => {
+    viewport.current?.scrollTo({ top: 0, left: 0 })
+    viewport.current?.querySelector('.report-paper')?.scrollTo({ top: 0, left: 0 })
+  }, [pageId])
   return <div ref={viewport} className="report-canvas-viewport"><div className="report-page-zoom" style={{ zoom: zoom === 'fit' ? fit : Number(zoom) / 100 }}>{children}</div></div>
 }
