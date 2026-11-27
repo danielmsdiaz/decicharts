@@ -32,7 +32,6 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
   const [cursor, setCursor] = useState<{ id: string; kind: 'rich' | 'figure'; from: number; to: number; version: number } | null>(null)
   const cursorVersion = useRef(0)
   const [formatTarget, setFormatTarget] = useState<HTMLDivElement | null>(null)
-  const [blockTarget, setBlockTarget] = useState<HTMLDivElement | null>(null)
   const [menu, setMenu] = useState<Menu | null>(null), [picker, setPicker] = useState<PageTarget | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -140,7 +139,6 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
   const cursorPage = cursor ? [...pages].reverse().find(page => { const fragment = page.fragments[cursor.id]; return fragment?.type === cursor.kind && cursor.from >= fragment.from && cursor.from <= fragment.to }) : undefined
   const selectedPage = selected && !pages.find(page => page.id === activePageId)?.rows.some(row => row.columns.flat().some(block => block.id === selected)) ? pages.find(page => page.rows.some(row => row.columns.flat().some(block => block.id === selected))) : undefined
   const pageIndex = Math.max(0, pages.findIndex(page => page.id === (cursorPage?.id ?? selectedPage?.id ?? activePageId))), page = pages[pageIndex]
-  const activeRow = page.rows.find(row => row.columns.flat().some(block => block.id === selected)) ?? page.rows[0]
   useEffect(() => { setEditorPageId(page.id) }, [page.id, setEditorPageId])
   return <main className="dashboard-shell report-shell" onKeyDownCapture={event => {
     if (previewOpen || picker || busy) return
@@ -160,7 +158,7 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
         const rowIndex = doc.rows.findIndex(value => value.id === row.id)
         return <div className="report-row-group" key={row.id}>
         <section className="report-row" aria-label={`Trecho ${localIndex + 1}`}>
-          {row.id === activeRow?.id && <div className="report-inline-tools"><div className="report-row-tools" aria-label={`Ações do trecho ${localIndex + 1}`}>
+          <div className="report-row-tools" aria-label={`Ações do trecho ${localIndex + 1}`}>
             <div className="report-column-choice" aria-label="Colunas"><button type="button" aria-pressed={row.columns.length === 1} disabled={!!busy} onClick={() => report.change(value => ({ ...value, rows: value.rows.map(item => item.id === row.id ? setColumns(item, 1) : item) }))}>1 coluna</button><button type="button" aria-pressed={row.columns.length === 2} disabled={!!busy || row.columns.flat().some(block => block.kind === 'break')} onClick={() => report.change(value => ({ ...value, rows: value.rows.map(item => item.id === row.id ? setColumns(item, 2) : item) }))}>2 colunas</button></div>
             <button type="button" aria-label="Mover trecho para cima" title="Mover trecho para cima" disabled={localIndex === 0 || !!busy} onClick={() => report.change(value => { const rows = [...value.rows]; [rows[rowIndex - 1], rows[rowIndex]] = [rows[rowIndex], rows[rowIndex - 1]]; return { ...value, rows } })}><ArrowUp /></button>
             <button type="button" aria-label="Mover trecho para baixo" title="Mover trecho para baixo" disabled={localIndex === page.rows.length - 1 || !!busy} onClick={() => report.change(value => { const rows = [...value.rows]; [rows[rowIndex], rows[rowIndex + 1]] = [rows[rowIndex + 1], rows[rowIndex]]; return { ...value, rows } })}><ArrowDown /></button>
@@ -169,7 +167,7 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
               return { ...value, rows: [...value.rows.slice(0, rowIndex + 1), duplicateRow(row), ...value.rows.slice(rowIndex + 1)] }
             }))}><Copy /></button>
             <button type="button" aria-label="Excluir trecho" title="Excluir trecho" disabled={!!busy} onClick={() => { report.change(value => ({ ...value, rows: value.rows.filter(item => item.id !== row.id) })); setStatus('Trecho removido. Use Desfazer para recuperá-lo.') }}><Trash2 /></button>
-          </div><div ref={setBlockTarget} className="report-inline-block-tools" /></div>}
+          </div>
           <div className={`report-columns columns-${row.columns.length}`}>
             {row.columns.map((column, columnIndex) => <div className="report-column" key={columnIndex}>
               {row.columns.length === 2 && column.length > 0 && <InsertPoint label={`Inserir no início da coluna ${columnIndex + 1}`} disabled={!!busy} onClick={anchor => openMenu({ rowId: row.id, column: columnIndex, index: 0 }, anchor)} />}
@@ -192,14 +190,14 @@ export default function ReportEditorPage({ onBack }: { onBack: () => void }) {
                     run(() => report.change(value => replaceBlock(value, block.id, old => 'content' in old ? { ...old, content: fragment?.type === 'rich' ? replaceRichFragment(old.content, fragment, content) : content } : old), `text-${block.id}`))
                     setCursor({ id: block.id, kind: 'rich', from: selection.from + (fragment?.type === 'rich' ? fragment.from - fragment.openStart : 0), to: selection.to + (fragment?.type === 'rich' ? fragment.from - fragment.openStart : 0), version: ++cursorVersion.current })
                   }} />}
-                {selected === block.id && blockTarget && (row.columns.length === 2 || column.length > 1) && createPortal(<div className="report-block-actions" aria-label="Ações do elemento selecionado">
+                {(row.columns.length === 2 || column.length > 1) && <div className="report-block-actions">
                   {column.length > 1 && ([-1, 1] as const).map(direction => <button type="button" key={direction} title={`Mover elemento para ${direction < 0 ? 'cima' : 'baixo'}`} aria-label={`Mover elemento para ${direction < 0 ? 'cima' : 'baixo'}`} disabled={!!busy || blockIndex + direction < 0 || blockIndex + direction >= column.length} onClick={() => report.change(value => ({ ...value, rows: value.rows.map(item => item.id !== row.id ? item : { ...item, columns: item.columns.map((list, index) => {
                     if (index !== columnIndex) return list
                     const sourceIndex = list.findIndex(value => value.id === block.id), next = [...list]; [next[sourceIndex], next[sourceIndex + direction]] = [next[sourceIndex + direction], next[sourceIndex]]; return next
                   }) }) }))}>{direction < 0 ? <ArrowUp /> : <ArrowDown />}</button>)}
                   {row.columns.length === 2 && <button type="button" title="Mover para outra coluna" aria-label="Mover para outra coluna" disabled={!!busy} onClick={() => report.change(value => ({ ...value, rows: value.rows.map(item => item.id !== row.id ? item : { ...item, columns: item.columns.map((list, index) => index === columnIndex ? list.filter(old => old.id !== block.id) : [...list, item.columns[columnIndex].find(value => value.id === block.id)!]) }) }))}><ArrowRightLeft /></button>}
                   <button type="button" title="Excluir elemento" aria-label="Excluir elemento" disabled={!!busy} onClick={() => report.change(value => ({ ...value, rows: value.rows.map(item => item.id !== row.id ? item : { ...item, columns: item.columns.map(list => list.filter(old => old.id !== block.id)) }) }))}><Trash2 /></button>
-                </div>, blockTarget)}
+                </div>}
                 {(row.columns.length === 2 || column.length > 1) && <InsertPoint label={`Inserir após elemento ${blockIndex + 1} da coluna ${columnIndex + 1}`} disabled={!!busy} onClick={anchor => openMenu({ rowId: row.id, column: columnIndex, index: blockIndex + 1 }, anchor)} />}
               </div>})}
               {!column.length && <button type="button" className="report-empty-column" disabled={!!busy} onClick={event => openMenu({ rowId: row.id, column: columnIndex, index: 0 }, event.currentTarget)}><Plus />Adicionar conteúdo</button>}

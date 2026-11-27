@@ -951,3 +951,10 @@ Refinamento de 26/11/2026: paginação automática implementada sem migração d
 ### Controles de trecho dentro da folha — 27/11/2026
 
 Após retornar à base c610ce1, o usuário confirmou recuperar somente os controles dentro da folha. Colunas e ações de mover/duplicar/excluir saem da lateral e ficam em uma barra junto do trecho selecionado; ações do elemento selecionado usam a mesma barra. Ações gerais, miniaturas/páginas, formatação e ajustes da figura continuam na lateral existente. A barra flutua sem ocupar altura imprimível, mantendo o cálculo atual de paginação e a quantidade de figuras por folha. Prévia e Word permanecem limpos. Validar colunas, mover/excluir/desfazer, continuação entre páginas, teclado, desktop/celular e quatro gráficos na primeira folha com os controles presentes somente no editor.
+
+
+### Recuperação dos pontos de inserção centralizados de 26/11 — 27/11/2026
+
+Usuário esclareceu que lembrava dos sinais + no meio, após rejeitar a barra flutuante. Conferidos todos os commits de 26/11: 2651b68, 8cbf557, c90e8a7 e b2efe54 tinham + Inserir centralizado com linhas laterais; c610ce1 moveu os pontos para a margem. Recuperar a renderização de controles de b2efe54, com seletor e ações fixos por trecho, ações por elemento e áreas de coluna vazia. Preservar os handlers e toda a lógica atual de paginação, modelo, estado, prévia e Word. O arquivo ReportEditorPage corresponde à versão b2efe54, cujo diff frente a c610ce1 contém apenas o posicionamento/exibição dos controles.
+
+A área do editor pode crescer para acomodar seus controles visíveis sem sobreposição; somente o conteúdo participa da distribuição A4 e da exportação. Não reintroduzir ROW_SPACE/BLOCK_SPACE antigos no paginador. Validar todos os dez cenários de documentos, inclusive conteúdo integral em páginas, tabelas/legendas longas, colunas, ordem e Word; conferir o centro geométrico de todos os botões de inserção e que quatro gráficos continuam na primeira página imprimível.

@@ -43,12 +43,12 @@
 .report-page-choice-label > span { color: var(--muted-foreground); font-size: 12px; }
 .report-page-choice-label .report-current-page-label { color: var(--primary); font-weight: 500; }
 .report-pages-footer { display: flex; justify-content: space-between; gap: 6px; padding-block: 6px; }
-.report-paper { --ring: #0b7566; width: 794px; max-width: 100%; height: 1123px; min-height: 1123px; background: #ffffff; color: #1e2d2b; border: 1px solid #dce3df; padding: 76px; font-family: Arial, sans-serif; color-scheme: light; box-shadow: 0 3px 12px #00000004; }
+.report-paper { --ring: #0b7566; width: 794px; max-width: 100%; height: auto; min-height: 1123px; background: #ffffff; color: #1e2d2b; border: 1px solid #dce3df; padding: 76px; font-family: Arial, sans-serif; color-scheme: light; box-shadow: 0 3px 12px #00000004; }
 .report-blank { min-height: 660px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
 .report-blank h2 { margin: 0; font-family: "DM Sans Variable", sans-serif; font-size: 24px; font-weight: 600; letter-spacing: -.025em; }
 .report-blank p { max-width: 32ch; margin: 0 0 12px; color: #5c6972; font: 15px/1.6 "DM Sans Variable", sans-serif; }
 .report-blank button, .report-paper .report-figure-tools { --foreground: #1e2d2b; --background: #ffffff; --accent: #e8eeeb; --input: #c8d0d5; --primary: #116b5c; --ring: #0b7566; }
-.report-row { position: relative; padding-top: 0; }
+.report-row { position: relative; padding-top: 36px; }
 .report-row-tools { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: flex-end; gap: 2px; flex-wrap: wrap; color: #5c6972; margin-bottom: 4px; font: 12px "DM Sans Variable", sans-serif; }
 .report-row-tools > button, .report-block-actions > button { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: #50615f; }
 .report-row-tools > button:hover, .report-block-actions > button:hover { background: #e8eeeb; }
@@ -184,6 +184,7 @@
   .report-canvas-viewport { padding: 12px; }
   .report-sidebar-actions { grid-template-columns: 1fr; }
   .report-sidebar-actions > * { grid-column: 1; }
+  .report-row { padding-top: 44px; }
   .report-row-tools > button, .report-block-actions > button, .report-text-tools button { min-height: 40px; min-width: 40px; }
   .report-insert-point button { min-height: 40px; }
   .report-chart-dialog { padding: 20px; }
@@ -205,7 +206,8 @@
 .report-format-panel .report-figure-tools { padding-block: 0; }
 
 /* The A4 canvas has exactly the same content geometry as the clean preview.
-   Editing controls float beside the selected content and never consume printable space. */
+   Editing controls keep their historical positions in the editor only.
+   Pagination and exports still measure just the printable content. */
 .report-row-group { padding-bottom: 8px; }
 .report-column { position: relative; }
 .report-title .tiptap p, .report-subtitle .tiptap p:last-child, .report-title .tiptap p:last-child, .report-subtitle .tiptap p { margin: 0; }
@@ -213,19 +215,5 @@
 .report-figure figcaption:has(.is-empty) { position: absolute; top: 100%; left: 0; right: 0; margin-top: 0; }
 .report-figure figcaption:has(.is-empty):not(:focus-within) { opacity: 0; }
 .report-figure:hover figcaption:has(.is-empty) { opacity: 1; }
-.report-paper .report-insert-point { position: relative; display: block; height: 0; padding: 0; }
-.report-paper .report-insert-point::before, .report-paper .report-insert-point::after { display: none; }
-.report-paper .report-insert-point button { position: absolute; z-index: 2; left: -32px; top: -12px; height: 24px; width: 24px; min-height: 24px; min-width: 24px; padding: 0; background: #ffffff; border: 1px solid #dce3df; border-radius: 50%; }
-.report-paper .report-insert-point button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.report-paper > .report-insert-point button, .report-row-group > .report-insert-point button { left: -62px; }
-.report-column .report-insert-point button { left: -23px; }
-.report-paper .report-empty-column { position: absolute; top: 0; min-height: 30px; height: 30px; padding: 0 8px; font-size: 11px; flex-direction: row; }
-.report-paper .report-empty-column svg { width: 14px; height: 14px; }
-.report-inline-tools { position: absolute; z-index: 4; right: 0; bottom: calc(100% + 6px); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%; padding: 4px; background: #f2f4f3; border: 1px solid #dce3df; border-radius: 6px; color: #1e2d2b; font: 12px "DM Sans Variable", sans-serif; }
-.report-inline-tools .report-row-tools { position: static; margin: 0; gap: 4px; }
-.report-inline-tools .report-block-actions { margin: 0; gap: 4px; }
-.report-inline-tools .report-inline-block-tools:empty { display: none; }
-.report-inline-tools .report-column-choice { margin: 0; }
-.report-inline-tools button:focus-visible { outline: 2px solid #0b7566; outline-offset: 2px; }
 .report-print-content .report-preview-row > div { display: flow-root; }
 .report-print-content .report-preview-row > div > div { display: flow-root; }

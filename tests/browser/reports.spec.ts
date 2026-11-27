@@ -132,10 +132,10 @@ test('colunas, desfazer, foto inválida, teclado e proteção de saída preserva
   await page.getByRole('textbox', { name: 'Subtítulo', exact: true }).fill('Entre os dois textos')
   const middle = row.locator('.report-block').filter({ has: page.getByRole('textbox', { name: 'Subtítulo', exact: true }) })
   await expect(middle).toHaveCount(1)
-  await page.getByRole('button', { name: 'Excluir elemento', exact: true }).click()
+  await middle.getByRole('button', { name: 'Excluir elemento', exact: true }).click()
   await expect(page.getByRole('textbox', { name: 'Subtítulo', exact: true })).toHaveCount(0)
   await page.getByRole('textbox', { name: 'Texto', exact: true }).last().click()
-  await page.getByRole('button', { name: 'Mover elemento para cima', exact: true }).click()
+  await row.locator('.report-block').filter({ has: page.getByRole('textbox', { name: 'Texto', exact: true }) }).last().getByRole('button', { name: 'Mover elemento para cima', exact: true }).click()
   expect(await page.getByRole('textbox', { name: 'Texto', exact: true }).allTextContents()).toEqual(['Conteúdo da direita', 'Conteúdo da esquerda'])
   await page.getByRole('button', { name: 'Desfazer', exact: true }).click()
   await add(page, 'Foto')
@@ -159,7 +159,7 @@ test('colunas, desfazer, foto inválida, teclado e proteção de saída preserva
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: 'Ativar tema escuro' }).click()
   const outliers = await page.evaluate(() => [...document.querySelectorAll('main *')].filter(element => element.getBoundingClientRect().right > innerWidth + 1 && !element.closest('[aria-hidden="true"]')).map(element => ({ tag: element.tagName, cls: element.className, right: element.getBoundingClientRect().right })).slice(0, 15))
-  await page.screenshot({ path: '/tmp/decicharts-report-inline-controls-mobile.png', fullPage: true, animations: 'disabled' })
+  await page.screenshot({ path: '/tmp/decicharts-report-centered-insert-mobile.png', fullPage: true, animations: 'disabled' })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), JSON.stringify(outliers)).toBe(true)
   await page.screenshot({ path: '/tmp/decicharts-report-editor-mobile.png', fullPage: true, animations: 'disabled' })
 })
@@ -277,8 +277,8 @@ test('texto ultrapassa a folha A4, continua automaticamente e volta a ocupar men
       const contents = [...paper.querySelectorAll('.tiptap')].map(element => element.getBoundingClientRect().bottom)
       return { height: box.height / zoom, contentBottom: (Math.max(...contents) - box.top) / zoom }
     })
-    expect(bounds.height).toBeCloseTo(1123, 0)
-    expect(bounds.contentBottom).toBeLessThan(1123 - 60)
+    expect(bounds.height).toBeGreaterThanOrEqual(1123)
+    expect(bounds.contentBottom).toBeLessThan(bounds.height - 60)
   }
   expect(recovered).toBe(content + ' CONTINUA')
   await page.getByRole('button', { name: 'Verificar prévia', exact: true }).click()
@@ -395,7 +395,7 @@ test('mudar colunas de um texto paginado preserva também as partes de outras fo
   await page.getByRole('textbox', { name: 'Texto', exact: true }).fill(content)
   const choices = page.getByRole('button', { name: /^Página \d+$/ })
   await expect.poll(() => choices.count()).toBeGreaterThan(1)
-  await page.getByRole('button', { name: 'Mover para outra coluna', exact: true }).click()
+  await page.locator('.report-block').filter({ has: page.getByRole('textbox', { name: 'Texto', exact: true }) }).getByRole('button', { name: 'Mover para outra coluna', exact: true }).click()
   await expect(page.locator('.report-column').last().getByRole('textbox', { name: 'Texto', exact: true })).toBeVisible()
   await page.getByRole('button', { name: '1 coluna', exact: true }).click()
   await expect(page.locator('.report-column')).toHaveCount(1)
@@ -441,16 +441,25 @@ test('usa a altura real do conteúdo: título, texto e quatro gráficos cabem na
     await expect(choices).toHaveCount(i < 2 ? 1 : 2)
     if (i === 1) {
       await expect(page.locator('.report-paper img')).toHaveCount(4)
-      await expect(page.locator('.report-paper .report-row-tools')).toHaveCount(1)
-      await expect(page.locator('.report-paper .report-block-actions')).toHaveCount(1)
+      await expect(page.locator('.report-paper .report-row-tools')).toHaveCount(4)
+      await expect(page.locator('.report-paper .report-block-actions')).toHaveCount(4)
       await expect(page.locator('.report-sidebar .report-row-tools, .report-sidebar .report-block-actions')).toHaveCount(0)
+      for (const control of await page.locator('.report-paper .report-insert-point').all()) {
+        const centered = await control.evaluate(element => {
+          const row = element.getBoundingClientRect(), button = element.querySelector('button')!.getBoundingClientRect()
+          return Math.abs(button.x + button.width / 2 - (row.x + row.width / 2)) < 1
+        })
+        expect(centered).toBe(true)
+      }
+
       const bottom = await page.locator('.report-paper').evaluate(paper => {
         const box = paper.getBoundingClientRect(), scale = box.width / 794
         return (Math.max(...[...paper.querySelectorAll('figure')].map(element => element.getBoundingClientRect().bottom)) - box.top) / scale
       })
-      expect(bottom).toBeLessThan(1123 - 76)
+      const editorHeight = await page.locator('.report-paper').evaluate(paper => paper.getBoundingClientRect().height / (paper.getBoundingClientRect().width / 794))
+      expect(bottom).toBeLessThan(editorHeight - 76)
       expect(bottom).toBeGreaterThan(800)
-      await page.screenshot({ path: '/tmp/decicharts-report-inline-controls-desktop.png', animations: 'disabled' })
+      await page.screenshot({ path: '/tmp/decicharts-report-centered-insert-desktop.png', animations: 'disabled' })
     }
   }
   await choices.first().click()
