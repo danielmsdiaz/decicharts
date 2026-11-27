@@ -543,3 +543,10 @@ Próxima ação:
 - Diff conferido: paginador, modelo, provider, prévia e exportador Word idênticos à base c610ce1. Handlers de inserção, edição, movimentação e exclusão preservados; somente renderização/CSS e seletores de testes ajustados. Não reintroduzidas reservas de controles na paginação.
 - Validação: build/TypeScript e lint aprovados; onze testes unitários de documento aprovados. Dez cenários Chrome de documentos aprovados: nove na rodada completa e o cenário de colunas/mover/excluir/desfazer/teclado/saída após corrigir o seletor para escolher o botão do elemento correto. Capturas desktop claro/celular escuro conferidas com + Inserir centralizado; regressão verifica o centro geométrico de todos os pontos e mantém quatro gráficos na primeira página imprimível, duas páginas na prévia e seis imagens com uma quebra no Word. Texto e tabelas longos, legenda sem repetição e continuidade entre colunas preservados. Diff sem erros.
 - Sem API, dependências, banco, migração, push ou deploy. Persistência do documento e aceites externos anteriores seguem pendentes.
+
+
+### 2026-11-27 — Envio da versão confirmada
+
+- Usuário confirmou o layout com + Inserir centralizado e solicitou push. Origin atualizado e histórico conferido: o remoto ainda aponta para e2bc780, com a01f174/e2bc780 posteriores à base c610ce1 que o usuário pediu para descartar. A versão local inclui e2c99f0 e a recuperação final c69f6fe.
+- Publicação autorizada da versão local em main com lease explícito sobre e2bc7801555bec8043ea597bc58d75f066eb6c5c, preservando a decisão de retorno de versão e recusando sobrescrever qualquer atualização remota concorrente. Nenhum merge dos recursos descartados.
+- Código e validações permanecem os da entrega anterior; somente este registro documental acrescentado. Nenhuma migração ou escrita no banco executada para o envio.
