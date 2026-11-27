@@ -37,19 +37,19 @@
 .report-page-choice:hover { background: var(--accent); }
 .report-page-choice[aria-current="page"] { background: var(--soft-primary); border-color: var(--primary); }
 .report-page-thumbnail { display: block; position: relative; width: 88px; height: 124px; border: 1px solid #dce3df; background: #ffffff; overflow: hidden; flex-shrink: 0; }
-.report-thumbnail-canvas { display: block; position: absolute; top: 0; left: 0; width: 794px; min-height: 1123px; padding: 76px; transform: scale(.1083); transform-origin: top left; }
+.report-thumbnail-canvas { display: block; position: absolute; top: 0; left: 0; width: 794px; height: 1123px; border: 1px solid transparent; padding: 96px; transform: scale(.1083); transform-origin: top left; }
 .report-page-choice-label { display: grid; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
 .report-page-choice-label strong { font-size: 13px; font-weight: 600; }
 .report-page-choice-label > span { color: var(--muted-foreground); font-size: 12px; }
 .report-page-choice-label .report-current-page-label { color: var(--primary); font-weight: 500; }
 .report-pages-footer { display: flex; justify-content: space-between; gap: 6px; padding-block: 6px; }
-.report-paper { --ring: #0b7566; width: 794px; max-width: 100%; height: auto; min-height: 1123px; background: #ffffff; color: #1e2d2b; border: 1px solid #dce3df; padding: 76px; font-family: Arial, sans-serif; color-scheme: light; box-shadow: 0 3px 12px #00000004; }
+.report-paper { --ring: #0b7566; position: relative; width: 794px; max-width: 100%; height: 1123px; background: #ffffff; color: #1e2d2b; border: 1px solid #dce3df; padding: 96px; font-family: Arial, sans-serif; color-scheme: light; box-shadow: 0 3px 12px #00000004; }
 .report-blank { min-height: 660px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
 .report-blank h2 { margin: 0; font-family: "DM Sans Variable", sans-serif; font-size: 24px; font-weight: 600; letter-spacing: -.025em; }
 .report-blank p { max-width: 32ch; margin: 0 0 12px; color: #5c6972; font: 15px/1.6 "DM Sans Variable", sans-serif; }
 .report-blank button, .report-paper .report-figure-tools { --foreground: #1e2d2b; --background: #ffffff; --accent: #e8eeeb; --input: #c8d0d5; --primary: #116b5c; --ring: #0b7566; }
-.report-row { position: relative; padding-top: 36px; }
-.report-row-tools { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: flex-end; gap: 2px; flex-wrap: wrap; color: #5c6972; margin-bottom: 4px; font: 12px "DM Sans Variable", sans-serif; }
+.report-row { position: relative; }
+.report-row-tools { display: flex; align-items: center; justify-content: flex-end; gap: 2px; flex-wrap: wrap; color: var(--muted-foreground); font: 12px "DM Sans Variable", sans-serif; }
 .report-row-tools > button, .report-block-actions > button { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: #50615f; }
 .report-row-tools > button:hover, .report-block-actions > button:hover { background: #e8eeeb; }
 .report-row-tools button:disabled { opacity: .35; }
@@ -94,13 +94,13 @@
 .report-figure-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-block: 8px; font: 12px "DM Sans Variable", sans-serif; }
 .report-figure-tools label { flex: 1; display: grid; gap: 4px; min-width: 120px; }
 .report-figure-tools input { width: 100%; color: #1e2d2b; border: 1px solid #c8d0d5; background: #ffffff; border-radius: 4px; padding: 7px; font-size: 12px; }
-.report-block-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
-.report-insert-point { display: flex; justify-content: center; align-items: center; gap: 10px; padding-block: 6px; }
-.report-insert-point::before, .report-insert-point::after { content: ''; height: 1px; background: #e8eeeb; flex: 1; }
-.report-insert-point button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 32px; padding: 4px 8px; border-radius: 4px; border: 0; background: transparent; color: #50615f; font: 12px "DM Sans Variable", sans-serif; }
+.report-block-actions { display: flex; justify-content: flex-end; }
+.report-insert-point { position: relative; height: 0; display: flex; justify-content: center; align-items: center; z-index: 2; }
+.report-insert-point button { position: absolute; z-index: 1; top: 0; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 24px; padding: 2px 6px; border-radius: 4px; border: 1px solid #dce3df; background: #ffffff; color: #50615f; font: 12px "DM Sans Variable", sans-serif; }
 .report-insert-point button:hover { background: #e9f5f1; color: #116b5c; }
 .report-insert-point svg { width: 14px; height: 14px; }
-.report-empty-column { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 1px dashed #a9b8b1; width: 100%; padding: 32px 12px; min-height: 140px; color: #50615f; background: #fafcfb; font: 13px "DM Sans Variable", sans-serif; }
+.report-empty-column { position: absolute; top: 0; left: 0; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px dashed #a9b8b1; width: 100%; padding: 4px; height: 28px; color: #50615f; background: #fafcfb; font: 13px "DM Sans Variable", sans-serif; }
+.report-columns:not(:has(.report-block)) { min-height: 28px; }
 .report-empty-column svg { width: 20px; height: 20px; }
 .report-page-break { display: flex; align-items: center; justify-content: center; border-block: 1px dashed #a9b8b1; padding: 24px 0; color: #5c6972; font: 13px "DM Sans Variable", sans-serif; }
 .report-row-group:has(.report-page-break) { padding-block: 50px; }
@@ -142,7 +142,7 @@
 .report-preview-pages { width: 100%; max-width: 794px; margin-inline: auto; }
 .report-preview-measure { position: absolute; left: -100000px; top: 0; width: 642px; visibility: hidden; pointer-events: none; }
 .report-preview-page-wrap { position: relative; }
-.report-preview-page { position: absolute; left: 0; top: 0; transform-origin: top left; padding: 76px; background: #ffffff; color: #1e2d2b; border: 1px solid #dce3df; box-shadow: 0 2px 10px #00000008; }
+.report-preview-page { position: absolute; left: 0; top: 0; transform-origin: top left; padding: 96px; background: #ffffff; color: #1e2d2b; border: 1px solid #dce3df; box-shadow: 0 2px 10px #00000008; }
 .report-preview-page-number { position: absolute; left: 0; right: 0; bottom: 8px; font-size: 11px; color: var(--muted-foreground); text-align: center; font-variant-numeric: tabular-nums; }
 .report-print-content { font: 14.67px/1.25 Arial, sans-serif; color: #1e2d2b; overflow-wrap: anywhere; white-space: pre-wrap; }
 .report-print-content .report-preview-row { display: grid; gap: 22px; padding-bottom: 8px; }
@@ -157,6 +157,8 @@
 .report-print-content figure { margin: 0 0 10px; }
 .report-print-content img { display: block; width: 100%; height: auto; max-height: 928px; object-fit: contain; }
 .report-print-content figcaption { font: 12px/1.4 Arial, sans-serif; text-align: center; margin-top: 5px; white-space: pre-wrap; }
+/* Keep a final empty line in the measurement, as textarea and Word do. */
+.report-print-content figcaption::after { content: '\200b'; }
 .report-print-content table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 8px; font-size: 13px; }
 .report-print-content th, .report-print-content td { padding: 6px; border: 1px solid #a9b8b1; vertical-align: top; }
 .report-print-content th { background: #e8eeeb; }
@@ -184,7 +186,6 @@
   .report-canvas-viewport { padding: 12px; }
   .report-sidebar-actions { grid-template-columns: 1fr; }
   .report-sidebar-actions > * { grid-column: 1; }
-  .report-row { padding-top: 44px; }
   .report-row-tools > button, .report-block-actions > button, .report-text-tools button { min-height: 40px; min-width: 40px; }
   .report-insert-point button { min-height: 40px; }
   .report-chart-dialog { padding: 20px; }
@@ -205,9 +206,7 @@
 .report-format-panel .report-figure-tools input { background: var(--background); border-color: var(--input); color: var(--foreground); }
 .report-format-panel .report-figure-tools { padding-block: 0; }
 
-/* The A4 canvas has exactly the same content geometry as the clean preview.
-   Editing controls keep their historical positions in the editor only.
-   Pagination and exports still measure just the printable content. */
+/* Controls are out of flow, so the editor and printable A4 share their geometry. */
 .report-row-group { padding-bottom: 8px; }
 .report-column { position: relative; }
 .report-title .tiptap p, .report-subtitle .tiptap p:last-child, .report-title .tiptap p:last-child, .report-subtitle .tiptap p { margin: 0; }
@@ -217,3 +216,17 @@
 .report-figure:hover figcaption:has(.is-empty) { opacity: 1; }
 .report-print-content .report-preview-row > div { display: flow-root; }
 .report-print-content .report-preview-row > div > div { display: flow-root; }
+.report-print-content .report-preview-row:not(:has(p, figure, table, h1, h2)) { min-height: 36px; }
+.report-action-anchor { position: absolute; z-index: 3; }
+.report-row-options { right: -80px; top: 0; }
+.report-block-options { left: -40px; top: 0; }
+.columns-2 > .report-column:last-child .report-block-options { left: auto; right: -40px; }
+.report-action-trigger { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid #dce3df; border-radius: 6px; color: #50615f; background: #ffffff; }
+.report-action-trigger:hover, .report-action-trigger[aria-expanded="true"] { color: #116b5c; background: #e9f5f1; }
+.report-action-trigger svg { width: 16px; height: 16px; }
+.report-actions-popover { position: fixed; margin: 0; width: 320px; max-width: calc(100vw - 24px); padding: 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--foreground); background: var(--card); box-shadow: 0 12px 30px #00000024; }
+.report-actions-popover .report-row-tools > button, .report-actions-popover .report-block-actions > button { color: var(--foreground); }
+.report-actions-popover .report-row-tools > button:hover, .report-actions-popover .report-block-actions > button:hover { background: var(--accent); }
+.report-actions-popover .report-column-choice { width: 100%; background: var(--background); }
+.report-actions-popover .report-column-choice button { flex: 1; color: var(--muted-foreground); }
+.report-actions-popover .report-column-choice button[aria-pressed="true"] { color: var(--primary); background: var(--soft-primary); }

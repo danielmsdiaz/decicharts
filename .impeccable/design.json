@@ -546,7 +546,7 @@
       "kind": "custom",
       "description": "Conteúdo de documento dentro da análise; branco nos dois temas e tipografia compatível com Word.",
       "html": "<article class=\"ds-report-paper\"><h2>Resultados das medições</h2><p>Conteúdo editável do documento.</p></article>",
-      "css": ".ds-report-paper { background:#fff; color:#1e2d2b; border:1px solid #dce3df; padding:32px; font:14.67px/1.25 Arial,sans-serif; } .ds-report-paper h2 { font-size:21.33px; font-weight:700; margin:0 0 12px; } .ds-report-paper p { margin:0; }"
+      "css": ".ds-report-paper { box-sizing:border-box; width:794px; height:1123px; background:#fff; color:#1e2d2b; border:1px solid #dce3df; padding:96px; font:14.67px/1.25 Arial,sans-serif; } .ds-report-paper h2 { font-size:21.33px; font-weight:700; margin:14px 0 8px; } .ds-report-paper p { margin:0 0 8px; }"
     }
   ],
   "narrative": {

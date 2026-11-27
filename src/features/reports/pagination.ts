@@ -4,12 +4,9 @@ import type { JSONContent } from '@tiptap/core'
 import { reportSchema } from './richtext'
 import { deleteReportPage, FIRST_PAGE, reportPages, type ReportPage } from './pages'
 import { MAX_REPORT_FIGURE_HEIGHT, checkDocumentSize, duplicateRow, insertBlocks, newBlock, rowFor, type InsertTarget, type ReportAsset, type ReportBlock, type ReportDocument, type ReportRow } from './model'
+import { PAGE_CONTENT_HEIGHT, PAGE_CONTENT_WIDTH as CONTENT_WIDTH, PAGE_COLUMN_GAP, PAGE_ROW_GAP as ROW_SPACE } from './page-layout'
 
-export const PAGE_WIDTH = 794, PAGE_HEIGHT = 1123, PAGE_MARGIN = 76
-// Only document content occupies the printable area; controls live outside it.
-const PAGE_CONTENT_HEIGHT = PAGE_HEIGHT - PAGE_MARGIN * 2 - 2
-const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2 - 2
-const ROW_SPACE = 8
+export { PAGE_WIDTH, PAGE_HEIGHT, PAGE_MARGIN } from './page-layout'
 export interface RichFragment { type: 'rich'; from: number; to: number; openStart: number; openEnd: number }
 export interface FigureFragment { type: 'figure'; from: number; to: number; image: boolean; imageHeight: number }
 export type BlockFragment = RichFragment | FigureFragment
@@ -117,7 +114,7 @@ export function paginateReport(doc: ReportDocument, assets: ReadonlyMap<string, 
     }
     nextPage()
     manual.rows.forEach((row, localIndex) => {
-      const sourceIndex = manual.start + localIndex, width = row.columns.length === 2 ? (CONTENT_WIDTH - 22) / 2 : CONTENT_WIDTH
+      const sourceIndex = manual.start + localIndex, width = row.columns.length === 2 ? (CONTENT_WIDTH - PAGE_COLUMN_GAP) / 2 : CONTENT_WIDTH
       let remaining: Piece[][] = row.columns.map(column => column.filter(block => block.kind !== 'break').map(block => {
         if ('content' in block) { const source = reportSchema.nodeFromJSON(block.content); return richPiece(block, source, 0, source.content.size) }
         if (block.kind === 'figure') {
@@ -131,7 +128,7 @@ export function paginateReport(doc: ReportDocument, assets: ReadonlyMap<string, 
       while (first || remaining.some(column => column.length)) {
         first = false
         const available = PAGE_CONTENT_HEIGHT - used - ROW_SPACE
-        const taken: Piece[][] = [], rest: Piece[][] = []; let rowHeight = 0
+        const taken: Piece[][] = [], rest: Piece[][] = []; let rowHeight = remaining.every(column => !column.length) ? 28 : 0
         for (const column of remaining) {
           const values: Piece[] = []; let height = 0, i = 0
           for (; i < column.length; i++) {

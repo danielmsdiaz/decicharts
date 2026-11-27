@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { PAGE_WIDTH } from './page-layout'
 
 export type PageZoom = 'fit' | '100' | '125' | '150'
 export function PageCanvas({ pageId, zoom, children }: { pageId: string; zoom: PageZoom; children: ReactNode }) {
@@ -7,7 +8,7 @@ export function PageCanvas({ pageId, zoom, children }: { pageId: string; zoom: P
   useLayoutEffect(() => {
     const element = viewport.current
     if (!element) return
-    const measure = () => setFit(Math.max(.2, (element.clientWidth - (window.innerWidth <= 640 ? 24 : 48)) / 794))
+    const measure = () => setFit(Math.max(.2, (element.clientWidth - (window.innerWidth <= 640 ? 24 : 48)) / PAGE_WIDTH))
     measure()
     const observer = new ResizeObserver(measure); observer.observe(element)
     return () => observer.disconnect()

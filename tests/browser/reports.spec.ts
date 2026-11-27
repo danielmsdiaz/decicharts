@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import JSZip from 'jszip'
 import { mockAccountApi } from './mock-api'
 import { multipointWorkbook } from '../multipoint-fixture'
@@ -21,6 +21,10 @@ async function add(page: Page, kind: string) {
 async function showTools(page: Page) {
   const toggle = page.getByRole('button', { name: 'Ferramentas e páginas', exact: true })
   if (await toggle.isVisible() && await toggle.getAttribute('aria-expanded') === 'false') await toggle.click()
+}
+async function action(page: Page, owner: Locator, label: string) {
+  await owner.locator(':scope > .report-action-anchor > button').click()
+  await page.locator('.report-actions-popover:popover-open').getByRole('button', { name: label, exact: true }).click()
 }
 
 test('editor abre prévia grande sob demanda e exporta Word com textos, tabela, foto e gráficos', async ({ page }) => {
@@ -120,7 +124,13 @@ test('colunas, desfazer, foto inválida, teclado e proteção de saída preserva
   await row.getByRole('button', { name: 'Adicionar conteúdo', exact: true }).last().click()
   await page.getByRole('menuitem', { name: 'Texto', exact: true }).click()
   await page.getByRole('textbox', { name: 'Texto', exact: true }).last().fill('Conteúdo da direita')
-  await page.getByRole('button', { name: '1 coluna', exact: true }).click()
+  const options = row.getByRole('button', { name: 'Ações do trecho 1', exact: true })
+  await options.focus(); await options.press('Enter')
+  await expect(page.locator('.report-actions-popover:popover-open')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+  await expect(options).toBeFocused()
+  await expect(options).toHaveAttribute('aria-expanded', 'false')
+  await action(page, row, '1 coluna')
   await expect(row.locator('.report-column')).toHaveCount(1)
   expect(await page.getByRole('textbox', { name: 'Texto', exact: true }).allTextContents()).toEqual(['Conteúdo da esquerda', 'Conteúdo da direita'])
   await page.getByRole('button', { name: 'Desfazer', exact: true }).click()
@@ -132,10 +142,10 @@ test('colunas, desfazer, foto inválida, teclado e proteção de saída preserva
   await page.getByRole('textbox', { name: 'Subtítulo', exact: true }).fill('Entre os dois textos')
   const middle = row.locator('.report-block').filter({ has: page.getByRole('textbox', { name: 'Subtítulo', exact: true }) })
   await expect(middle).toHaveCount(1)
-  await middle.getByRole('button', { name: 'Excluir elemento', exact: true }).click()
+  await action(page, middle, 'Excluir elemento')
   await expect(page.getByRole('textbox', { name: 'Subtítulo', exact: true })).toHaveCount(0)
   await page.getByRole('textbox', { name: 'Texto', exact: true }).last().click()
-  await row.locator('.report-block').filter({ has: page.getByRole('textbox', { name: 'Texto', exact: true }) }).last().getByRole('button', { name: 'Mover elemento para cima', exact: true }).click()
+  await action(page, row.locator('.report-block').filter({ has: page.getByRole('textbox', { name: 'Texto', exact: true }) }).last(), 'Mover elemento para cima')
   expect(await page.getByRole('textbox', { name: 'Texto', exact: true }).allTextContents()).toEqual(['Conteúdo da direita', 'Conteúdo da esquerda'])
   await page.getByRole('button', { name: 'Desfazer', exact: true }).click()
   await add(page, 'Foto')
@@ -277,8 +287,8 @@ test('texto ultrapassa a folha A4, continua automaticamente e volta a ocupar men
       const contents = [...paper.querySelectorAll('.tiptap')].map(element => element.getBoundingClientRect().bottom)
       return { height: box.height / zoom, contentBottom: (Math.max(...contents) - box.top) / zoom }
     })
-    expect(bounds.height).toBeGreaterThanOrEqual(1123)
-    expect(bounds.contentBottom).toBeLessThan(bounds.height - 60)
+    expect(bounds.height).toBeCloseTo(1123, 0)
+    expect(bounds.contentBottom).toBeLessThanOrEqual(1123 - 96)
   }
   expect(recovered).toBe(content + ' CONTINUA')
   await page.getByRole('button', { name: 'Verificar prévia', exact: true }).click()
@@ -328,6 +338,67 @@ test('texto ultrapassa a folha A4, continua automaticamente e volta a ocupar men
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
+test('muitos trechos mantêm o A4 fixo e continuam sem gastar altura com os controles', async ({ page }) => {
+  await start(page)
+  const choices = page.getByRole('button', { name: /^Página \d+$/ })
+  for (let i = 0; i < 30; i++) {
+    await add(page, 'Texto')
+    await page.getByRole('textbox', { name: 'Texto', exact: true }).last().fill(`Trecho ${String(i).padStart(2, '0')}`)
+    const size = await page.locator('.report-paper').evaluate(paper => ({ height: getComputedStyle(paper).height, margin: getComputedStyle(paper).paddingTop }))
+    expect(size).toEqual({ height: '1123px', margin: '96px' })
+    if (i === 19) await expect(choices).toHaveCount(1)
+  }
+  await expect(choices).toHaveCount(2)
+  const recovered: string[] = []
+  for (let i = 0; i < 2; i++) {
+    await choices.nth(i).click()
+    recovered.push(...await page.getByRole('textbox', { name: 'Texto', exact: true }).allTextContents())
+    const bottom = await page.locator('.report-paper').evaluate(paper => {
+      const box = paper.getBoundingClientRect(), scale = box.width / 794
+      return (Math.max(...[...paper.querySelectorAll('.tiptap')].map(child => child.getBoundingClientRect().bottom)) - box.top) / scale
+    })
+    expect(bottom).toBeLessThanOrEqual(1123 - 96)
+  }
+  expect(recovered).toEqual(Array.from({ length: 30 }, (_, i) => `Trecho ${String(i).padStart(2, '0')}`))
+  await page.getByRole('button', { name: 'Verificar prévia', exact: true }).click()
+  await expect(page.locator('.report-preview-page')).toHaveCount(2)
+  for (const sheet of await page.locator('.report-preview-page').all()) {
+    const counts = await sheet.evaluate(element => element.querySelectorAll('p').length)
+    expect(counts).toBeGreaterThan(0)
+  }
+  await page.getByRole('button', { name: 'Voltar à edição', exact: true }).click()
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Exportar Word', exact: true }).click()
+  await (await downloading).saveAs('/tmp/decicharts-report-many-blocks.docx')
+})
+
+test('capacidade A4 aceita 45 linhas e continua um parágrafo de 55 linhas na próxima folha', async ({ page }) => {
+  await start(page)
+  await add(page, 'Texto')
+  const lines = Array.from({ length: 55 }, (_, i) => `Linha ${String(i).padStart(2, '0')}`)
+  async function pasteLines(count: number) {
+    const input = page.getByRole('textbox', { name: 'Texto', exact: true })
+    await input.fill('')
+    await input.evaluate((element, html) => {
+      const clipboardData = new DataTransfer(); clipboardData.setData('text/html', html)
+      element.dispatchEvent(new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }))
+    }, `<p>${lines.slice(0, count).join('<br>')}</p>`)
+  }
+  await pasteLines(45)
+  const choices = page.getByRole('button', { name: /^Página \d+$/ })
+  await expect(choices).toHaveCount(1)
+  await pasteLines(55)
+  await expect(choices).toHaveCount(2)
+  await choices.first().click()
+  const first = (await page.getByRole('textbox', { name: 'Texto', exact: true }).innerText()).trim().split('\n').filter(Boolean)
+  // Normal A4 margins, Arial 11 pt and 1.25 spacing fit about 50 text lines.
+  expect(first.length).toBeGreaterThanOrEqual(47)
+  expect(first.length).toBeLessThanOrEqual(50)
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Exportar Word', exact: true }).click()
+  await (await downloading).saveAs('/tmp/decicharts-report-line-capacity.docx')
+})
+
 test('tabela longa continua em folhas A4 e mantém todas as linhas editáveis', async ({ page }) => {
   await start(page)
   await add(page, 'Texto')
@@ -347,7 +418,7 @@ test('tabela longa continua em folhas A4 e mantém todas as linhas editáveis', 
     if (await target.count()) await target.fill('Resultado revisado 35')
     const overflow = await page.locator('.report-paper').evaluate(element => {
       const bounds = element.getBoundingClientRect(), scale = bounds.width / 794
-      return Math.max(...[...element.querySelectorAll('.tiptap')].map(child => child.getBoundingClientRect().bottom)) > bounds.bottom - 60 * scale
+      return Math.abs(bounds.height / scale - 1123) > 1 || Math.max(...[...element.querySelectorAll('.tiptap')].map(child => child.getBoundingClientRect().bottom)) > bounds.bottom - 95 * scale
     })
     expect(overflow).toBe(false)
   }
@@ -373,6 +444,12 @@ test('foto fica inteira e legenda longa continua sem repetir a imagem no Word', 
     await choices.nth(i).click()
     recovered += await page.getByLabel('Legenda de foto', { exact: true }).inputValue()
     images += await page.locator('.report-paper img').count()
+    const bounds = await page.locator('.report-paper').evaluate(paper => {
+      const box = paper.getBoundingClientRect(), scale = box.width / 794
+      return { height: box.height / scale, bottom: (paper.querySelector('textarea')!.getBoundingClientRect().bottom - box.top) / scale }
+    })
+    expect(bounds.height).toBeCloseTo(1123, 0)
+    expect(bounds.bottom).toBeLessThanOrEqual(1123 - 95)
   }
   expect(recovered).toBe(caption); expect(images).toBe(1)
   const downloading = page.waitForEvent('download')
@@ -395,9 +472,9 @@ test('mudar colunas de um texto paginado preserva também as partes de outras fo
   await page.getByRole('textbox', { name: 'Texto', exact: true }).fill(content)
   const choices = page.getByRole('button', { name: /^Página \d+$/ })
   await expect.poll(() => choices.count()).toBeGreaterThan(1)
-  await page.locator('.report-block').filter({ has: page.getByRole('textbox', { name: 'Texto', exact: true }) }).getByRole('button', { name: 'Mover para outra coluna', exact: true }).click()
+  await action(page, page.locator('.report-block').filter({ has: page.getByRole('textbox', { name: 'Texto', exact: true }) }), 'Mover para outra coluna')
   await expect(page.locator('.report-column').last().getByRole('textbox', { name: 'Texto', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: '1 coluna', exact: true }).click()
+  await action(page, page.locator('.report-row').first(), '1 coluna')
   await expect(page.locator('.report-column')).toHaveCount(1)
   await page.getByRole('button', { name: 'Verificar prévia', exact: true }).click()
   const preview = page.getByRole('dialog', { name: 'Prévia do documento', exact: true })
@@ -441,8 +518,8 @@ test('usa a altura real do conteúdo: título, texto e quatro gráficos cabem na
     await expect(choices).toHaveCount(i < 2 ? 1 : 2)
     if (i === 1) {
       await expect(page.locator('.report-paper img')).toHaveCount(4)
-      await expect(page.locator('.report-paper .report-row-tools')).toHaveCount(4)
-      await expect(page.locator('.report-paper .report-block-actions')).toHaveCount(4)
+      await expect(page.locator('.report-paper .report-row-options')).toHaveCount(4)
+      await expect(page.locator('.report-paper .report-block-options')).toHaveCount(4)
       await expect(page.locator('.report-sidebar .report-row-tools, .report-sidebar .report-block-actions')).toHaveCount(0)
       for (const control of await page.locator('.report-paper .report-insert-point').all()) {
         const centered = await control.evaluate(element => {
@@ -457,7 +534,8 @@ test('usa a altura real do conteúdo: título, texto e quatro gráficos cabem na
         return (Math.max(...[...paper.querySelectorAll('figure')].map(element => element.getBoundingClientRect().bottom)) - box.top) / scale
       })
       const editorHeight = await page.locator('.report-paper').evaluate(paper => paper.getBoundingClientRect().height / (paper.getBoundingClientRect().width / 794))
-      expect(bottom).toBeLessThan(editorHeight - 76)
+      expect(editorHeight).toBeCloseTo(1123, 0)
+      expect(bottom).toBeLessThan(editorHeight - 96)
       expect(bottom).toBeGreaterThan(800)
       await page.screenshot({ path: '/tmp/decicharts-report-centered-insert-desktop.png', animations: 'disabled' })
     }

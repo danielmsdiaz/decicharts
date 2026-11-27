@@ -2,8 +2,8 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { JSONContent } from '@tiptap/core'
 import type { ReportAsset, ReportBlock, ReportDocument, ReportRow } from './model'
 import type { BlockFragment } from './pagination'
+import { PAGE_WIDTH as paperWidth, PAGE_HEIGHT as paperHeight, PAGE_CONTENT_HEIGHT as usableHeight } from './page-layout'
 
-const paperWidth = 794, paperHeight = 1123, paperMargin = 76, usableHeight = paperHeight - paperMargin * 2
 interface Page { rows: ReportRow[]; height: number }
 function RichContent({ nodes = [] }: { nodes?: JSONContent[] }): ReactNode {
   return nodes.map((node, index) => {
@@ -74,9 +74,9 @@ export function LivePreview({ document: doc, assets, singlePage = false, pageNum
     <div ref={measurement} className="report-preview-measure report-print-content" aria-hidden="true">{doc.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} fragments={fragments} />)}</div>
     {(layout.pages.length ? layout.pages : [{ rows: [], height: 0 }]).map((page, index) => {
       const continuous = !singlePage && page.height > usableHeight
-      const height = singlePage ? paperHeight : Math.max(paperHeight, page.height + paperMargin * 2)
+      const height = paperHeight
       return <div className="report-preview-page-wrap" key={index} style={{ height: height * layout.scale + 32 }}>
-        <div className="report-preview-page report-print-content" style={{ width: paperWidth, minHeight: height, transform: `scale(${layout.scale})` }}>
+        <div className="report-preview-page report-print-content" style={{ width: paperWidth, height, transform: `scale(${layout.scale})` }}>
           {page.rows.map(row => <PreviewRow key={row.id} row={row} assets={assets} fragments={fragments} />)}
           {!doc.rows.length && <p className="report-preview-empty">Documento em branco.</p>}
         </div>
