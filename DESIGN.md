@@ -256,7 +256,7 @@ O painel organiza gráfico e importação conferida; a faixa do arquivo preserva
 
 O gráfico é a superfície principal. Arquivo, ponto e período permanecem verificáveis; setas e seletor alternam pontos sem perder ajustes locais. Média aritmética e Leq estimado são indicadores distintos. Preservar medições, duplicados e escala; não suavizar, interpolar ou amostrar para fins estéticos. A ajuda contextual, a faixa de zoom, as guias e a consulta de valores originais apoiam a leitura.
 
-A figura PNG/SVG usa fundo claro e reúne identificação, quatro indicadores e nota técnica. O diálogo de exportação usa cartões de seleção única para o tipo de arquivo e a proporção e mostra a figura que será baixada. O foco começa no tipo selecionado e retorna ao botão de exportação ao fechar.
+A figura PNG/SVG usa fundo claro e reúne identificação e quatro indicadores. A curva é contínua, sem marcadores em cada leitura; uma medição isolada mantém seu ponto visível. Não há legenda técnica nem identificação do arquivo no rodapé; o aviso condicional de leituras fora da escala permanece. O diálogo de exportação usa cartões de seleção única para o tipo de arquivo e a proporção e mostra a figura que será baixada. O foco começa no tipo selecionado e retorna ao botão de exportação ao fechar.
 
 A identificação da figura ocupa uma superfície clara com rótulos alinhados e valores em seminegrito (24–26px no arquivo vetorial), separada dos indicadores. O gráfico cede altura para essa leitura; as três proporções de exportação permanecem disponíveis. Campos excepcionalmente longos recebem reticências e aviso de identificação abreviada, mantendo todos os rótulos presentes. Os valores completos continuam nos ajustes da figura.
 

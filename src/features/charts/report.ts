@@ -1,7 +1,7 @@
 import type { ChartView, ReportInfo } from '../../../shared/persistence'
 import type { MeasurementDataset } from '@/features/measurements/types'
 import { datasetTime, levelUnit } from '@/features/measurements/temporal'
-import { indicators, ESTIMATE_NOTE } from '@/features/measurements/indicators'
+import { indicators } from '@/features/measurements/indicators'
 import { selectMeasurements } from '@/features/measurements/statistics'
 import { chartOption, scaleLimitNote } from './options'
 import { format, type EChartsCoreOption } from 'echarts/core'
@@ -77,8 +77,7 @@ export function reportOption(dataset: MeasurementDataset, view: ChartView, aspec
     ['Início informado', info.startedAt ? `${info.startedAt.replace('T', ' ')} · ${dataset.timezone}` : ''],
     ['Período', `${datasetTime(dataset, view.range.start)} — ${datasetTime(dataset, view.range.end)}${dataset.timeBasis === 'elapsed' ? '' : ` · ${dataset.timezone}`} · ${selected.length.toLocaleString('pt-BR')} medições`],
   ].filter((field): field is [string, string] => !!field[1])
-  const notes = [scaleLimitNote(dataset, stats), stats.leq === null ? `Leq estimado indisponível: ${stats.reason}` : ESTIMATE_NOTE,
-    `${dataset.fileName} · ${dataset.sheetName} · ${dataset.invalidRecords} registros inválidos · ${dataset.duplicateTimestamps} tempos repetidos`].filter(Boolean)
+  const notes = [scaleLimitNote(dataset, stats)].filter(Boolean)
 
   const labelWidth = 166, metaPadding = 22, rowGap = 12
   const valueWidth = contentWidth - 2 * metaPadding - labelWidth
@@ -132,7 +131,7 @@ export function reportOption(dataset: MeasurementDataset, view: ChartView, aspec
     text(titleLines.join('\n'), margin, Math.max(titleTop, (headerHeight - titleLines.length * titleLineHeight) / 2), titleSize, headerText, 700, titleLineHeight),
     rect(margin, metaTop, contentWidth, metaHeight, '#f2f6f4', 12, border),
     rect(margin, graphFrameTop, contentWidth, graphFrameBottom - graphFrameTop, colors.chartBackgroundColor, 12, customPlot ? mixColor(colors.chartBackgroundColor, plotText, 0.18) : border),
-    text(noteLines.join('\n'), margin, footerTop, noteSize, muted, 400, noteLineHeight),
+    ...(noteLines.length ? [text(noteLines.join('\n'), margin, footerTop, noteSize, muted, 400, noteLineHeight)] : []),
   ]
   let rowTop = metaTop + metaPadding
   rows.forEach(({ label, lines }, index) => {

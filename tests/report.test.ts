@@ -63,7 +63,7 @@ describe('figura e escalas temporais', () => {
     data.unit = 'Pa'
     expect(chartOption(data, view.range, view.title).yAxis).not.toHaveProperty('max')
   })
-  it('exporta identificação, indicadores e hipótese sem inventar datas ou executar texto', () => {
+  it('exporta identificação e indicadores sem rodapé, datas inventadas ou execução de texto', () => {
     const data = dataset()
     data.timeBasis = data.mapping.timeBasis = 'elapsed'
     data.mapping.weighting = 'unknown'
@@ -73,7 +73,8 @@ describe('figura e escalas temporais', () => {
     const result = reportOption(data, view)
     expect(result).toMatchObject({ width: 960, height: 1080 })
     const svg = reportSvg(data, view)
-    for (const label of ['Ponto sul', 'Exemplo sintético', 'Média aritmética', 'Leq estimado', '65,7 dB', 'instantâneas', 'Tempo decorrido']) expect(svg).toContain(label)
+    for (const label of ['Ponto sul', 'Exemplo sintético', 'Média aritmética', 'Leq estimado', '65,7 dB', 'Tempo decorrido']) expect(svg).toContain(label)
+    for (const label of ['instantâneas', data.fileName, 'registros inválidos', 'tempos repetidos']) expect(svg).not.toContain(label)
     expect(svg).not.toContain('<script>')
     expect(svg).not.toContain('1900')
     expect(svg).not.toContain('dB(A)')

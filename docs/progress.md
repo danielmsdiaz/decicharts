@@ -4,8 +4,8 @@
 
 - Fase atual: 15 — Editor clicável e exportação Word dentro da análise
 - Status: Editor visual na própria folha e conferência por Verificar prévia concluídos; persistência de documentos na conta continua futura. Confirmar o ajuste legado no PostgreSQL descartável e os aceites externos anteriores.
-- Última atualização: 2026-11-26
-- Exportação com proporções, prévia no modal, identificação em destaque, gráfico mais baixo, cores personalizáveis e envio de logomarca com limites explícitos implementados. Escala de 0 a 110 dB, cabeçalho fixo e transições preservados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
+- Última atualização: 2026-11-27
+- Exportação com proporções, prévia no modal, identificação em destaque, cores personalizáveis e envio de logomarca com limites explícitos implementados. Curva exportada contínua, sem marcadores em cada leitura nem legenda no rodapé; aviso condicional de leituras fora da escala preservado. Escala de 0 a 110 dB, cabeçalho fixo e transições preservados. Google real, reprodução do reinício do Vite e integração em banco separado continuam pendentes.
 
 Salvar/reabrir/atualizar/excluir agora opera sobre a importação inteira da aba escolhida, com ajustes individuais, tentativas idempotentes e publicação atômica. Migração ensaiada em PostgreSQL descartável e aplicada ao Neon configurado após autorização em 26/11/2026; consulta real do histórico e schema conferidos.
 
@@ -550,3 +550,10 @@ Próxima ação:
 - Usuário confirmou o layout com + Inserir centralizado e solicitou push. Origin atualizado e histórico conferido: o remoto ainda aponta para e2bc780, com a01f174/e2bc780 posteriores à base c610ce1 que o usuário pediu para descartar. A versão local inclui e2c99f0 e a recuperação final c69f6fe.
 - Publicação autorizada da versão local em main com lease explícito sobre e2bc7801555bec8043ea597bc58d75f066eb6c5c, preservando a decisão de retorno de versão e recusando sobrescrever qualquer atualização remota concorrente. Nenhum merge dos recursos descartados.
 - Código e validações permanecem os da entrega anterior; somente este registro documental acrescentado. Nenhuma migração ou escrita no banco executada para o envio.
+
+### 2026-11-27 — Curva contínua e retirada da legenda inferior da figura
+
+- Removidos os marcadores claros sobre cada leitura na figura PNG/SVG, que davam aparência pontilhada à curva. Uma única medição mantém o ponto visível; referências de mínimo, máximo e Leq estimado preservadas. Dados, filtros e interação do gráfico na análise permanecem iguais.
+- Retirados do rodapé a nota de estimativa e o nome do arquivo/aba com diagnósticos, liberando a altura para o gráfico. Identificação e quatro indicadores continuam presentes; aviso de leituras fora da escala aparece somente quando necessário. Prévia, download e novas figuras do documento compartilham o ajuste; cópias já inseridas exigem atualização explícita, como antes.
+- Validação: 13 testes unitários pertinentes aprovados, lint e TypeScript/build aprovados. Três cenários Chrome aprovados: importação/filtros/PNG/SVG, pontos variáveis com proporções/logo e cores personalizadas/persistência. PNG exportado e prévia SVG desktop inspecionados, além da captura mobile escura. Diff sem erros. DESIGN e expectativa anterior de rodapé sincronizados.
+- Sem dependências, API, banco, migração, push ou deploy. Persistência de documentos e aceites externos anteriores continuam pendentes.

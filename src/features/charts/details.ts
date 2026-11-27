@@ -26,7 +26,7 @@ export function chartDetails(dataset: MeasurementDataset, range: TimeRange, dark
     { name: 'Mín.', value: stats.min, coord: [minimum!.timestamp, stats.min], label: pointLabel(minimum!.timestamp, 'bottom') },
   ] : []
   return {
-    showSymbol: selected.length <= 120,
+    showSymbol: selected.length === 1 || (!exporting && selected.length <= 120),
     symbolSize: selected.length <= 1 ? 7 : exporting ? 4 : 3.5,
     markPoint: {
       silent: true, symbol: 'circle', symbolSize: 7, data: extrema,
